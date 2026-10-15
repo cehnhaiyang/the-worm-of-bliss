@@ -1,0 +1,1047 @@
+@import "tailwindcss";
+
+/* ============================================
+ * 至乐之蠕虫 - 全局样式
+ * The Worm of Bliss - Global Styles
+ * ============================================ */
+
+/* ========== CSS 变量 (CSS Variables) ========== */
+:root {
+  /* 主色调 */
+  --color-blood: #7f1d1d;
+  --color-blood-light: #dc2626;
+  --color-abyss: #581c87;
+  --color-abyss-light: #9333ea;
+  --color-grace: #f59e0b;
+
+  /* 背景层次 */
+  --bg-void: #000000;
+  --bg-deep: #09090b;
+  --bg-surface: #18181b;
+  --bg-elevated: #27272a;
+  --bg-overlay: rgba(0, 0, 0, 0.85);
+
+  /* 边框 */
+  --border-subtle: rgba(63, 63, 70, 0.3);
+  --border-default: rgba(63, 63, 70, 0.5);
+  --border-strong: rgba(82, 82, 91, 0.6);
+
+  /* 发光效果 */
+  --glow-blood: 0 0 20px rgba(220, 38, 38, 0.3);
+  --glow-abyss: 0 0 20px rgba(147, 51, 234, 0.3);
+  --glow-grace: 0 0 20px rgba(245, 158, 11, 0.3);
+
+  /* 间距 */
+  --spacing-panel: 12px;
+  --spacing-section: 16px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}
+
+/* ========== 基础重置 (Base Reset) ========== */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+}
+
+body {
+  font-family: 'Noto Serif SC', serif;
+  background-color: var(--bg-void);
+  color: #d4d4d8;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ========== 选择文本颜色 (Selection Color) ========== */
+::selection {
+  background: rgba(127, 29, 29, 0.5);
+  color: #fecaca;
+}
+
+/* ========== 禁用图片拖拽 (Disable Image Drag) ========== */
+img {
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* ========== 自定义滚动条 (Custom Scrollbar) ========== */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(82, 82, 91, 0.4);
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(127, 29, 29, 0.6);
+}
+
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* 隐藏滚动条但保持滚动功能 */
+.scrollbar-hidden {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
+/* ========== 动画 (Animations) ========== */
+
+/* 淡入动画 */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.25s ease-out;
+}
+
+/* 从左滑入 */
+@keyframes slide-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in-left {
+  animation: slide-in-left 0.2s ease-out;
+}
+
+/* 缩放淡入 */
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* 脉冲动画 */
+@keyframes pulse-slow {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
+}
+
+/* 微妙呼吸 */
+@keyframes subtle-breathe {
+
+  0%,
+  100% {
+    opacity: 0.8;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+.animate-subtle-breathe {
+  animation: subtle-breathe 4s ease-in-out infinite;
+}
+
+/* 扫描线效果 */
+@keyframes scanline {
+  0% {
+    transform: translateY(-100%);
+  }
+
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+.scanline-effect::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(to bottom,
+      transparent,
+      rgba(255, 255, 255, 0.1),
+      transparent);
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+}
+
+/* 深渊模式效果 */
+.abyss-mode {
+  position: relative;
+}
+
+.abyss-mode::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(88, 28, 135, 0.15) 0%, transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(88, 28, 135, 0.1) 0%, transparent 40%),
+    radial-gradient(ellipse at center, transparent 0%, rgba(88, 28, 135, 0.08) 100%);
+  pointer-events: none;
+  z-index: 30;
+  animation: abyss-pulse 8s ease-in-out infinite;
+}
+
+.abyss-mode::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(0deg,
+      transparent,
+      transparent 2px,
+      rgba(147, 51, 234, 0.015) 2px,
+      rgba(147, 51, 234, 0.015) 4px);
+  pointer-events: none;
+  z-index: 31;
+  opacity: 0.6;
+}
+
+@keyframes abyss-pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+/* 闪烁效果 */
+@keyframes flicker {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.8;
+  }
+
+  75% {
+    opacity: 0.9;
+  }
+}
+
+.animate-flicker {
+  animation: flicker 0.15s infinite;
+}
+
+/* 呼吸效果 */
+@keyframes breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+
+  50% {
+    transform: scale(1.02);
+    opacity: 1;
+  }
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+/* 危险状态闪烁 */
+@keyframes danger-pulse {
+
+  0%,
+  100% {
+    background-color: rgba(239, 68, 68, 0.2);
+  }
+
+  50% {
+    background-color: rgba(239, 68, 68, 0.4);
+  }
+}
+
+.danger-state {
+  animation: danger-pulse 1s ease-in-out infinite;
+}
+
+/* ========== 字体类 (Font Classes) ========== */
+.font-header {
+  font-family: 'Cinzel', serif;
+}
+
+.font-tech {
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.font-serif {
+  font-family: 'Noto Serif SC', serif;
+}
+
+/* ========== 文本截断 (Text Truncation) ========== */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ========== 玻璃效果 (Glass Effect) ========== */
+.glass {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* ========== 发光效果 (Glow Effects) ========== */
+.glow-red {
+  box-shadow: var(--glow-blood);
+}
+
+.glow-purple {
+  box-shadow: var(--glow-abyss);
+}
+
+.glow-amber {
+  box-shadow: var(--glow-grace);
+}
+
+/* 深渊文字效果 */
+.abyss-text {
+  text-shadow: 0 0 12px rgba(147, 51, 234, 0.6), 0 0 24px rgba(147, 51, 234, 0.3);
+}
+
+/* 神恩发光效果 */
+.grace-glow {
+  text-shadow: 0 0 12px rgba(251, 191, 36, 0.6), 0 0 24px rgba(251, 191, 36, 0.3);
+}
+
+/* 血色文字效果 */
+.blood-text {
+  text-shadow: 0 0 12px rgba(220, 38, 38, 0.5), 0 0 24px rgba(220, 38, 38, 0.2);
+}
+
+/* 脉动发光边框 */
+.glow-pulse {
+  animation: glow-pulse-anim 2s ease-in-out infinite;
+}
+
+@keyframes glow-pulse-anim {
+
+  0%,
+  100% {
+    box-shadow: 0 0 10px rgba(127, 29, 29, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 20px rgba(127, 29, 29, 0.5);
+  }
+}
+
+/* ========== 边框动画 (Border Animation) ========== */
+@keyframes border-pulse {
+
+  0%,
+  100% {
+    border-color: rgba(127, 29, 29, 0.5);
+  }
+
+  50% {
+    border-color: rgba(220, 38, 38, 0.8);
+  }
+}
+
+.border-pulse {
+  animation: border-pulse 2s ease-in-out infinite;
+}
+
+/* ========== 加载动画 (Loading Animation) ========== */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ========== 面板样式 (Panel Styles) ========== */
+.panel {
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.95) 0%, rgba(9, 9, 11, 0.98) 100%);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  backdrop-filter: blur(12px);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 2px 4px -2px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.panel-header {
+  padding: 0.625rem 0.875rem;
+  border-bottom: 1px solid var(--border-subtle);
+  background: linear-gradient(180deg, rgba(39, 39, 42, 0.4) 0%, transparent 100%);
+}
+
+.panel-abyss {
+  background: linear-gradient(180deg, rgba(88, 28, 135, 0.2) 0%, rgba(9, 9, 11, 0.98) 100%);
+  border-color: rgba(147, 51, 234, 0.4);
+  box-shadow:
+    0 4px 6px -1px rgba(0, 0, 0, 0.3),
+    0 0 30px -10px rgba(147, 51, 234, 0.2),
+    inset 0 1px 0 rgba(147, 51, 234, 0.1);
+}
+
+/* 面板内部分区 */
+.panel-section {
+  padding: var(--spacing-panel);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel-section:last-child {
+  border-bottom: none;
+}
+
+/* ========== 卡片悬停效果 (Card Hover Effects) ========== */
+.card-interactive {
+  transition: all 0.2s ease;
+}
+
+.card-interactive:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card-interactive:active {
+  transform: translateY(0);
+}
+
+/* ========== 状态标签样式 (Status Tag Styles) ========== */
+.status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.5625rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  backdrop-filter: blur(6px);
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ========== 进度条样式 (Progress Bar Styles) ========== */
+.progress-bar {
+  height: 5px;
+  background: rgba(24, 24, 27, 0.9);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.progress-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.2) 0%, transparent 100%);
+  border-radius: 3px 3px 0 0;
+}
+
+.progress-fill-animated {
+  background-size: 200% 100%;
+  animation: gradient-shift 2s linear infinite;
+}
+
+@keyframes gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+/* 迷你进度条 */
+.progress-bar-mini {
+  height: 3px;
+  background: rgba(24, 24, 27, 0.8);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progress-bar-mini .progress-fill {
+  box-shadow: none;
+}
+
+.progress-bar-mini .progress-fill::after {
+  display: none;
+}
+
+/* ========== 输入框样式 (Input Styles) ========== */
+.input-dark {
+  background: rgba(9, 9, 11, 0.9);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.75rem;
+  color: #e4e4e7;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.input-dark:focus {
+  outline: none;
+  border-color: rgba(127, 29, 29, 0.7);
+  box-shadow:
+    inset 0 1px 3px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(127, 29, 29, 0.15);
+  background: rgba(9, 9, 11, 1);
+}
+
+.input-dark::placeholder {
+  color: rgba(113, 113, 122, 0.5);
+}
+
+.input-dark:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ========== 按钮样式 (Button Styles) ========== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  border: 1px solid transparent;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.btn:hover::before {
+  opacity: 1;
+}
+
+.btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.9) 0%, rgba(100, 20, 20, 0.8) 100%);
+  border-color: rgba(185, 28, 28, 0.6);
+  color: #fecaca;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(180deg, rgba(153, 27, 27, 1) 0%, rgba(127, 29, 29, 0.9) 100%);
+  box-shadow: var(--glow-blood);
+  border-color: rgba(220, 38, 38, 0.6);
+}
+
+.btn-secondary {
+  background: rgba(39, 39, 42, 0.7);
+  border-color: var(--border-default);
+  color: #a1a1aa;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(63, 63, 70, 0.7);
+  color: #e4e4e7;
+  border-color: var(--border-strong);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: #71717a;
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background: rgba(39, 39, 42, 0.6);
+  color: #a1a1aa;
+}
+
+/* 危险按钮 */
+.btn-danger {
+  background: rgba(127, 29, 29, 0.3);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #f87171;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: rgba(153, 27, 27, 0.5);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+}
+
+/* 深渊按钮 */
+.btn-abyss {
+  background: rgba(88, 28, 135, 0.4);
+  border-color: rgba(147, 51, 234, 0.4);
+  color: #c4b5fd;
+}
+
+.btn-abyss:hover:not(:disabled) {
+  background: rgba(88, 28, 135, 0.6);
+  box-shadow: var(--glow-abyss);
+}
+
+/* ========== 分隔线样式 (Divider Styles) ========== */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(63, 63, 70, 0.5), transparent);
+  margin: 0.75rem 0;
+}
+
+/* ========== 徽章样式 (Badge Styles) ========== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.125rem 0.5rem;
+  font-size: 0.625rem;
+  font-weight: 600;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(4px);
+}
+
+.badge-danger {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+}
+
+.badge-warning {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.1);
+}
+
+.badge-success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.badge-info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
+.badge-purple {
+  background: rgba(147, 51, 234, 0.15);
+  color: #a78bfa;
+  border: 1px solid rgba(147, 51, 234, 0.3);
+  box-shadow: 0 0 10px rgba(147, 51, 234, 0.1);
+}
+
+.badge-blood {
+  background: rgba(127, 29, 29, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(185, 28, 28, 0.4);
+}
+
+/* ========== 网格布局 (Grid Layout) ========== */
+.stat-grid {
+  display: grid;
+  gap: 0.375rem;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.375rem;
+  background: rgba(9, 9, 11, 0.6);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+  transition: border-color 0.2s;
+}
+
+.stat-item:hover {
+  border-color: var(--border-default);
+}
+
+.stat-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-family: 'Share Tech Mono', monospace;
+}
+
+.stat-label {
+  font-size: 0.5625rem;
+  color: #52525b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ========== 列表项样式 (List Item Styles) ========== */
+.list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.625rem;
+  background: rgba(24, 24, 27, 0.5);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+  position: relative;
+}
+
+.list-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 0;
+  background: var(--color-blood);
+  border-radius: 1px;
+  transition: height 0.2s;
+}
+
+.list-item:hover {
+  background: rgba(39, 39, 42, 0.6);
+  border-color: var(--border-strong);
+  transform: translateX(2px);
+}
+
+.list-item:hover::before {
+  height: 60%;
+}
+
+.list-item-active {
+  background: rgba(127, 29, 29, 0.2);
+  border-color: rgba(185, 28, 28, 0.5);
+  box-shadow: inset 0 0 20px rgba(127, 29, 29, 0.1);
+}
+
+.list-item-active::before {
+  height: 80%;
+  background: var(--color-blood-light);
+  box-shadow: 0 0 8px var(--color-blood);
+}
+
+.list-item-danger {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.3);
+  animation: danger-subtle 2s ease-in-out infinite;
+}
+
+@keyframes danger-subtle {
+
+  0%,
+  100% {
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  50% {
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+}
+
+/* ========== 工具提示 (Tooltip) ========== */
+.tooltip {
+  position: relative;
+}
+
+.tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 0.375rem 0.625rem;
+  background: rgba(0, 0, 0, 0.9);
+  color: #e4e4e7;
+  font-size: 0.625rem;
+  white-space: nowrap;
+  border-radius: 4px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.15s ease;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.tooltip:hover::after {
+  opacity: 1;
+  visibility: visible;
+  bottom: calc(100% + 4px);
+}
+
+/* ========== 图标容器 (Icon Container) ========== */
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: var(--radius-sm);
+  background: rgba(24, 24, 27, 0.6);
+  border: 1px solid var(--border-subtle);
+  transition: all 0.2s;
+}
+
+.icon-container:hover {
+  background: rgba(39, 39, 42, 0.6);
+  border-color: var(--border-default);
+}
+
+/* ========== 头像样式 (Avatar Styles) ========== */
+.avatar {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  background: rgba(24, 24, 27, 0.8);
+}
+
+.avatar-ring {
+  box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.5);
+}
+
+.avatar-ring-purple {
+  box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.5);
+}
+
+/* ========== 遮罩层 (Overlay) ========== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+}
+
+/* ========== 模态框 (Modal) ========== */
+.modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: linear-gradient(180deg, rgba(24, 24, 27, 0.98) 0%, rgba(9, 9, 11, 0.99) 100%);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.02) inset;
+  z-index: 51;
+  overflow: hidden;
+  animation: modal-enter 0.2s ease-out;
+}
+
+@keyframes modal-enter {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* ========== 遮罩层动画 ========== */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(6px);
+  z-index: 50;
+  animation: overlay-enter 0.2s ease-out;
+}
+
+@keyframes overlay-enter {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* ========== 滚动阴影 (Scroll Shadow) ========== */
+.scroll-shadow-top {
+  box-shadow: inset 0 8px 8px -8px rgba(0, 0, 0, 0.5);
+}
+
+.scroll-shadow-bottom {
+  box-shadow: inset 0 -8px 8px -8px rgba(0, 0, 0, 0.5);
+}
+
+/* ========== 焦点环 (Focus Ring) ========== */
+.focus-ring:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(127, 29, 29, 0.4);
+}
+
+/* ========== 悬停提升 (Hover Lift) ========== */
+.hover-lift {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+/* ========== 文字渐变 (Text Gradient) ========== */
+.text-gradient-blood {
+  background: linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-abyss {
+  background: linear-gradient(135deg, #a855f7 0%, #581c87 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ========== 边框渐变 (Border Gradient) ========== */
+.border-gradient-blood {
+  border: 1px solid transparent;
+  background: linear-gradient(var(--bg-surface), var(--bg-surface)) padding-box,
+    linear-gradient(135deg, rgba(220, 38, 38, 0.4), rgba(127, 29, 29, 0.2)) border-box;
+}
+
+/* ========== 噪点纹理 (Noise Texture) ========== */
+.noise-overlay::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+  opacity: 0.02;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+}
+
+/* ========== 玻璃态增强 (Enhanced Glass) ========== */
+.glass-dark {
+  background: rgba(9, 9, 11, 0.8);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ========== 内发光 (Inner Glow) ========== */
+.inner-glow-blood {
+  box-shadow: inset 0 0 30px rgba(127, 29, 29, 0.15);
+}
+
+.inner-glow-abyss {
+  box-shadow: inset 0 0 30px rgba(88, 28, 135, 0.15);
+}

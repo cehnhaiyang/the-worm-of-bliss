@@ -1,0 +1,22 @@
+{
+  "version": "0.2.1",
+  "timestamp": 1777689895406,
+  "playTime": 684990,
+  "slotName": "存档 1",
+  "stats": {
+    "totalGraceGiven": 0,
+    "totalAbyssExposures": 0,
+    "totalBirths": 0,
+    "totalDeaths": 0,
+    "hubShuffleCount": 0,
+    "commandsIssued": 0,
+    "daysElapsed": 0,
+    "totalPregnancies": 0,
+    "totalRankPromotions": 0,
+    "totalBreakdowns": 0,
+    "totalRelationshipsFormed": 0,
+    "totalMemoriesCorrupted": 0,
+    "longestPlaySession": 397015
+  },
+  "maidenCount": 250
+}

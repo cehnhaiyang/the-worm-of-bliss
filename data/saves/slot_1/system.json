@@ -1,0 +1,14 @@
+{
+  "resonanceFrequency": 18,
+  "entropyLevel": 5,
+  "cycleCount": 1,
+  "gameTimePassed": 6653741,
+  "hubConfiguration": "ALPHA-7",
+  "globalFertilitySync": 45,
+  "watcherAlertLevel": 1,
+  "gracePoolSize": 100,
+  "gameStartTime": 1777593600000,
+  "lastTickTime": 1777614432631,
+  "timeScale": 1,
+  "isPaused": true
+}
