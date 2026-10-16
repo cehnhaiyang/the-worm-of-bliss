@@ -5,7 +5,7 @@
 // ============================================
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useGameEngine, usePersistence, useKeyboardShortcuts, audioService } from './engines';
+import { useGameEngine, usePersistence, audioService } from './engines';
 import { formatGameTimeDisplay, getCurrentCarriageId } from './meta';
 
 import { Log, Control } from './components/TerminalPanel';
@@ -52,7 +52,6 @@ export default function App() {
   } = useGameEngine();
 
   // UI 状态
-  const [showHelp, setShowHelp] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showMemory, setShowMemory] = useState(false);
   const [showPregnancy, setShowPregnancy] = useState(false);
@@ -70,17 +69,6 @@ export default function App() {
   const handleClearFocus = useCallback(() => {
     setMasterState((prev: any) => ({ ...prev, focusedMaidenId: undefined }));
   }, [setMasterState]);
-
-  // 键盘快捷键
-  useKeyboardShortcuts({
-    showHelp, setShowHelp,
-    showMemory, setShowMemory,
-    showPregnancy, setShowPregnancy,
-    showRelationship, setShowRelationship,
-    focusedMaidenId: masterState.focusedMaidenId,
-    onClearFocus: handleClearFocus,
-    togglePause,
-  });
 
   // 存档管理
   const { handleSave, handleLoad, handleReset } = usePersistence({

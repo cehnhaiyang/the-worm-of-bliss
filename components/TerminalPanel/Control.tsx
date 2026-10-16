@@ -4,9 +4,9 @@
 // 处理玩家输入、系统控制及快捷指令
 // ============================================
 
-import React, { useState, useCallback, useMemo, useRef, useEffect, memo } from 'react';
+import React, { useState, useCallback, useMemo, useRef, memo } from 'react';
 import { SystemState } from '../../meta';
-import { ALL_QUICK_COMMANDS, TIME_SCALE_OPTIONS, UI_CONFIG } from '../../constants';
+import { ALL_QUICK_COMMANDS, TIME_SCALE_OPTIONS } from '../../constants';
 
 // ============================================
 // 类型定义
@@ -90,8 +90,6 @@ export const Control: React.FC<ControlProps> = memo(({
   // 内部状态
   const [input, setInput] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('basic');
-  const [commandHistory, setCommandHistory] = useState<string[]>([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -122,11 +120,6 @@ export const Control: React.FC<ControlProps> = memo(({
   const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
     if (canSubmit) {
-      setCommandHistory(prev => {
-        const newHistory = [input, ...prev.filter(h => h !== input)].slice(0, UI_CONFIG.MAX_COMMAND_HISTORY);
-        return newHistory;
-      });
-      setHistoryIndex(-1);
       onSend(input);
       setInput('');
       // 保持焦点
@@ -140,41 +133,6 @@ export const Control: React.FC<ControlProps> = memo(({
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   }, [canUseCommands, onSend]);
-
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      if (commandHistory.length > 0) {
-        const newIndex = Math.min(historyIndex + 1, commandHistory.length - 1);
-        setHistoryIndex(newIndex);
-        setInput(commandHistory[newIndex]);
-      }
-    } else if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      if (historyIndex > 0) {
-        const newIndex = historyIndex - 1;
-        setHistoryIndex(newIndex);
-        setInput(commandHistory[newIndex]);
-      } else if (historyIndex === 0) {
-        setHistoryIndex(-1);
-        setInput('');
-      }
-    } else if (e.key === 'Escape') {
-      setInput('');
-      setHistoryIndex(-1);
-    }
-  }, [commandHistory, historyIndex]);
-
-  // 全局快捷键监听
-  useEffect(() => {
-    const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'Enter') {
-        inputRef.current?.focus();
-      }
-    };
-    window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
 
   // ============================================
   // 渲染
@@ -316,7 +274,6 @@ export const Control: React.FC<ControlProps> = memo(({
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
             placeholder={!hasFocusedMaiden ? "WAITING FOR TARGET..." : disabled ? "PROCESSING..." : "ENTER COMMAND..."}
             className={`w-full bg-zinc-900/50 border border-zinc-800 rounded py-2 pl-6 pr-16 text-sm text-zinc-300 placeholder-zinc-700 focus:outline-none focus:border-zinc-600 focus:bg-zinc-900 transition-colors ${!hasFocusedMaiden ? 'opacity-50 cursor-not-allowed' : ''}`}
             disabled={disabled || !hasFocusedMaiden}
@@ -339,9 +296,6 @@ export const Control: React.FC<ControlProps> = memo(({
             <span>{hasFocusedMaiden ? 'TARGET LOCKED' : 'NO TARGET'}</span>
             {focusedMaidenName && <span className="text-zinc-500">[{focusedMaidenName}]</span>}
           </div>
-          {commandHistory.length > 0 && historyIndex >= 0 && (
-            <span className="text-zinc-500">HIST: {historyIndex + 1}/{commandHistory.length}</span>
-          )}
         </div>
       </form>
     </div>

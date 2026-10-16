@@ -335,7 +335,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
             </button>
           )}
         </div>
-        <button onClick={onClose} className="btn btn-ghost hover:text-red-400">ESC</button>
+        <button onClick={onClose} className="btn btn-ghost hover:text-red-400">CLOSE</button>
       </div>
 
       <div className="flex-1 flex overflow-hidden relative">

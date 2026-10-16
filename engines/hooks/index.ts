@@ -358,7 +358,6 @@ export const useGameEngine = () => {
 };
 
 export * from './useGameLog';
-export * from './useKeyboardShortcuts';
 export * from './usePersistence';
 export * from './usePlayerActions';
 export * from './useTimeLoop';

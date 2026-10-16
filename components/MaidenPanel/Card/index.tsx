@@ -229,7 +229,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
           <button
             onClick={(e) => { e.stopPropagation(); onClose(); }}
             className="absolute top-2 right-2 z-50 w-7 h-7 flex items-center justify-center bg-black/50 hover:bg-red-900/80 text-white/70 hover:text-white border border-white/10 rounded-md transition-all backdrop-blur-sm"
-            title="返回列表 (ESC)"
+            title="返回列表"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -143,7 +143,7 @@ export const Relationship: React.FC<RelationshipProps> = ({ maiden, allMaidens, 
           <span className="text-sm text-zinc-500 font-mono">关系网络</span>
           <span className="px-2 py-1 rounded bg-emerald-900/30 text-emerald-400 text-xs font-mono">{relationships.length} CONNECTIONS</span>
         </div>
-        <button onClick={onClose} className="btn btn-ghost hover:text-red-400">ESC</button>
+        <button onClick={onClose} className="btn btn-ghost hover:text-red-400">CLOSE</button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">

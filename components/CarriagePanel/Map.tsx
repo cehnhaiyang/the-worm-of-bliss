@@ -4,7 +4,7 @@
 // 显示5x50车厢网格，支持导航和筛选
 // ============================================
 
-import React, { useState, useMemo, useCallback, useEffect, memo } from 'react';
+import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Carriage, ViewMode } from '../../meta';
 import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, SANCTUARY_TYPES, TYPE_COLORS, CARRIAGE_ICONS, MAP_VIEW_MODES, UI_CONFIG } from '../../constants';
 
@@ -267,16 +267,6 @@ export const Map: React.FC<MapProps> = memo(({
       setViewportStart(Math.max(0, Math.min(UI_CONFIG.MAP_TOTAL_COLUMNS - UI_CONFIG.MAP_VIEWPORT_SIZE, carriage.position.col - Math.floor(UI_CONFIG.MAP_VIEWPORT_SIZE / 2))));
     }
   }, [carriages, focusedMaidenCarriageId]);
-
-  // 键盘导航
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'ArrowLeft' && e.ctrlKey) scrollLeft();
-      else if (e.key === 'ArrowRight' && e.ctrlKey) scrollRight();
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [scrollLeft, scrollRight]);
 
   return (
     <div className="panel">

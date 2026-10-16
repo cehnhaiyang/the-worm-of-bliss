@@ -106,7 +106,7 @@ export const Pregnancy: React.FC<PregnancyProps> = ({ maiden, allMaidens, onClos
           <span className="text-sm text-zinc-500 font-mono">孕育监控系统</span>
           <span className="px-2 py-1 rounded bg-pink-900/30 text-pink-400 text-xs font-mono">{pregnantMaidens.length} ACTIVE</span>
         </div>
-        <button onClick={onClose} className="btn btn-ghost hover:text-red-400">ESC</button>
+        <button onClick={onClose} className="btn btn-ghost hover:text-red-400">CLOSE</button>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
