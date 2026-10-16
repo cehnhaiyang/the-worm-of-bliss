@@ -313,14 +313,6 @@ export const RANK_STYLES: Record<string, { color: string; icon: string; name: st
   unranked: { color: 'text-zinc-500', icon: '0', name: '无' },
 };
 
-export const RANK_ORDER: Record<string, number> = {
-  obsidian: 4,
-  gold: 3,
-  silver: 2,
-  copper: 1,
-  unranked: 0,
-};
-
 // ============================================
 // IS-SHEX 人格构型样式
 // 构型是对多个分数组合的"速记描述"，不是类别、更不是诊断（personality.md §3.4）
