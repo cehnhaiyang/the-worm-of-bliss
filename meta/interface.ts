@@ -3,7 +3,7 @@ import {
   MoodState, CarriageType, MemoryCategory, PregnancyStage, RelationType,
   NarcissusStage, EventType, SoundCategory, GraceType, ChangeType, LogType,
   NameOrigin, SocialInteractionType, PersonalityState, SpontaneousAction,
-  MovementState,
+  MovementState, CupSize,
 } from './type';
 
 // ============================================================================
@@ -30,9 +30,6 @@ export interface NameData {
 // ============================================================================
 // 2. 外观与生理 (Appearance & Physical)
 // ============================================================================
-
-/** 罩杯型号（升序排列） */
-export type CupSize = 'AAA' | 'AA' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H';
 
 /**
  * 生理面板数据

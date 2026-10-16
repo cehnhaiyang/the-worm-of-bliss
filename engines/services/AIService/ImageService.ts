@@ -18,11 +18,6 @@ const POLLINATIONS_API_KEY = 'sk_frApAL0jeDBArPbnOZDfAQtqKC5n8XuN';
 // 可用图像模型列表
 export const AVAILABLE_IMAGE_MODELS = {
   FLUX: 'flux',
-  ZIMAGE: 'zimage',
-  GPTIMAGE: 'gptimage',
-  KONTEXT: 'kontext',
-  SEEDREAM: 'seedream',
-  NANOBANANA: 'nanobanana',
 } as const;
 
 const CONFIG = {

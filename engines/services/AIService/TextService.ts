@@ -1,6 +1,6 @@
 
 // ============================================
-// AI 文本生成服务 (Groq / DS2API)
+// AI 文本生成服务 (Groq / Agent2API)
 // ============================================
 
 import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, MemoryCategory, generateId } from '../../../meta';
@@ -26,22 +26,33 @@ export const memoryGeneratingIds = new Set<string>();
 const GROQ_API_KEY = "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// DS2API 服务商 (本地代理, 5001端口)
-const DS2API_KEY = "1";
-const DS2API_URL = "http://localhost:5001/v1/chat/completions";
+// Agent2API 服务商 (本地代理, 3065端口)
+const AGENT2API_KEY = "sk-a2a-f345da9360a116c54801e02675eb0c37";
+const AGENT2API_URL = "http://localhost:3065/v1/chat/completions";
 
-// 归属于 DS2API 的模型标识集合
-const DS2API_MODELS = new Set(["o3", "gpt-4o"]);
+// 归属于 Agent2API 的模型标识集合
+const AGENT2API_MODELS = new Set([
+  "cn:glm-5.2",
+  "global:glm-5.2",
+  "global:step-5-preview",
+  "cn:step-5-preview",
+  "GLM-5.3-Flash",
+  "GLM-5.2",
+]);
 
-// 可用模型列表
+// 可用模型列表，值即请求中直接使用的模型 id
 export const AVAILABLE_TEXT_MODELS = {
   QWEN: "qwen/qwen3-32b",
   LLAMA_MAVERICK: "meta-llama/llama-4-maverick-17b-128e-instruct",
   LLAMA_3_3_70B: "llama-3.3-70b-versatile",
   GROQ_COMPOUND: "groq/compound",
-  // DS2API 模型
-  O3: "o3",
-  GPT4O: "gpt-4o",
+  // Agent2API 模型
+  GLM_5_2_CN: "cn:glm-5.2",
+  GLM_5_2_GLOBAL: "global:glm-5.2",
+  STEP_5_PREVIEW_GLOBAL: "global:step-5-preview",
+  STEP_5_PREVIEW_CN: "cn:step-5-preview",
+  GLM_5_3_FLASH: "GLM-5.3-Flash",
+  GLM_5_2: "GLM-5.2",
 } as const;
 
 export class TextService {
@@ -51,8 +62,8 @@ export class TextService {
   constructor(apiKey?: string) {
     // 优先使用构造函数传入的 key，否则使用硬编码的 key
     this.apiKey = GROQ_API_KEY;
-    // 默认使用 GPT4O (DS2API)
-    this.currentModel = AVAILABLE_TEXT_MODELS.GPT4O;
+    // 默认使用 GLM-5.2 (Agent2API)
+    this.currentModel = AVAILABLE_TEXT_MODELS.GLM_5_2;
   }
 
   // ============================================
@@ -74,7 +85,7 @@ export class TextService {
 
   /**
    * 根据当前模型自动路由到对应服务商
-   * - DS2API_MODELS 中的模型 → 本地 5001 端口
+   * - AGENT2API_MODELS 中的模型 → 本地 3065 端口
    * - 其余模型 → Groq
    */
   private async callAPI(
@@ -93,10 +104,10 @@ IMPORTANT: You must strictly output valid JSON matching the following structure:
 ${schemaDescription}`;
 
     // 路由决策
-    const isDS2 = DS2API_MODELS.has(this.currentModel);
-    const endpoint = isDS2 ? DS2API_URL : GROQ_URL;
-    const authKey = isDS2 ? DS2API_KEY : this.apiKey;
-    const provider = isDS2 ? "DS2API" : "Groq";
+    const isAgent2 = AGENT2API_MODELS.has(this.currentModel);
+    const endpoint = isAgent2 ? AGENT2API_URL : GROQ_URL;
+    const authKey = isAgent2 ? AGENT2API_KEY : this.apiKey;
+    const provider = isAgent2 ? "Agent2API" : "Groq";
 
     try {
       const response = await fetch(endpoint, {
