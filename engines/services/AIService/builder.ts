@@ -5,6 +5,7 @@
 
 import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData } from '../../../meta';
 import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, WORLD_LORE } from '../../../constants';
+import { maidenMemory } from '../../systems/MaidenSystem/MaidenMemory';
 
 // ============================================
 // Helper Functions
@@ -126,8 +127,8 @@ ${profile.fetish ? `潜在癖好: ${profile.fetish}` : ''}
 周期: 第${physiology.cycleDay}天 ${physiology.isOvulating ? '【排卵期】' : ''}
 孕周: ${physiology.pregnancy?.weekNumber ? `${physiology.pregnancy.weekNumber}周` : '无'}
 
-[记忆摘要]
-${maiden.memorySummary || '记忆链尚未生成'}
+[记忆索引]
+${maidenMemory.generateSummaryFromChain(maiden.memoryChain)}
 近期记忆: ${maiden.memoryChain.slice(-3).map(n => n.title).join(' → ') || '无'}
 `.trim();
 }
@@ -187,14 +188,9 @@ ${serializeMaiden(maiden)}
 // ============================================
 
 export function buildMemoryGenerationPrompt(
-  maiden: Maiden,
-  targetDepth: number
+  maiden: Maiden
 ): string {
   const personality = serializePersonality(maiden);
-
-  if (targetDepth !== 1) {
-    throw new Error("Depth > 1 specific generation is deprecated. Use buildMemoryDeepeningPrompt instead.");
-  }
 
   // 初始记忆链
   const arrivalDate = new Date(maiden.arrivalTimestamp).toLocaleDateString();
@@ -237,7 +233,7 @@ export function buildMemoryDeepeningPrompt(
   const personality = serializePersonality(maiden);
 
   // 序列化当前记忆链供 AI 分析
-  const chainContext = maiden.memoryChain.map((node, idx) => {
+  const chainContext = maiden.memoryChain.map((node) => {
     return `[Node ID: ${node.id}]
     Title: ${node.title}
     Time: ${node.timeLabel}
@@ -263,6 +259,7 @@ ${chainContext}
 3. **内容深化**：新节点应包含更细腻的感官细节、心理活动或被遗忘的小事。
 4. **多样性**：你可以选择在多处插入，也可以集中在一处插入多个节点。
 5. **一致性**：新生成节点的时间标签必须严格位于前后节点的时间之间。
+6. **严禁接续**：链上最后一个节点是登上列车的瞬间，其之后不得再有任何记忆；不要以它为 anchor。
 
 ${TIME_FORMAT_GUIDE}
 `.trim();

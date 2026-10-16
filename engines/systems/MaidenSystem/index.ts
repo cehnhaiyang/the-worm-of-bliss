@@ -236,11 +236,6 @@ class MaidenSystem {
         occupants: [...carriage.occupants, id],
       });
 
-      // 如果没有记忆链，设置占位符 (覆盖生成器的默认值，如果有需要)
-      if (maiden.memoryChain.length === 0) {
-        maiden.memorySummary = this.memory.generateSummaryFromChain([]);
-      }
-
       maidens.set(id, maiden);
     }
 

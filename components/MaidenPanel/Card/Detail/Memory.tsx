@@ -5,22 +5,33 @@
 // ============================================
 
 import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
-import { Maiden, MemoryNode, MemoryHistoryEntry } from '../../../../meta';
+import { Maiden, MemoryNode, MemoryHistoryEntry, formatGameTimeDisplay } from '../../../../meta';
 import { aiService } from '../../../../engines/services';
-import { memoryGeneratingIds } from '../../../../engines/services/AIService/TextService';
 import { maidenSystem } from '../../../../engines/systems';
+import { isAlteredMemory } from '../../../../engines/systems/MaidenSystem/MaidenMemory';
 import { TAMPER_PERMISSIONS } from '../../../../constants';
 
 interface MemoryProps {
   maiden: Maiden;
   onClose: () => void;
-  onUpdateMaiden: (maiden: Maiden) => void;
+  /** 会话起始墙钟时间：记忆历史里的时间戳是游戏内时间，需要它换算成日期 */
+  gameStartTime: number;
+  /** 覆盖整条链（初次生成 / 深潜） */
+  onSetChain: (maidenId: string, chain: MemoryNode[]) => void;
+  /** 替换链上的单个节点（篡改 / 修复） */
+  onReplaceNode: (maidenId: string, node: MemoryNode) => void;
+  /** 植入一段并非真实发生的记忆 */
+  onImplant: (maidenId: string, node: MemoryNode, afterNodeId?: string) => void;
 }
+
+/** 布局可容纳的最大层级：更深的节点不再继续下移，避免溢出与负 z-index */
+const MAX_VISUAL_DEPTH = 8;
 
 const HistoryModal = memo<{
   history: MemoryHistoryEntry[];
+  gameStartTime: number;
   onClose: () => void;
-}>(({ history, onClose }) => (
+}>(({ history, gameStartTime, onClose }) => (
   <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-sm" onClick={onClose}>
     <div className="bg-zinc-900 border border-zinc-700 p-4 rounded-lg w-[500px] max-h-[80vh] overflow-hidden flex flex-col shadow-2xl" onClick={e => e.stopPropagation()}>
       <div className="flex justify-between items-center mb-3 pb-2 border-b border-zinc-800">
@@ -35,7 +46,7 @@ const HistoryModal = memo<{
         {[...history].reverse().map((entry, idx) => (
           <div key={idx} className="bg-black/30 p-2 rounded border border-zinc-800/50 text-xs">
             <div className="flex justify-between text-zinc-500 mb-1 font-mono text-[10px]">
-              <span>{new Date(entry.timestamp).toLocaleString()}</span>
+              <span>{formatGameTimeDisplay(entry.timestamp, gameStartTime)}</span>
               <span className="uppercase">{entry.action}</span>
             </div>
             {entry.directive && <div className="text-purple-400 mb-1">指令: "{entry.directive}"</div>}
@@ -67,17 +78,20 @@ const MemoryNodeItem = memo<MemoryNodeItemProps>(({ node, nextNode, onSelect, is
     }
   };
 
-  // 根据深度计算视觉变换，制造纵深感
-  const depthScale = Math.max(0.7, 1 - (node.depth - 1) * 0.1);
-  const depthY = (node.depth - 1) * 40;
-  const opacity = Math.max(0.6, 1 - (node.depth - 1) * 0.15);
+  // 根据深度计算视觉变换，制造纵深感。
+  // 反复深潜会让 depth 无限增长，而布局只能容纳有限层级：
+  // 超出部分不再继续下移/缩小，否则会算出负 z-index 并把节点推出可视区。
+  const visualDepth = Math.min(node.depth, MAX_VISUAL_DEPTH);
+  const depthScale = Math.max(0.7, 1 - (visualDepth - 1) * 0.1);
+  const depthY = (visualDepth - 1) * 40;
+  const opacity = Math.max(0.6, 1 - (visualDepth - 1) * 0.15);
 
   return (
     <div
       className="relative flex flex-col items-center group shrink-0 mx-6 transition-all duration-500"
       style={{
         transform: `translateY(${depthY}px) scale(${isSelected ? 1.1 : depthScale})`,
-        zIndex: isSelected ? 50 : 10 - node.depth,
+        zIndex: isSelected ? 50 : 10 - visualDepth,
         opacity: isSelected ? 1 : opacity,
       }}
     >
@@ -127,7 +141,7 @@ const MemoryNodeItem = memo<MemoryNodeItemProps>(({ node, nextNode, onSelect, is
 
 MemoryNodeItem.displayName = 'MemoryNodeItem';
 
-export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden }) => {
+export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, onSetChain, onReplaceNode, onImplant }) => {
   const [selectedNode, setSelectedNode] = useState<MemoryNode | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isDeepening, setIsDeepening] = useState(false);
@@ -135,10 +149,11 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden 
   const [tamperDirective, setTamperDirective] = useState('');
   const [viewLegacy, setViewLegacy] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  // 追踪本轮已尝试生成的 maiden.id（string 值比 boolean 更精确）
-  // 在同一 maiden.id 下：无论 Strict Mode 双重调用还是多次挂载，只触发一次
+  // 记录已经尝试过初始生成的少女：Strict Mode 的双重调用与反复挂载都只触发一次。
+  // 失败时置回空串，使再次打开面板可以重试，而不是永久停在"无记忆数据"。
   const lastAttemptedId = useRef<string>('');
 
   const permission = TAMPER_PERMISSIONS[maiden.rank] || TAMPER_PERMISSIONS.unranked;
@@ -149,38 +164,44 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden 
   const stabilityStats = useMemo(() => {
     if (!activeChain || activeChain.length === 0) return { total: 0, corrupted: 0, percentage: 100 };
     const total = activeChain.length;
-    const corrupted = activeChain.filter(n => n.type !== 'original' && n.type !== 'dead_node').length;
+    const corrupted = activeChain.filter(isAlteredMemory).length;
     const percentage = Math.round(((total - corrupted) / total) * 100);
     return { total, corrupted, percentage };
   }, [activeChain]);
 
-  // 初始化：三重防重入
-  // 1. lastAttemptedId ref — 防止 React Strict Mode 双重调用（value 不会因 effect 重运行而 reset）
-  // 2. memoryGeneratingIds 共享锁 — 防止 focusMaiden 已在生成时 Memory 再次触发
-  // 3. activeChain.length > 0 — 数据已存在时跳过
+  // 初始化：懒生成。记忆链只在玩家第一次打开本面板时生成，
+  // 此处只需防 Strict Mode 的重入与"生成失败后反复重试"。
   useEffect(() => {
-    const initChain = async () => {
-      if (isDeaconess) return;
-      if (activeChain.length > 0) return;
-      if (lastAttemptedId.current === maiden.id) return;   // Strict Mode 防重
-      if (memoryGeneratingIds.has(maiden.id)) {             // 跨触发点防重
-        // focusMaiden 已在生成中，等其完成后 maiden prop 会更新
-        return;
-      }
-      lastAttemptedId.current = maiden.id;
-      memoryGeneratingIds.add(maiden.id);
-      setIsInitializing(true);
-      try {
-        const chain = await aiService.generateMemories(maiden, 1);
-        if (chain && chain.length > 0) onUpdateMaiden({ ...maiden, memoryChain: chain });
-      } catch (err) {
+    if (isDeaconess) return;
+    if (activeChain.length > 0) return;
+    if (lastAttemptedId.current === maiden.id) return;
+
+    lastAttemptedId.current = maiden.id;
+    let cancelled = false;
+    setIsInitializing(true);
+
+    aiService.generateMemories(maiden, maiden.lastUpdateTime)
+      .then(chain => {
+        if (cancelled) return;
+        if (chain.length === 0) {
+          lastAttemptedId.current = '';   // 允许重试
+          setNotice('记忆解密失败，重新打开本面板可再次尝试。');
+          return;
+        }
+        onSetChain(maiden.id, chain);
+      })
+      .catch(err => {
         console.error('[Memory] Init generation failed:', err);
-      } finally {
-        memoryGeneratingIds.delete(maiden.id);
-        setIsInitializing(false);
-      }
-    };
-    initChain();
+        if (!cancelled) {
+          lastAttemptedId.current = '';
+          setNotice('神经链接中断，重新打开本面板可再次尝试。');
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsInitializing(false);
+      });
+
+    return () => { cancelled = true; };
   }, [maiden.id]);
 
   // 滚轮横向滚动
@@ -193,40 +214,54 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden 
   const handleDeepDive = async () => {
     if (viewLegacy || isDeepening) return;
     setIsDeepening(true);
+    setNotice(null);
     try {
-      // 提交整个记忆链，让 AI 决定在哪里插入
-      const insertions = await aiService.deepenMemories(maiden);
-      if (insertions.length > 0) {
-        const newChain = maidenSystem.memory.batchInsertNodes(activeChain, insertions);
-        const newSummary = maidenSystem.memory.generateSummaryFromChain(newChain);
-        onUpdateMaiden({ ...maiden, memoryChain: newChain, memorySummary: newSummary });
+      // 只提交请求：插入位置由 AI 选择，合法性由链层判定，不在 UI 里拼链
+      const { chain, rejections } = await aiService.deepenMemories(maiden, maiden.lastUpdateTime);
+
+      const inserted = chain.length - activeChain.length;
+      if (inserted > 0) {
+        onSetChain(maiden.id, chain);
+        setNotice(`追忆完成：新增 ${inserted} 段记忆。`);
+      } else if (rejections.length > 0) {
+        setNotice(`追忆失败：${rejections[0].reason}（${rejections.length} 处插入被拒绝）。`);
+      } else {
+        setNotice('追忆完成：这段过往已无从深挖。');
       }
+    } catch (err) {
+      console.error('[Memory] Deepen failed:', err);
+      setNotice('追忆中断：神经链接不稳定。');
     } finally {
       setIsDeepening(false);
     }
   };
 
   const handleTamper = async () => {
-    if (!selectedNode || viewLegacy) return;
+    if (!selectedNode || viewLegacy || isTampering) return;
     setIsTampering(true);
+    setNotice(null);
     try {
       const directive = tamperDirective.trim() || "使其变得模糊、扭曲，充满不安的杂音。";
-      // AI Service now returns an object { narrative, selfOpinion } or null
-      const result = await aiService.tamperMemoryObject(maiden, selectedNode, directive);
+      const result = await aiService.tamperMemory(maiden, selectedNode, directive);
 
-      if (result) {
-        const tamperedNode = maidenSystem.memory.tamperNode(
-          selectedNode,
-          maiden.lastUpdateTime,
-          result.narrative,
-          directive,
-          result.selfOpinion
-        );
-        const newChain = activeChain.map(n => n.id === selectedNode.id ? tamperedNode : n);
-        onUpdateMaiden({ ...maiden, memoryChain: newChain });
-        setSelectedNode(tamperedNode);
+      if (!result) {
+        setNotice('篡改失败：神经链接不稳定。');
+        return;
       }
+
+      const tamperedNode = maidenSystem.memory.tamperNode(
+        selectedNode,
+        maiden.lastUpdateTime,
+        result.narrative,
+        directive,
+        result.selfOpinion
+      );
+      onReplaceNode(maiden.id, tamperedNode);
+      setSelectedNode(tamperedNode);
       setTamperDirective('');
+    } catch (err) {
+      console.error('[Memory] Tamper failed:', err);
+      setNotice('篡改中断：神经链接不稳定。');
     } finally {
       setIsTampering(false);
     }
@@ -234,10 +269,15 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden 
 
   const handleImplant = () => {
     if (!permission.canImplant || viewLegacy || !tamperDirective.trim()) return;
-    const newNode = maidenSystem.memory.createImplantedNode(tamperDirective.trim());
-    const newChain = selectedNode ? maidenSystem.memory.insertNodes(activeChain, [newNode], selectedNode.id) : [...activeChain, newNode];
-    onUpdateMaiden({ ...maiden, memoryChain: newChain });
+    // 节点在这里创建并立即选中，落链位置由写回层按"登车瞬间"不变量决定
+    const newNode = maidenSystem.memory.createImplantedNode(
+      tamperDirective.trim(),
+      'trauma',
+      maiden.lastUpdateTime
+    );
+    onImplant(maiden.id, newNode, selectedNode?.id);
     setTamperDirective('');
+    setNotice('记忆已植入。');
     setSelectedNode(newNode);
   };
 
@@ -340,6 +380,11 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden 
 
         {/* 右侧：详情面板 */}
         <div className="w-96 shrink-0 border-l border-zinc-800 bg-zinc-900/90 backdrop-blur-xl p-0 flex flex-col overflow-hidden shadow-2xl relative z-30">
+          {notice && (
+            <div className="shrink-0 px-4 py-2 border-b border-cyan-900/40 bg-cyan-950/20 text-[11px] text-cyan-300 font-tech">
+              {notice}
+            </div>
+          )}
           {selectedNode ? (
             <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-6 space-y-6">
               {/* 头部信息 */}
@@ -440,7 +485,13 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, onUpdateMaiden 
         </div>
       </div>
 
-      {showHistory && selectedNode?.history && <HistoryModal history={selectedNode.history} onClose={() => setShowHistory(false)} />}
+      {showHistory && selectedNode?.history && (
+        <HistoryModal
+          history={selectedNode.history}
+          gameStartTime={gameStartTime}
+          onClose={() => setShowHistory(false)}
+        />
+      )}
     </div>
   );
 };

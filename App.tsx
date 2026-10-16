@@ -6,7 +6,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useGameEngine, usePersistence, useKeyboardShortcuts, audioService } from './engines';
-import { Maiden, formatGameTimeDisplay, getCurrentCarriageId } from './meta';
+import { formatGameTimeDisplay, getCurrentCarriageId } from './meta';
 
 import { Log, Control } from './components/TerminalPanel';
 import { MaidenList } from './components/MaidenPanel';
@@ -35,6 +35,9 @@ export default function App() {
     triggerGrace,
     setTimeScale,
     togglePause,
+    setMemoryChain,
+    replaceMemoryNode,
+    implantMemory,
     getCurrentCarriage,
     getFocusedMaiden,
     getMaidensInCarriage,
@@ -84,15 +87,6 @@ export default function App() {
     systemState, masterState, carriages, maidens, logs,
     setCarriages, setMaidens, setSystemState, setMasterState, setLogs, addLog,
   });
-
-  // 更新单个少女状态 (用于记忆回廊的回调)
-  const handleUpdateMaiden = useCallback((updatedMaiden: Maiden) => {
-    setMaidens((prev: Map<string, Maiden>) => {
-      const newMap = new Map(prev);
-      newMap.set(updatedMaiden.id, updatedMaiden);
-      return newMap;
-    });
-  }, [setMaidens]);
 
   // 当前车厢
   const currentCarriage = getCurrentCarriage();
@@ -246,8 +240,11 @@ export default function App() {
       {showMemory && focusedMaiden && (
         <Memory
           maiden={focusedMaiden}
+          gameStartTime={systemState.gameStartTime}
           onClose={() => setShowMemory(false)}
-          onUpdateMaiden={handleUpdateMaiden}
+          onSetChain={setMemoryChain}
+          onReplaceNode={replaceMemoryNode}
+          onImplant={implantMemory}
         />
       )}
 

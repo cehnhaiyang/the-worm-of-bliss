@@ -7,6 +7,7 @@
 import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode } from '../../../meta';
 import { TextService } from './TextService';
 import { ImageService } from './ImageService';
+import { ChainRejection } from '../../systems/MaidenSystem/MaidenMemory';
 
 class AIService {
   private textService: TextService;
@@ -51,35 +52,24 @@ class AIService {
   }
 
   /**
-   * 统一记忆生成接口 (初始生成)
-   * @param maiden 目标角色
-   * @param targetDepth 目标深度 (必须为1)
+   * 生成初始记忆链。空数组表示生成失败，调用方不得写入。
    */
-  async generateMemories(
-    maiden: Maiden,
-    targetDepth: number
-  ): Promise<MemoryNode[]> {
-    return this.textService.generateMemories(maiden, targetDepth);
+  async generateMemories(maiden: Maiden, gameTimePassed: number): Promise<MemoryNode[]> {
+    return this.textService.generateMemories(maiden, gameTimePassed);
   }
 
   /**
-   * 记忆深潜/扩充
-   * AI自主决定插入点
+   * 记忆深潜/扩充：AI 自主决定插入点。
+   * 返回完整新链与被拒绝的插叙；链的合法性由 MaidenMemory 判定，调用方不再自己拼链。
    */
-  async deepenMemories(maiden: Maiden): Promise<{ insertAfterId: string; nodes: MemoryNode[] }[]> {
-    return this.textService.deepenMemories(maiden);
+  async deepenMemories(
+    maiden: Maiden,
+    gameTimePassed: number
+  ): Promise<{ chain: MemoryNode[]; rejections: ChainRejection[] }> {
+    return this.textService.deepenMemories(maiden, gameTimePassed);
   }
 
   async tamperMemory(
-    maiden: Maiden,
-    node: MemoryNode,
-    directive: string
-  ): Promise<string | null> {
-    const result = await this.textService.tamperMemory(maiden, node, directive);
-    return result ? JSON.stringify(result) : null;
-  }
-
-  async tamperMemoryObject(
     maiden: Maiden,
     node: MemoryNode,
     directive: string
@@ -87,8 +77,9 @@ class AIService {
     return this.textService.tamperMemory(maiden, node, directive);
   }
 
-  async generateDeaconessGenesis(maiden: Maiden): Promise<{ summary: string; nodes: MemoryNode[] }> {
-    return this.textService.generateDeaconessGenesis(maiden);
+  /** 发起创世纪，返回写入链的节点；摘要由调用方从链派生 */
+  async generateDeaconessGenesis(maiden: Maiden, gameTimePassed: number): Promise<MemoryNode[]> {
+    return this.textService.generateDeaconessGenesis(maiden, gameTimePassed);
   }
 
   // ============================================

@@ -412,7 +412,7 @@ export type MemoryAction = 'tamper' | 'implant' | 'restore';
  * 记忆篡改审计条目
  */
 export interface MemoryHistoryEntry {
-  timestamp: number;
+  timestamp: number;            // 游戏内时间 (gameTimePassed)，非墙钟时间
   previousNarrative: string;
   action: MemoryAction;
   directive?: string;
@@ -428,11 +428,12 @@ export interface MemoryNode {
   subjectiveNarrative: string;  // 主观认知（受堕落/篡改影响）
   selfOpinion: string;
   timeLabel: string;            // 模糊时间标签，如"登车前夕"
-  depth: number;                // 记忆深度（越深越难篡改）
+  depth: number;                // 记忆层级：1=核心事件，N=在第 N-1 层节点之间插叙的细节，由锚点推导
   type: 'original' | 'corrupted' | 'implanted' | 'dead_node';
   corruptionLevel: number;
   category: MemoryCategory;
-  timestamp: number;
+  timestamp: number;            // 游戏内时间 (gameTimePassed)，非墙钟时间
+  /** 仅"登车瞬间"为 true，由 MaidenMemory 独占维护；不可编辑 ≠ 被污染 */
   isImmutable?: boolean;
   history?: MemoryHistoryEntry[];
 }
@@ -572,8 +573,7 @@ export interface Maiden {
 
   // --- 记忆 ---
   memoryChain: MemoryNode[];
-  legacyMemoryChain?: MemoryNode[]; // 废弃/遗忘的记忆
-  memorySummary: string;            // AI 读取用精简摘要
+  legacyMemoryChain?: MemoryNode[]; // 废弃/遗忘的记忆（仅执事旧档查看，不参与任何总结）
 
   // --- 阶级与统计 ---
   rank: CharacterRank;

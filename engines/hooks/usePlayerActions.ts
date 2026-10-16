@@ -17,6 +17,7 @@ import {
 import { CARRIAGE_TYPE_INFO, ABYSS_TYPES } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
 import { audioService, aiService } from '../services';
+import { commitGenesis } from './maidenUpdates';
 
 interface UsePlayerActionsParams {
   stateRef: React.RefObject<{
@@ -215,17 +216,15 @@ export const usePlayerActions = ({
           if (aiResponse.memoryUpdate) {
             const { action, content, targetMemoryId } = aiResponse.memoryUpdate;
             if (action === 'implant' && content) {
-              // FIX: 传入 gameTimePassed 确保节点 timestamp 正确，而非默认 0
               const newNode = maidenSystem.memory.createImplantedNode(
                 content,
                 'trauma',
                 currSystem.gameTimePassed
               );
-              const newChain = [...maiden.memoryChain, newNode];
+              // 植入内容不属于她的人生，按同一不变量落在登车瞬间之前
               maiden = {
                 ...maiden,
-                memoryChain: newChain,
-                memorySummary: maidenSystem.memory.generateSummaryFromChain(newChain),
+                memoryChain: maidenSystem.memory.insertNode(maiden.memoryChain, newNode),
               };
               addLog('system', `>>> 记忆植入: [${content}]`);
             } else if (action === 'tamper') {
@@ -240,13 +239,9 @@ export const usePlayerActions = ({
                   content,
                   "AI 自动篡改"
                 );
-                const newChain = maiden.memoryChain.map(n =>
-                  n.id === corruptedNode.id ? corruptedNode : n
-                );
                 maiden = {
                   ...maiden,
-                  memoryChain: newChain,
-                  memorySummary: maidenSystem.memory.generateSummaryFromChain(newChain),
+                  memoryChain: maidenSystem.memory.replaceNode(maiden.memoryChain, corruptedNode),
                 };
                 addLog('system', `>>> 记忆篡改: ${nodeToCorrupt.title} 已被重写`);
               }
@@ -277,26 +272,21 @@ export const usePlayerActions = ({
             } else if (action === 'return') {
               const res = maidenSystem.narcissus.acceptInvitation(maiden, currSystem.gameTimePassed);
               maiden = { ...maiden, ...res.maidenUpdate };
-              addLog('system', `>>> 水仙协议: ${maiden.name} 已归来，晋升为执事。正在重构意识...`);
+              const returningMaiden = maiden;
+              addLog('system', `>>> 水仙协议: ${returningMaiden.name} 已归来，晋升为执事。正在重构意识...`);
 
-              // 捕获当前值用于异步回调，防止闭包逃逸
-              const currentMaidenForGenesis = { ...maiden };
-
-              // 触发执事创世纪 (异步更新)
-              aiService.generateDeaconessGenesis(currentMaidenForGenesis).then(({ summary, nodes }) => {
-                setMaidens(prevMaidens => {
-                  const map = new Map(prevMaidens);
-                  const m = map.get(currentMaidenForGenesis.id);
-                  if (m) {
-                    map.set(currentMaidenForGenesis.id, {
-                      ...m,
-                      memoryChain: nodes,
-                      memorySummary: summary
-                    });
-                  }
-                  return map;
-                });
-                addLog('system', `>>> 意识重构完成: ${currentMaidenForGenesis.name} 的新档案已生效。`, 'SYSTEM');
+              // 触发执事创世纪 (异步更新)。写回只按 id 合并记忆字段，
+              // 不整对象覆盖——创世纪耗时数秒，期间该少女仍被时间循环推进。
+              aiService.generateDeaconessGenesis(returningMaiden, currSystem.gameTimePassed).then(nodes => {
+                if (nodes.length === 0) {
+                  addLog('system', `>>> 意识重构失败: ${returningMaiden.name} 的旧档案仍被封存。`, 'SYSTEM');
+                  return;
+                }
+                commitGenesis(setMaidens, returningMaiden.id, nodes);
+                addLog('system', `>>> 意识重构完成: ${returningMaiden.name} 的新档案已生效。`, 'SYSTEM');
+              }).catch(err => {
+                console.error('[Genesis] 意识重构中断:', err);
+                addLog('system', `>>> 意识重构中断: 神经链接不稳定。`, 'SYSTEM');
               });
             }
           }

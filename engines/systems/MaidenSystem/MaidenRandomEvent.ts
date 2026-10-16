@@ -487,12 +487,12 @@ export class MaidenRandomEvent {
     const maiden = changedMaidens.get(maidenId) || sourceMaidens.get(maidenId);
     if (!maiden) return;
 
-    const newMaiden: Maiden = { ...maiden, memoryChain: [...maiden.memoryChain] };
+    let chain = maiden.memoryChain;
 
     switch (action) {
       case 'tamper': {
-        const targetNodes = newMaiden.memoryChain.filter(n => n.type === 'original');
-        const candidatePool = targetNodes.length > 0 ? targetNodes : newMaiden.memoryChain;
+        const targetNodes = chain.filter(n => n.type === 'original');
+        const candidatePool = targetNodes.length > 0 ? targetNodes : chain;
         const targetNode = randomElement(candidatePool);
 
         if (targetNode) {
@@ -502,20 +502,17 @@ export class MaidenRandomEvent {
             value || "记忆被深渊的雾霾吞没...",
             "深渊共鸣篡改"
           );
-          newMaiden.memoryChain = newMaiden.memoryChain.map(n =>
-            n.id === corruptedNode.id ? corruptedNode : n
-          );
+          chain = maidenMemory.replaceNode(chain, corruptedNode);
         }
         break;
       }
       case 'implant': {
         const content = typeof value === 'string' ? value : "不可名状的幻象植入";
-        const newNode = maidenMemory.createImplantedNode(content, 'trauma', gameTimePassed);
-        newMaiden.memoryChain.push(newNode);
+        chain = maidenMemory.insertNode(chain, maidenMemory.createImplantedNode(content, 'trauma', gameTimePassed));
         break;
       }
       case 'restore': {
-        const corruptedNodes = newMaiden.memoryChain.filter(n => n.type === 'corrupted');
+        const corruptedNodes = chain.filter(n => n.type === 'corrupted');
         const targetNode = randomElement(corruptedNodes);
 
         if (targetNode) {
@@ -524,16 +521,13 @@ export class MaidenRandomEvent {
             gameTimePassed,
             value || targetNode.history?.[targetNode.history.length - 1]?.previousNarrative || targetNode.objectiveTruth
           );
-          newMaiden.memoryChain = newMaiden.memoryChain.map(n =>
-            n.id === restoredNode.id ? restoredNode : n
-          );
+          chain = maidenMemory.replaceNode(chain, restoredNode);
         }
         break;
       }
     }
 
-    newMaiden.memorySummary = maidenMemory.generateSummaryFromChain(newMaiden.memoryChain);
-    changedMaidens.set(maidenId, newMaiden);
+    changedMaidens.set(maidenId, { ...maiden, memoryChain: chain });
   }
 
   private applyRankEffect(

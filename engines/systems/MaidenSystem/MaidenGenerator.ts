@@ -279,7 +279,6 @@ export class MaidenGenerator {
       rankColor: 'dim gray',
       relationships: [],
       memoryChain: [],
-      memorySummary: '【档案封存】等待我接入回声档案馆以解密...',
       abyssExposureCount: 0,
       graceReceived: 0,
       birthCount: 0,

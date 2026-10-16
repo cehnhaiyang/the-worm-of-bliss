@@ -10,6 +10,7 @@ import { Maiden, CharacterStatus, CarriageType } from '../../../meta';
 import { STATUS_STYLES, ABYSS_TYPES } from '../../../constants';
 import { aiService, maidenSystem, useGameEngine } from '../../../engines';
 import { formatPreciseAge } from '../../../meta';
+import { isAlteredMemory } from '../../../engines/systems/MaidenSystem/MaidenMemory';
 import { Appearance } from './Appearance';
 import { Attire } from './Attire';
 import { Attribute } from './Attribute';
@@ -174,7 +175,9 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
 
   const { attributes, physiology, status, clothing, isshex } = maiden;
   const personalityDescription = maidenSystem.getPersonalityDescription(maiden);
-  const corruptedMemoryCount = maiden.memoryChain.filter(m => m.type !== 'original').length;
+  const corruptedMemoryCount = maiden.memoryChain.filter(isAlteredMemory).length;
+  // 摘要由链派生，卡片不持有第二份记忆状态
+  const memorySummary = maidenSystem.memory.generateSummaryFromChain(maiden.memoryChain);
   const isCritical = attributes.sanity < 30;
   const currentAgeMs = (maiden.initialAgeMs || 0) + (systemState?.gameTimePassed || 0);
   const preciseAgeString = formatPreciseAge(currentAgeMs);
@@ -314,9 +317,9 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
             {corruptedMemoryCount} 段异常
           </span>
         </div>
-        {maiden.memorySummary && (
+        {memorySummary && (
           <p className="text-[10px] text-zinc-600 leading-relaxed line-clamp-2 italic">
-            "{maiden.memorySummary}"
+            "{memorySummary}"
           </p>
         )}
 

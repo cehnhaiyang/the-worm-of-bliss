@@ -48,9 +48,9 @@ export const responseSchemaDesc = `
     "hubReconfiguration": "boolean"
   },
   "memoryUpdate": {
-    "action": "string (corrupt | implant | restore)",
+    "action": "string (implant | tamper)",
     "content": "string (记忆内容)",
-    "targetMemoryId": "string"
+    "targetMemoryId": "string (仅 tamper 使用：要重写的节点 ID)"
   },
   "narcissusAction": "string (initiate | leave | stay | return)",
   "visualPromptModifier": "string (英文视觉修饰词，如 'crying, trembling')",
@@ -72,7 +72,6 @@ export const memoryChainSchemaDesc = `
       "subjectiveNarrative": "string (主观记忆：她如何记住这件事，可能被扭曲或美化)",
       "selfOpinion": "string (自我看法：对这段记忆的评价及影响)",
       "timeLabel": "string (格式：Age.Month.Day.Hour.Minute.Second)",
-      "depth": "number (1=核心, 2=细节)",
       "category": "string (childhood | family | friendship | romance | trauma | train | master | abyss)"
     }
   ]
@@ -87,7 +86,7 @@ export const memoryDeepeningSchemaDesc = `
 {
   "insertions": [
     {
-      "insertAfterNodeId": "string (现有记忆节点的 ID)",
+      "insertAfterNodeId": "string (现有记忆节点的 ID，必须是链上真实存在的 ID)",
       "newNodes": [
         {
           "title": "string",
@@ -95,7 +94,6 @@ export const memoryDeepeningSchemaDesc = `
           "subjectiveNarrative": "string",
           "selfOpinion": "string",
           "timeLabel": "string",
-          "depth": "number",
           "category": "string"
         }
       ]

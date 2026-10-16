@@ -3,7 +3,7 @@
 // AI 文本生成服务 (Groq / Agent2API)
 // ============================================
 
-import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, MemoryCategory, generateId } from '../../../meta';
+import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, generateId } from '../../../meta';
 import {
   responseSchemaDesc,
   memoryChainSchemaDesc,
@@ -14,14 +14,11 @@ import {
 } from './schema';
 import * as Builder from './builder';
 import { TAMPER_PERMISSIONS } from '../../../constants';
+import { maidenMemory, RawInsertion, ChainRejection } from '../../systems/MaidenSystem/MaidenMemory';
 
 // ============================================
 // 配置常量
 // ============================================
-
-// 全局唯一并发锁 — 所有触发点（focusMaiden / Memory.tsx）共享同一状态
-// 防止同一少女在不同路径下同时触发多次记忆生成
-export const memoryGeneratingIds = new Set<string>();
 
 const GROQ_API_KEY = "";
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
@@ -184,17 +181,13 @@ ${schemaDescription}`;
   }
 
   /**
-   * 记忆生成 (仅限初始 Depth=1)
+   * 生成初始记忆链。
+   * 在这里就把 AI 返回值收敛成领域节点，越界数据不再流入 store。
    */
-  async generateMemories(
-    maiden: Maiden,
-    targetDepth: number
-  ): Promise<MemoryNode[]> {
-    if (targetDepth !== 1) return [];
-
-    const prompt = Builder.buildMemoryGenerationPrompt(maiden, 1);
-
+  async generateMemories(maiden: Maiden, gameTimePassed: number): Promise<MemoryNode[]> {
     try {
+      const prompt = Builder.buildMemoryGenerationPrompt(maiden);
+
       const data = await this.callAPI(
         "You are a memory architect engine.",
         prompt,
@@ -202,29 +195,8 @@ ${schemaDescription}`;
         0.7
       );
 
-      const nodes: MemoryNode[] = (data.nodes || []).map((node: any) => ({
-        id: generateId('mem_node'),
-        title: node.title,
-        objectiveTruth: node.objectiveTruth,
-        subjectiveNarrative: node.subjectiveNarrative,
-        selfOpinion: node.selfOpinion || "...",
-        timeLabel: node.timeLabel,
-        depth: 1,
-        type: 'original',
-        corruptionLevel: 0,
-        category: node.category,
-        timestamp: Date.now(),
-      }));
-
-      // 最后一个节点设为死节点（登车）
-      if (nodes.length > 0) {
-        const lastNode = nodes[nodes.length - 1];
-        lastNode.type = 'dead_node';
-        lastNode.isImmutable = true;
-        lastNode.category = 'train';
-      }
-
-      return nodes;
+      const raw = Array.isArray(data.nodes) ? data.nodes : [];
+      return maidenMemory.buildInitialChain(raw, gameTimePassed);
 
     } catch (error) {
       console.error("Memory Generation Error:", error);
@@ -233,12 +205,16 @@ ${schemaDescription}`;
   }
 
   /**
-   * 深度挖掘记忆
+   * 深度挖掘记忆：AI 自主挑选锚点并插入更细的中间记忆。
+   * 锚点是否合法由 MaidenMemory 判定，被拒绝的插叙原样回报给调用方。
    */
-  async deepenMemories(maiden: Maiden): Promise<{ insertAfterId: string; nodes: MemoryNode[] }[]> {
-    const prompt = Builder.buildMemoryDeepeningPrompt(maiden);
-
+  async deepenMemories(
+    maiden: Maiden,
+    gameTimePassed: number
+  ): Promise<{ chain: MemoryNode[]; rejections: ChainRejection[] }> {
     try {
+      const prompt = Builder.buildMemoryDeepeningPrompt(maiden);
+
       const data = await this.callAPI(
         "You are a psychoanalytic AI engine.",
         prompt,
@@ -246,42 +222,35 @@ ${schemaDescription}`;
         0.7
       );
 
-      const result = (data.insertions || []).map((insertion: any) => ({
-        insertAfterId: insertion.insertAfterNodeId,
-        nodes: (insertion.newNodes || []).map((node: any) => ({
-          id: generateId('mem_node_deep'),
-          title: node.title,
-          objectiveTruth: node.objectiveTruth,
-          subjectiveNarrative: node.subjectiveNarrative,
-          selfOpinion: node.selfOpinion,
-          timeLabel: node.timeLabel,
-          depth: node.depth,
-          type: 'original',
-          corruptionLevel: 0,
-          category: node.category,
-          timestamp: Date.now(),
-        }))
+      const raw = Array.isArray(data.insertions) ? data.insertions : [];
+      const insertions: RawInsertion[] = raw.map((insertion: any) => ({
+        insertAfterNodeId: String(insertion?.insertAfterNodeId ?? ''),
+        nodes: Array.isArray(insertion?.newNodes) ? insertion.newNodes : [],
       }));
 
-      return result;
+      return maidenMemory.insertInputs(maiden.memoryChain, insertions, gameTimePassed);
 
     } catch (error) {
       console.error("Deepen Memory Error:", error);
-      return [];
+      return { chain: maiden.memoryChain, rejections: [] };
     }
   }
 
-  // 篡改记忆
+  /**
+   * 记忆篡改。
+   * prompt 构建也纳入 try：链上节点字段异常时返回 null，而不是抛出未处理的 rejection。
+   * 返回 null 表示失败，调用方不得写回。
+   */
   async tamperMemory(
     maiden: Maiden,
     node: MemoryNode,
     directive: string
   ): Promise<{ narrative: string; selfOpinion: string } | null> {
-    const permission = TAMPER_PERMISSIONS[maiden.rank];
-    const permissionDesc = `${permission.description} (能力: ${permission.capability})`;
-    const prompt = Builder.buildTamperMemoryPrompt(maiden, node, directive, permissionDesc);
-
     try {
+      const permission = TAMPER_PERMISSIONS[maiden.rank];
+      const permissionDesc = `${permission.description} (能力: ${permission.capability})`;
+      const prompt = Builder.buildTamperMemoryPrompt(maiden, node, directive, permissionDesc);
+
       const data = await this.callAPI(
         "You are a memory corruption interface.",
         prompt,
@@ -289,9 +258,14 @@ ${schemaDescription}`;
         0.9 // 高温度以获得扭曲效果
       );
 
+      if (typeof data?.subjectiveNarrative !== 'string' || !data.subjectiveNarrative.trim()) {
+        console.error("Memory Tamper Error: 模型未返回可用的叙事内容");
+        return null;
+      }
+
       return {
         narrative: data.subjectiveNarrative,
-        selfOpinion: data.selfOpinion
+        selfOpinion: typeof data.selfOpinion === 'string' ? data.selfOpinion : '',
       };
     } catch (error) {
       console.error("Memory Tamper Error:", error);
@@ -299,11 +273,14 @@ ${schemaDescription}`;
     }
   }
 
-  // 生成执事创世纪
-  async generateDeaconessGenesis(maiden: Maiden): Promise<{ summary: string; nodes: MemoryNode[] }> {
-    const prompt = Builder.buildDeaconessGenesisPrompt(maiden);
-
+  /**
+   * 生成执事创世纪。
+   * 只产出节点；摘要由链路层的 summarizeGenesis 生成，此处不制造第二份摘要。
+   */
+  async generateDeaconessGenesis(maiden: Maiden, gameTimePassed: number): Promise<MemoryNode[]> {
     try {
+      const prompt = Builder.buildDeaconessGenesisPrompt(maiden);
+
       const data = await this.callAPI(
         "You are a religious indoctrination engine.",
         prompt,
@@ -311,26 +288,25 @@ ${schemaDescription}`;
         0.8
       );
 
-      const nodes = (data.deadNodes || []).map((n: any) => ({
+      const raw = Array.isArray(data.deadNodes) ? data.deadNodes : [];
+      return raw.map((n: any, index: number) => ({
         id: generateId('node_dead'),
-        title: n.title,
+        title: typeof n?.title === 'string' && n.title.trim() ? n.title.trim() : `信条 ${index + 1}`,
         objectiveTruth: "这是我意志的直接投射，是新世界的基石。",
-        subjectiveNarrative: n.content,
+        subjectiveNarrative: typeof n?.content === 'string' && n.content.trim() ? n.content.trim() : '（内容缺失）',
         selfOpinion: "这是绝对的真理。",
-        timeLabel: n.timeLabel,
+        timeLabel: typeof n?.timeLabel === 'string' && n.timeLabel.trim() ? n.timeLabel.trim() : '重生时刻',
         depth: 1,
         type: 'dead_node',
         isImmutable: true,
         corruptionLevel: 0,
         category: 'master',
-        timestamp: Date.now(),
+        timestamp: gameTimePassed,
       }));
-
-      return { summary: data.genesisNarrative, nodes };
 
     } catch (error) {
       console.error("Deaconess Genesis Error:", error);
-      return { summary: "神经重构失败...", nodes: [] };
+      return [];
     }
   }
 }

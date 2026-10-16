@@ -14,6 +14,7 @@ import {
   GraceType,
   GraceEvent,
   CharacterStatus,
+  MemoryNode,
 } from '../../meta';
 import { GRACE_REWARDS, GAME_CONFIG } from '../../constants';
 
@@ -26,6 +27,7 @@ import { audioService, persistenceService } from '../services';
 // Hook 导入
 import { useGameLog } from './useGameLog';
 import { useTimeLoop } from './useTimeLoop';
+import { commitChain, commitNodeEdit, commitNodeInsert } from './maidenUpdates';
 import { usePlayerActions } from './usePlayerActions';
 
 // ============================================
@@ -295,6 +297,24 @@ export const useGameEngine = () => {
   }, []);
 
   // --------------------------------------------
+  // 记忆写回 (Memory Chain Writes)
+  // 记忆链的写点集中在这里：面板与叙事路径都经由它回写，
+  // 每次都只按 id 合并记忆字段，绝不整对象替换。
+  // --------------------------------------------
+
+  const setMemoryChain = useCallback((maidenId: string, chain: MemoryNode[]) => {
+    commitChain(setMaidens, maidenId, chain);
+  }, [setMaidens]);
+
+  const replaceMemoryNode = useCallback((maidenId: string, node: MemoryNode) => {
+    commitNodeEdit(setMaidens, maidenId, node);
+  }, [setMaidens]);
+
+  const implantMemory = useCallback((maidenId: string, node: MemoryNode, afterNodeId?: string) => {
+    commitNodeInsert(setMaidens, maidenId, node, afterNodeId);
+  }, [setMaidens]);
+
+  // --------------------------------------------
   // API 返回
   // --------------------------------------------
 
@@ -316,6 +336,9 @@ export const useGameEngine = () => {
     triggerGrace,
     setTimeScale,
     togglePause,
+    setMemoryChain,
+    replaceMemoryNode,
+    implantMemory,
 
     // 数据获取器
     getCurrentCarriage,
