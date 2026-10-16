@@ -181,22 +181,13 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
 // 4. 时序流转处理
 // ============================================
 
-const TIME_CONSTANTS = {
-  MS_PER_SECOND: 1000,
-  MS_PER_MINUTE: 60 * 1000,
-  MS_PER_HOUR: 60 * 60 * 1000,
-  MS_PER_DAY: 24 * 60 * 60 * 1000,
-  MS_PER_MONTH: 30 * 24 * 60 * 60 * 1000,
-  MS_PER_YEAR: 365 * 24 * 60 * 60 * 1000,
-};
-
 /**
  * 格式化世界运行时钟展示
  */
 export function formatGameTimeDisplay(gameTimePassed: number, startTime?: number, includeSeconds: boolean = true): string {
   const currentTotal = startTime ? startTime + gameTimePassed : gameTimePassed;
-  const days = Math.floor(currentTotal / TIME_CONSTANTS.MS_PER_DAY) + 1;
-  const totalSeconds = Math.floor(currentTotal / TIME_CONSTANTS.MS_PER_SECOND);
+  const days = Math.floor(currentTotal / TIME_CONFIG.MS_PER_DAY) + 1;
+  const totalSeconds = Math.floor(currentTotal / TIME_CONFIG.MS_PER_SECOND);
   const hours = Math.floor(totalSeconds / 3600) % 24;
   const minutes = Math.floor((totalSeconds % 3600) / 60);
 
@@ -214,7 +205,7 @@ export function formatGameTimeDisplay(gameTimePassed: number, startTime?: number
  * 格式化实体精确年龄标识
  */
 export function formatPreciseAge(ageInMs: number): string {
-  const { MS_PER_YEAR, MS_PER_MONTH, MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } = TIME_CONSTANTS;
+  const { MS_PER_YEAR, MS_PER_MONTH, MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } = TIME_CONFIG;
 
   const years = Math.floor(ageInMs / MS_PER_YEAR);
   let remaining = ageInMs % MS_PER_YEAR;
@@ -237,11 +228,11 @@ export function formatPreciseAge(ageInMs: number): string {
 }
 
 export function msToMinutes(ms: number): number {
-  return ms / TIME_CONSTANTS.MS_PER_MINUTE;
+  return ms / TIME_CONFIG.MS_PER_MINUTE;
 }
 
 export function minutesToMs(minutes: number): number {
-  return minutes * TIME_CONSTANTS.MS_PER_MINUTE;
+  return minutes * TIME_CONFIG.MS_PER_MINUTE;
 }
 
 export function getGameHour(gameTimeMs: number): number {

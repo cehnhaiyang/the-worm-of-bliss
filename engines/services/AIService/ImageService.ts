@@ -6,7 +6,7 @@
 // ============================================
 
 import { Maiden, CarriageType, ISShexPersonality, PhysicalStats, NameOrigin, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot } from '../../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, MIN_PORTRAIT_UPDATE_INTERVAL } from '../../../constants';
+import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, MIN_PORTRAIT_UPDATE_INTERVAL, GAME_CONFIG } from '../../../constants';
 import { PersonalityView, personalityView } from '../../systems';
 import { hashCode } from '../../../meta';
 
@@ -56,10 +56,10 @@ const RANK_VISUALS: Record<string, string> = {
 
 // 孕期视觉
 const PREGNANCY_VISUALS: Record<number, string> = {
-  4: 'slightly soft belly',
+  [GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK]: 'slightly soft belly',
   13: 'visible small baby bump, hand gently resting on stomach',
-  28: 'heavily pregnant, large round belly, stretch marks, glowing maternal skin',
-  36: 'extremely pregnant, massive belly, swollen figure, expression of endurance',
+  [GAME_CONFIG.PREGNANCY.LATE_WEEK]: 'heavily pregnant, large round belly, stretch marks, glowing maternal skin',
+  [GAME_CONFIG.PREGNANCY.IMMINENT_WEEK]: 'extremely pregnant, massive belly, swollen figure, expression of endurance',
 };
 
 // 种族特征映射
@@ -452,10 +452,10 @@ export class ImageService {
 
   private getPregnancyTag(week: number): string | null {
     if (week <= 0) return null;
-    if (week >= 36) return PREGNANCY_VISUALS[36];
-    if (week >= 28) return PREGNANCY_VISUALS[28];
+    if (week >= GAME_CONFIG.PREGNANCY.IMMINENT_WEEK) return PREGNANCY_VISUALS[GAME_CONFIG.PREGNANCY.IMMINENT_WEEK];
+    if (week >= GAME_CONFIG.PREGNANCY.LATE_WEEK) return PREGNANCY_VISUALS[GAME_CONFIG.PREGNANCY.LATE_WEEK];
     if (week >= 13) return PREGNANCY_VISUALS[13];
-    if (week >= 4) return PREGNANCY_VISUALS[4];
+    if (week >= GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK) return PREGNANCY_VISUALS[GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK];
     return null;
   }
 

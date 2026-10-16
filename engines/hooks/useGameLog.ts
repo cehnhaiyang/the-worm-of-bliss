@@ -5,6 +5,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { GameLog, LogType } from '../../meta';
+import { GAME_CONFIG } from '../../constants';
 
 export const useGameLog = () => {
   const [logs, setLogs] = useState<GameLog[]>([]);
@@ -25,8 +26,8 @@ export const useGameLog = () => {
         speaker,
         carriageId,
       }];
-      // 仅保留最近500条日志以优化性能
-      return newLogs.slice(-500);
+      // 仅保留最近 GAME_CONFIG.MAX_LOGS 条日志以优化性能
+      return newLogs.slice(-GAME_CONFIG.MAX_LOGS);
     });
   }, []);
 

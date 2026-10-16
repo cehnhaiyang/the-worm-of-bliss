@@ -1284,7 +1284,6 @@ class MaidenSocialization {
 }
 
 /** 水仙协议：褪色速度与阶段阈值，与 GAME_CONFIG.NARCISSUS 保持一致 */
-const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const FADING_RATE_PER_DAY = GAME_CONFIG.NARCISSUS.FADING_RATE;
 const FADING_STAGE_THRESHOLD = 30;
 const INVITATION_THRESHOLD = GAME_CONFIG.NARCISSUS.INVITATION_THRESHOLD;
@@ -1304,9 +1303,9 @@ class MaidenNarcissus {
         const reasons: string[] = [];
 
         const requirements = {
-            minDaysOnTrain: 30,
-            minAbyssExposure: 3,
-            sanityRange: [20, 70] as [number, number],
+            minDaysOnTrain: GAME_CONFIG.NARCISSUS.MIN_DAYS_ON_TRAIN,
+            minAbyssExposure: GAME_CONFIG.NARCISSUS.MIN_ABYSS_EXPOSURE,
+            sanityRange: GAME_CONFIG.NARCISSUS.SANITY_RANGE,
             hasExperiencedGrace: true,
         };
 
@@ -1315,7 +1314,7 @@ class MaidenNarcissus {
             return { eligible: false, reasons, requirements };
         }
 
-        const daysOnTrain = Math.floor(gameTimePassed / (24 * 60 * 60 * 1000));
+        const daysOnTrain = Math.floor(gameTimePassed / TIME_CONFIG.MS_PER_DAY);
 
         if (daysOnTrain < requirements.minDaysOnTrain) {
             reasons.push(`在列车上的时间不足 (${daysOnTrain}/${requirements.minDaysOnTrain}天)`);
@@ -1519,7 +1518,7 @@ class MaidenNarcissus {
             return { stageChanged: false };
         }
 
-        const daysOutside = elapsedMs / MS_PER_DAY;
+        const daysOutside = elapsedMs / TIME_CONFIG.MS_PER_DAY;
         const fadingLevel = clamp(daysOutside * FADING_RATE_PER_DAY, 0, 100);
 
         // 邀请一经发出就锁定，避免玩家尚未抉择时重复触发
@@ -1780,7 +1779,7 @@ class MaidenRandomEvent {
             const pregnancyInfo = maiden.physiology.pregnancy;
             if (
                 pregnancyInfo &&
-                pregnancyInfo.weekNumber >= 4 &&
+                pregnancyInfo.weekNumber >= GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK &&
                 pregnancyInfo.weekNumber <= 8 &&
                 !maiden.status.includes('pregnant') &&
                 this.canTriggerGlobal('pregnancy', now)
@@ -4045,8 +4044,7 @@ class MaidenClothing {
 
 // 妊娠
 
-const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
-const TOTAL_PREGNANCY_WEEKS = 40;
+const MS_PER_WEEK = 7 * TIME_CONFIG.MS_PER_DAY;
 const ABORTION_RISK_THRESHOLD = 85;
 
 /**
@@ -4094,7 +4092,7 @@ class MaidenPregnancy {
      * 初始化妊娠状态
      */
     private initializePregnancy(maiden: Maiden, gameTimePassed: number): PregnancyEvent {
-        const expectedBirthTime = gameTimePassed + TOTAL_PREGNANCY_WEEKS * MS_PER_WEEK;
+        const expectedBirthTime = gameTimePassed + GAME_CONFIG.PREGNANCY.TOTAL_WEEKS * MS_PER_WEEK;
 
         // 初始健康风险受母体当前压力与健康状况影响
         const baseRisk = 5 + Math.floor(maiden.attributes.stress * 0.2) + Math.floor((100 - maiden.physiology.health) * 0.2);
@@ -4284,7 +4282,7 @@ class MaidenPregnancy {
         }
 
         // 2. 状态觉察
-        if (weekNumber >= 4 && !state.isDiscovered) {
+        if (weekNumber >= GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK && !state.isDiscovered) {
             return {
                 type: 'discovery',
                 maidenId: maiden.id,
@@ -4296,7 +4294,7 @@ class MaidenPregnancy {
         }
 
         // 3. 固定时序里程碑
-        if (weekNumber === 12) {
+        if (weekNumber === GAME_CONFIG.PREGNANCY.VISIBLE_WEEK) {
             return {
                 type: 'milestone',
                 maidenId: maiden.id,
@@ -4306,7 +4304,7 @@ class MaidenPregnancy {
             };
         }
 
-        if (weekNumber === 20) {
+        if (weekNumber === GAME_CONFIG.PREGNANCY.MOVEMENT_WEEK) {
             return {
                 type: 'milestone',
                 maidenId: maiden.id,
@@ -4316,7 +4314,7 @@ class MaidenPregnancy {
             };
         }
 
-        if (weekNumber === 36) {
+        if (weekNumber === GAME_CONFIG.PREGNANCY.IMMINENT_WEEK) {
             return {
                 type: 'milestone',
                 maidenId: maiden.id,
@@ -4326,7 +4324,7 @@ class MaidenPregnancy {
             };
         }
 
-        if (weekNumber >= 40 && state.stage !== 'labor') {
+        if (weekNumber >= GAME_CONFIG.PREGNANCY.TOTAL_WEEKS && state.stage !== 'labor') {
             return {
                 type: 'labor',
                 maidenId: maiden.id,
@@ -4338,7 +4336,7 @@ class MaidenPregnancy {
         }
 
         // 4. 高危并发症爆发
-        if (probabilityCheck(0.03) && state.healthRisk > 40) {
+        if (probabilityCheck(GAME_CONFIG.PREGNANCY.COMPLICATION_CHANCE) && state.healthRisk > 40) {
             return this.generateComplication(maiden, state, weekNumber);
         }
 
@@ -4361,7 +4359,7 @@ class MaidenPregnancy {
 
         if (!complicationsList.includes(complication)) {
             complicationsList.push(complication);
-            healthRisk = clamp(state.healthRisk + 15, 0, 100);
+            healthRisk = clamp(state.healthRisk + GAME_CONFIG.PREGNANCY.COMPLICATION_RISK_INCREASE, 0, 100);
         }
 
         const updatedState: PregnancyState = {
@@ -4903,7 +4901,7 @@ class MaidenSystem {
         const physiology = { ...maiden.physiology };
         const gameDeltaMs = deltaMinutes * 60 * 1000;
         const previousTime = gameTimePassed - gameDeltaMs;
-        const daysToAdvance = Math.floor(gameTimePassed / MS_PER_DAY) - Math.floor(previousTime / MS_PER_DAY);
+        const daysToAdvance = Math.floor(gameTimePassed / TIME_CONFIG.MS_PER_DAY) - Math.floor(previousTime / TIME_CONFIG.MS_PER_DAY);
         if (daysToAdvance > 0) {
             physiology.cycleDay = ((physiology.cycleDay - 1 + daysToAdvance) % 28) + 1;
             physiology.isOvulating = physiology.cycleDay >= 12 && physiology.cycleDay <= 16;
@@ -4945,7 +4943,7 @@ class MaidenSystem {
 
         // 时间基：P2 的 ρ 与 P4 的漂移率都以**游戏日**定义，因此两者共用
         // lastDriftTime 这一个时钟，按实际经过的天数推进，与调用频率无关
-        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / MS_PER_DAY;
+        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / TIME_CONFIG.MS_PER_DAY;
         if (elapsedDays <= 0) return maiden.isshex;
 
         // P1：本时点的状态表达与情境期待

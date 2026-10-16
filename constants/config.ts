@@ -14,9 +14,7 @@ export const GAME_CONFIG = {
   GRID_ROWS: 5,
   /** 网格列数 (50列) */
   GRID_COLS: 50,
-  /** 总车厢数 (5×50=250) */
-  TOTAL_CARRIAGES: 250,
-  /** 地图视口大小 */
+  /** 地图视口列数 */
   VIEWPORT_SIZE: 10,
 
   // ========== 少女系统 (Maiden System) ==========
@@ -24,8 +22,6 @@ export const GAME_CONFIG = {
   TOTAL_MAIDENS: 250,
 
   // ========== 时间系统 (Time System) ==========
-  /** Tick间隔(毫秒) - 游戏心跳 */
-  TICK_INTERVAL_MS: 1000,
   /** 枢纽重组间隔(毫秒) - 10分钟 */
   HUB_SHUFFLE_INTERVAL_MS: 10 * 60 * 1000,
   /** 枢纽重组触发概率 */
@@ -125,6 +121,8 @@ export const GAME_CONFIG = {
     TOTAL_WEEKS: 40,
     /** 发现怀孕周数 */
     DISCOVERY_WEEK: 4,
+    /** 腹部可见周数（立绘切换节点） */
+    VISIBLE_WEEK: 12,
     /** 胎动周数 */
     MOVEMENT_WEEK: 20,
     /** 晚期开始周数 */
@@ -178,17 +176,24 @@ export const GAME_CONFIG = {
 
 // ========== 动态管理常量 (Dynamic Management) ==========
 
-/** 变化追踪阈值 - 用于生成状态变化日志 */
+/**
+ * 变化追踪阈值 - 用于生成状态变化日志。
+ *
+ * 与 `GAME_CONFIG.THRESHOLDS` 同名同义的值一律从那里取，不再抄一份：
+ * 两处各自维护时改了一边就会让"状态标签"与"变化日志"用不同阈值判断同一件事。
+ * 只有滞回下侧（恢复/平息方向）是这里独有的量，因为 `THRESHOLDS` 只定义了上侧。
+ */
 export const CHANGE_THRESHOLDS = {
-  sanityCritical: 30,
-  sanityRecovered: 50,
-  stressHigh: 80,
+  sanityCritical: GAME_CONFIG.THRESHOLDS.SANITY_CRITICAL,
+  sanityRecovered: GAME_CONFIG.THRESHOLDS.SANITY_LOW,
+  stressHigh: GAME_CONFIG.THRESHOLDS.STRESS_HIGH,
+  /** 压力恢复下侧，与 STRESS_HIGH 构成滞回区间 */
   stressRelieved: 60,
-  lustHigh: 70,
-  lustNormal: 50,
-  hungerUrgent: 85,
-  fatigueExhausted: 90,
-  hygieneDirty: 30,
+  lustHigh: GAME_CONFIG.THRESHOLDS.LUST_HIGH,
+  lustNormal: GAME_CONFIG.THRESHOLDS.LUST_NORMAL,
+  hungerUrgent: GAME_CONFIG.THRESHOLDS.HUNGER_URGENT,
+  fatigueExhausted: GAME_CONFIG.THRESHOLDS.FATIGUE_EXHAUSTED,
+  hygieneDirty: GAME_CONFIG.THRESHOLDS.HYGIENE_DIRTY,
   // 虔诚/堕落的下侧阈值：与 GAME_CONFIG.THRESHOLDS 的上侧阈值构成滞回区间，
   // 避免属性在单点附近抖动时状态标签反复增删。
   devotionCalm: 55,
@@ -205,8 +210,20 @@ export const PORTRAIT_THRESHOLDS = {
   devotion: [25, 50, 75],
 } as const;
 
-/** 怀孕里程碑周数 - 触发立绘更新 */
-export const PORTRAIT_PREGNANCY_MILESTONES = [4, 12, 20, 28, 36, 40] as const;
+/**
+ * 怀孕里程碑周数 - 触发立绘更新。
+ *
+ * 由 `GAME_CONFIG.PREGNANCY` 派生而非另写一份字面量：12 周是"腹部可见"的
+ * 视觉节点，其余取自孕期各阶段阈值，两处一旦不同步就会漏掉立绘切换。
+ */
+export const PORTRAIT_PREGNANCY_MILESTONES = [
+  GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK,
+  GAME_CONFIG.PREGNANCY.VISIBLE_WEEK,
+  GAME_CONFIG.PREGNANCY.MOVEMENT_WEEK,
+  GAME_CONFIG.PREGNANCY.LATE_WEEK,
+  GAME_CONFIG.PREGNANCY.IMMINENT_WEEK,
+  GAME_CONFIG.PREGNANCY.TOTAL_WEEKS,
+] as const;
 
 /** 最小立绘更新间隔 (毫秒) */
 export const MIN_PORTRAIT_UPDATE_INTERVAL = 30000;

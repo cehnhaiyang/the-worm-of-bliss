@@ -428,14 +428,3 @@ export const MAP_VIEW_MODES = [
   { mode: 'abyss' as const, label: '深渊' },
   { mode: 'occupied' as const, label: '有人' },
 ];
-
-// ============================================
-// 常量配置
-// ============================================
-
-export const UI_CONFIG = {
-  MAX_LOGS: 500,
-  MAP_VIEWPORT_SIZE: 10,
-  MAP_TOTAL_COLUMNS: 50,
-  MAP_TOTAL_ROWS: 5,
-} as const;
