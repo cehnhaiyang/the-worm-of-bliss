@@ -189,6 +189,10 @@ export const CHANGE_THRESHOLDS = {
   hungerUrgent: 85,
   fatigueExhausted: 90,
   hygieneDirty: 30,
+  // 虔诚/堕落的下侧阈值：与 GAME_CONFIG.THRESHOLDS 的上侧阈值构成滞回区间，
+  // 避免属性在单点附近抖动时状态标签反复增删。
+  devotionCalm: 55,
+  corruptionCleared: 35,
 } as const;
 
 /** 立绘更新属性阈值 - 跨越时触发立绘更新 */

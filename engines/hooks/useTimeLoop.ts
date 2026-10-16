@@ -211,7 +211,19 @@ export const useTimeLoop = ({
         }
       }
 
-      // --- 4. 社交超时/目标离场清理 ---
+      // --- 4. 着装同步（活动与车厢此时均已确定）---
+      // 着装是派生态：由当前活动 + 所在车厢现算，无变化时返回 null，避免每 tick 产生新引用
+      {
+        const currentCarriageAfterMove = nextCarriages.get(getCurrentCarriageId(updatedMaiden));
+        if (currentCarriageAfterMove) {
+          const derivedClothing = maidenSystem.clothing.deriveClothing(updatedMaiden, currentCarriageAfterMove.type);
+          if (derivedClothing) {
+            updatedMaiden = { ...updatedMaiden, clothing: derivedClothing };
+          }
+        }
+      }
+
+      // --- 5. 社交超时/目标离场清理 ---
       if (updatedMaiden.behavior.socialContext) {
         const socialElapsed = now - updatedMaiden.behavior.socialContext.startTime;
         const socialDuration = updatedMaiden.behavior.activityDuration || 10 * 60 * 1000;
@@ -231,7 +243,7 @@ export const useTimeLoop = ({
         }
       }
 
-      // --- 5. 社交互动（静止且无当前社交上下文时触发）---
+      // --- 6. 社交互动（静止且无当前社交上下文时触发）---
       const updatedCarriage = nextCarriages.get(getCurrentCarriageId(updatedMaiden));
       if (
         updatedCarriage &&
@@ -249,7 +261,7 @@ export const useTimeLoop = ({
         }
       }
 
-      // --- 6. 水仙协议（新版同时返回 log 和 maidenUpdate）---
+      // --- 7. 水仙协议（新版同时返回 log 和 maidenUpdate）---
       const narcissusResult = maidenSystem.processNarcissusLogic(updatedMaiden, newGameTime);
       if (narcissusResult.log) {
         addLog('system', narcissusResult.log, 'SYSTEM', getCurrentCarriageId(updatedMaiden));
@@ -258,7 +270,7 @@ export const useTimeLoop = ({
         updatedMaiden = { ...updatedMaiden, ...narcissusResult.maidenUpdate };
       }
 
-      // --- 7. 妊娠更新 ---
+      // --- 8. 妊娠更新 ---
       const pregEvent = maidenSystem.pregnancy.updatePregnancy(updatedMaiden, gameDeltaMs);
       if (pregEvent && pregEvent.description) {
         addLog(pregEvent.logType, pregEvent.description, undefined, getCurrentCarriageId(updatedMaiden));
@@ -285,7 +297,7 @@ export const useTimeLoop = ({
         updatedMaiden = maidenSystem.pregnancy.syncToMaiden(updatedMaiden, pregEvent);
       }
 
-      // --- 8. 心境更新 ---
+      // --- 9. 心境更新 ---
       const moodResult = maidenSystem.mood.updateMood(updatedMaiden, gameDeltaMs);
       updatedMaiden = moodResult.updatedMaiden;
       if (moodResult.moodChange) {
@@ -297,14 +309,14 @@ export const useTimeLoop = ({
         );
       }
 
-      // --- 9. 自发行为 ---
+      // --- 10. 自发行为 ---
       const spontaneousAction = maidenSystem.mood.checkSpontaneousAction(updatedMaiden, newGameTime);
       if (spontaneousAction.actionEvent) {
         addLog(spontaneousAction.actionEvent.logType, spontaneousAction.actionEvent.description, undefined, spontaneousAction.actionEvent.carriageId);
         updatedMaiden = spontaneousAction.updatedMaiden;
       }
 
-      // --- 10. 状态 diff ---
+      // --- 11. 状态 diff ---
       const changes = maidenSystem.compareStates(beforeMaiden, updatedMaiden);
 
       return { updatedMaiden, changes, carriagesChanged };
@@ -345,7 +357,7 @@ export const useTimeLoop = ({
 
       if (updatedMaidenIds.length > 0) {
         const events = maidenSystem.event.checkForEvents(
-          nextMaidens, nextCarriages, sys, master.carriageId, newGameTime, updatedMaidenIds
+          nextMaidens, nextCarriages, newGameTime, updatedMaidenIds
         );
         for (const event of events) {
           addLog(event.logType, event.description, undefined, event.carriageId);

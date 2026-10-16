@@ -62,7 +62,6 @@ import {
     SpontaneousAction,
     SpontaneousActionEvent,
     StateChange,
-    SystemState,
     UnifiedMovementState,
     buildRelationshipIndex,
     clamp,
@@ -124,7 +123,6 @@ import {
     HAIR_TEXTURES,
     HOBBIES,
     NAKED_INTIMATE_LAYER,
-    NAKED_OUTERWEAR_LAYER,
     NAKED_UNDERGARMENT_LAYER,
     NEED_THRESHOLDS,
     NEGATIVE_TRAITS,
@@ -151,6 +149,7 @@ import {
     UNDERSHIRT_COLORS,
     UNDERSHIRT_MATERIALS,
     UNDERSHIRT_TYPES,
+    calculateDressLevel,
     isBondageAccessory,
     isCarryableItem,
 } from '../../constants';
@@ -159,19 +158,25 @@ const MEMORY_CATEGORIES: readonly MemoryCategory[] = [
     'childhood', 'family', 'friendship', 'romance', 'trauma', 'train', 'master', 'abyss',
 ];
 
+/**
+ * 记忆文本字段的强制收敛。
+ * AI 返回的字段可能缺失、为空串或类型不符，未收敛的空串会被 UI 当作有效内容渲染，
+ * 因此每个落库字段都必须经此降级后再写入链。
+ */
 function asText(value: unknown, fallback: string): string {
     return typeof value === 'string' && value.trim() ? value.trim() : fallback;
 }
 
+/** 记忆分类合法性校验，越界时回落到调用方指定的类别 */
 function asCategory(value: unknown, fallback: MemoryCategory): MemoryCategory {
     return MEMORY_CATEGORIES.includes(value as MemoryCategory) ? value as MemoryCategory : fallback;
 }
 
+/**
+ * 记忆链子系统。
+ * 链是记忆的唯一权威数据，摘要、污染统计等一切派生量都从链现算，不额外持久化。
+ */
 class MaidenMemory {
-
-    // --------------------------------------------
-    // 链构建与不变量
-    // --------------------------------------------
 
     /**
      * 载入 AI 生成的初始记忆链。
@@ -280,10 +285,6 @@ class MaidenMemory {
         return this.syncTail(chain.map(n => (n.id === node.id ? node : n)));
     }
 
-    // --------------------------------------------
-    // 摘要（由链派生）
-    // --------------------------------------------
-
     /**
      * 记忆链 -> 紧凑摘要，供 AI 上下文与卡片展示共用。
      * 摘要不是独立字段：唯一来源是 `chain` 本身，因此任何写入链的路径都自动保持一致。
@@ -293,7 +294,8 @@ class MaidenMemory {
 
         const corruptedCount = chain.filter(n => n.type === 'corrupted').length;
         const implantedCount = chain.filter(n => n.type === 'implanted').length;
-        const alteredCount = corruptedCount + implantedCount;
+        // 污染总量复用 meta 的判定，避免"被改动过"在此处出现第二份定义
+        const alteredCount = chain.filter(isAlteredMemory).length;
 
         let summary = `她当前承载着${chain.length}段关键人生记忆。`;
 
@@ -317,11 +319,10 @@ class MaidenMemory {
         return summary;
     }
 
-    // --------------------------------------------
-    // 植入与篡改
-    // --------------------------------------------
-
-    // 创建并追加一个植入记忆节点
+    /**
+     * 构造一个"植入"节点：内容并非真实发生过，是外部意志捏造的记忆。
+     * 默认污染度 100（她无法分辨真伪），并由 insertNode 决定落点——植入物永不越过登车瞬间。
+     */
     createImplantedNode(
         content: string,
         category: MemoryCategory = 'romance',
@@ -350,8 +351,10 @@ class MaidenMemory {
         };
     }
 
-    // 篡改特定节点
-    // 支持增量篡改与明确的防劣化隔离
+    /**
+     * 篡改节点：累加污染度并改写叙事，同时把旧叙事记入 history 以便还原。
+     * 登车瞬间不可篡改，直接原样返回；污染度满值时在标题追加标记（不重复追加）。
+     */
     tamperNode(
         node: MemoryNode,
         gameTimePassed: number,
@@ -391,8 +394,10 @@ class MaidenMemory {
         };
     }
 
-    // 修复/重塑特定节点 (新增补全状态机)
-    // 用于神恩净化或解离抵抗
+    /**
+     * 修复被篡改或植入的节点，降低污染度并回退叙事。
+     * 污染度归零时清除类型与标题上的篡改标记；不动登车瞬间与未受污染的原始记忆。
+     */
     restoreNode(
         node: MemoryNode,
         gameTimePassed: number,
@@ -433,7 +438,10 @@ class MaidenMemory {
         };
     }
 
-    // 归档当前记忆链 (转化为旧人格)
+    /**
+     * 封存当前记忆链为"旧日人格"。
+     * 用于水仙协议回归：她带着旧人生的记录离开，作为女执事重新开始，因此链被清空而非删除。
+     */
     archiveMemoryChain(maiden: Maiden): Maiden {
         const safeMaiden = deepCopy(maiden);
         return {
@@ -444,12 +452,15 @@ class MaidenMemory {
     }
 }
 
-// 少女关系系统 - 社交网络管理与状态演化
+/**
+ * 关系网络子系统：维护少女之间单向关系边的生成、结算与自然衰减。
+ * 关系边挂在各自的 `maiden.relationships` 上，因此不存在可脱节的独立副本。
+ */
 class MaidenRelationship {
 
     /**
-     * 初始化全局关系网络
-     * 为所有实体构建基础的人际关联基线
+     * 初始化全局关系网络。
+     * 为尚无关系数据的实体补空数组，再据人格契合度生成初始社交拓扑。
      */
     public initializeNetwork(maidens: Map<string, Maiden>, gameTimePassed: number): void {
         for (const [id, maiden] of maidens) {
@@ -579,28 +590,23 @@ class MaidenRelationship {
         };
     }
 
+    /** 读取单向关系边；不存在时返回 undefined（不隐式创建） */
     public getRelationship(maiden: Maiden, targetId: string): Relationship | undefined {
         return getRelationship(maiden, targetId);
     }
 
+    /** 关系边的隔离副本，调用方改写它不会影响实体 */
     public getAllRelationships(maiden: Maiden): Relationship[] {
         return getAllRelationships(maiden);
     }
 
-    public getFriends(maiden: Maiden): string[] {
-        return this.getAllRelationships(maiden)
-            .filter(r => r.type === 'friend' || r.type === 'close_friend')
-            .map(r => r.targetId);
-    }
-
-    public getEnemies(maiden: Maiden): string[] {
-        return this.getAllRelationships(maiden)
-            .filter(r => r.type === 'rival' || r.type === 'enemy')
-            .map(r => r.targetId);
-    }
-
     /**
-     * 细粒度更新指定单向关系参数
+     * 细粒度更新单向关系。
+     * 关系不存在时以 'stranger' 基线创建；每次调用都会累加互动次数并刷新 lastInteraction，
+     * 因此不要用它做"只读探测"。
+     *
+     * 注意：本方法**就地修改**传入的两个实体（沿用社交结算的浅拷贝隔离约定），
+     * 而本文件其余部分一律返回新对象。
      */
     public updateRelationship(
         maiden: Maiden,
@@ -669,6 +675,10 @@ class MaidenRelationship {
     /**
      * 处理具体的双向社交事件
      * 严格遵循 SocialInteractionType 向量与非对称人格结算
+     */
+    /**
+     * 结算一次双向社交事件。
+     * 双方各按自身人格得到不同的增减（非对称），因此同一场互动对两人的意义并不相同。
      */
     public processInteraction(
         initiator: Maiden,
@@ -832,7 +842,9 @@ class MaidenRelationship {
     }
 
     /**
-     * 关系自然演化与熵增衰减机制
+     * 关系随时间的自然衰退。
+     * 正负好感都向 0 收敛（遗忘而非恶化），共享创伤与高情绪性会显著减缓衰减；
+     * 仅在确有数值变化时才替换实体，避免每 tick 产生无意义的新引用。
      */
     public decayRelationships(maidens: Map<string, Maiden>, deltaMs: number): void {
         const baseDecayRate = 0.1 / (24 * 60 * 60 * 1000);
@@ -900,44 +912,7 @@ class MaidenRelationship {
             }
         }
     }
-
-    /**
-     * 提取当前时空切片下的全景社交拓扑统计
-     */
-    public getNetworkStats(maidens: Map<string, Maiden>): {
-        totalRelationships: number;
-        friendships: number;
-        rivalries: number;
-        averageAffinity: number;
-    } {
-        let total = 0;
-        let friendships = 0;
-        let rivalries = 0;
-        let totalAffinity = 0;
-
-        for (const maiden of maidens.values()) {
-            if (!maiden.relationships) continue;
-
-            for (const rel of maiden.relationships) {
-                total++;
-                totalAffinity += rel.affinity;
-                if (rel.type === 'friend' || rel.type === 'close_friend') friendships++;
-                if (rel.type === 'rival' || rel.type === 'enemy') rivalries++;
-            }
-        }
-
-        return {
-            totalRelationships: Math.floor(total / 2),
-            friendships: Math.floor(friendships / 2),
-            rivalries: Math.floor(rivalries / 2),
-            averageAffinity: total > 0 ? totalAffinity / total : 0,
-        };
-    }
 }
-
-// ==========================================================================
-// 社交互动
-// ==========================================================================
 
 const SOCIAL_INTERACTION_BASE_CHANCE = 0.2;
 
@@ -985,13 +960,16 @@ const SOCIAL_INTERACTION_DESCRIPTIONS: Record<SocialInteractionType, string[]> =
 };
 
 /**
- * @少女社交系统 - 处理少女间的互动逻辑
+ * 社交互动子系统：决定同车厢少女之间是否互动、互动类型及其属性结算。
+ * 互动类型由情境（车厢、压力、人格）推导，不依赖随机表。
  */
 class MaidenSocialization {
-    // ============================================
-    // 社交互动执行干道
-    // ============================================
-
+    /**
+     * 单帧社交尝试。
+     *
+     * 依次过闸：同车厢人数、自身状态（睡眠/崩溃/移动中）、概率门、目标选取、目标状态。
+     * 任一不满足即返回空对象；`updatedMaiden`/`updatedTarget` 由调用方写回实体表。
+     */
     public processSocialInteractions(
         maiden: Maiden,
         othersInCarriage: string[],
@@ -1273,15 +1251,23 @@ class MaidenSocialization {
     }
 }
 
+/** 水仙协议：褪色速度与阶段阈值，与 GAME_CONFIG.NARCISSUS 保持一致 */
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const FADING_RATE_PER_DAY = GAME_CONFIG.NARCISSUS.FADING_RATE;
+const FADING_STAGE_THRESHOLD = 30;
+const INVITATION_THRESHOLD = GAME_CONFIG.NARCISSUS.INVITATION_THRESHOLD;
+
 /**
- * @水仙平原协议
+ * 水仙平原协议（Narcissus Protocol）。
+ * 状态机：none → choice → departed → fading → invitation → returned / rejected。
+ * 阶段推进完全由 elapsedMs 推导，不依赖调用频率。
  */
 class MaidenNarcissus {
 
-    // ============================================
-    // 检查资格
-    // ============================================
-
+    /**
+     * 资格校验。
+     * 返回全部未满足项而非仅布尔值，调用方据此向玩家展示具体原因。
+     */
     checkEligibility(maiden: Maiden, gameTimePassed: number): NarcissusEligibility {
         const reasons: string[] = [];
 
@@ -1331,10 +1317,6 @@ class MaidenNarcissus {
         };
     }
 
-    // ============================================
-    // 判断是否应该自动触发 (Autonomous Trigger)
-    // ============================================
-
     shouldAutonomousTrigger(maiden: Maiden, gameTimePassed: number): boolean {
         const eligibility = this.checkEligibility(maiden, gameTimePassed);
         if (!eligibility.eligible) return false;
@@ -1383,10 +1365,6 @@ class MaidenNarcissus {
         return Math.random() < chance;
     }
 
-    // ============================================
-    // 触发协议
-    // ============================================
-
     initiateProtocol(maiden: Maiden, gameTimePassed: number): { success: boolean; description: string; maidenUpdate: Partial<Maiden> } {
         const eligibility = this.checkEligibility(maiden, gameTimePassed);
 
@@ -1411,10 +1389,6 @@ class MaidenNarcissus {
             maidenUpdate: { narcissusState: newState },
         };
     }
-
-    // ============================================
-    // 选择离开
-    // ============================================
 
     chooseToDeparture(maiden: Maiden, gameTimePassed: number): { description: string; maidenUpdate: Partial<Maiden> } {
         const state = maiden.narcissusState;
@@ -1447,10 +1421,6 @@ class MaidenNarcissus {
         };
     }
 
-    // ============================================
-    // 选择留下
-    // ============================================
-
     chooseToStay(maiden: Maiden): { description: string; maidenUpdate: Partial<Maiden> } {
         const state = maiden.narcissusState;
         if (!state || state.stage !== 'choice') {
@@ -1479,67 +1449,73 @@ class MaidenNarcissus {
         };
     }
 
-    // ============================================
-    // 更新外部世界状态（褪色）
-    // ============================================
-
-    updateFading(maiden: Maiden, deltaMs: number): {
+    /**
+     * 褪色推进。
+     *
+     * 两个容易写错的地方：
+     * 1. 调用方传入的是**绝对游戏时间**，必须扣除 departureTime 得到"离开后经过时长"，
+     *    否则读档时褪色度会随存档年龄凭空跳变。
+     * 2. 阶段必须由褪色度**推导**，不能写成"当前阶段 + 单次跃迁"的 else-if 链：
+     *    那样一次调用跨越多个阈值时只会走一步，而一旦阶段离开 departed 就再也不会前进，
+     *    于是永远停在 fading、拿不到邀请。
+     *
+     * @param maiden 处于 departed/fading/invitation 的实体
+     * @param gameTimePassed 当前**绝对**游戏时间
+     * @returns `stageChanged` 表示阶段是否切换；`description` 仅在切换时给出；
+     *          未进入可推进阶段或时间未前进时返回 `{ stageChanged: false }` 且无 `updatedState`
+     */
+    updateFading(maiden: Maiden, gameTimePassed: number): {
         description?: string;
         stageChanged: boolean;
-        newStage?: NarcissusStage;
         updatedState?: NarcissusState;
     } {
         const state = maiden.narcissusState;
-        if (!state || state.stage !== 'departed') {
+        // 仅"人在外面"的阶段参与推进；returned/rejected/none 是终态，不再褪色
+        if (!state || (state.stage !== 'departed' && state.stage !== 'fading' && state.stage !== 'invitation')) {
             return { stageChanged: false };
         }
 
-        if (typeof deltaMs !== 'number' || deltaMs <= 0 || isNaN(deltaMs)) {
+        const departureTime = state.departureTime;
+        if (typeof departureTime !== 'number' || typeof gameTimePassed !== 'number') {
             return { stageChanged: false };
         }
 
-        const hoursPassed = deltaMs / (1000 * 60 * 60);
-        const daysOutside = state.daysOutside + hoursPassed / 24;
-
-        const oldFading = state.fadingLevel;
-        const fadingLevel = clamp(daysOutside * 2, 0, 100);
-
-        let newStage: NarcissusStage = state.stage;
-        let description: string | undefined = undefined;
-        let stageChanged = false;
-        let hasReceivedInvitation = state.hasReceivedInvitation;
-
-        if (fadingLevel >= 30 && oldFading < 30) {
-            newStage = 'fading';
-            stageChanged = true;
-            description = '世界开始褪色。食物尝起来像蜡，颜色变得灰暗，声音变得沉闷。';
-        } else if (fadingLevel >= 70 && !hasReceivedInvitation) {
-            newStage = 'invitation';
-            stageChanged = true;
-            hasReceivedInvitation = true;
-            description = '在她精神濒临崩溃的边缘，一个陌生人出现了。他没有劝说，只是静静地聆听。\n\n' +
-                '"如果你愿意回去，"他最后说，"契约已经准备好了。"';
+        const elapsedMs = gameTimePassed - departureTime;
+        if (elapsedMs <= 0 || isNaN(elapsedMs)) {
+            return { stageChanged: false };
         }
+
+        const daysOutside = elapsedMs / MS_PER_DAY;
+        const fadingLevel = clamp(daysOutside * FADING_RATE_PER_DAY, 0, 100);
+
+        // 邀请一经发出就锁定，避免玩家尚未抉择时重复触发
+        const hasReceivedInvitation = state.hasReceivedInvitation || fadingLevel >= INVITATION_THRESHOLD;
+
+        const stage: NarcissusStage = hasReceivedInvitation
+            ? 'invitation'
+            : fadingLevel >= FADING_STAGE_THRESHOLD ? 'fading' : 'departed';
 
         const updatedState: NarcissusState = {
             ...state,
             daysOutside,
             fadingLevel,
-            stage: newStage,
+            stage,
             hasReceivedInvitation,
         };
 
+        if (stage === state.stage) {
+            return { stageChanged: false, updatedState };
+        }
+
         return {
-            description,
-            stageChanged,
-            newStage: stageChanged ? newStage : undefined,
+            description: stage === 'invitation'
+                ? '在她精神濒临崩溃的边缘，一个陌生人出现了。他没有劝说，只是静静地聆听。\n\n' +
+                '"如果你愿意回去，"他最后说，"契约已经准备好了。"'
+                : '世界开始褪色。食物尝起来像蜡，颜色变得灰暗，声音变得沉闷。',
+            stageChanged: true,
             updatedState,
         };
     }
-
-    // ============================================
-    // 接受邀请回归
-    // ============================================
 
     acceptInvitation(maiden: Maiden, gameTimePassed: number): { description: string; maidenUpdate: Partial<Maiden> } {
         const state = maiden.narcissusState;
@@ -1594,10 +1570,10 @@ class MaidenNarcissus {
         };
     }
 
-    // ============================================
-    // 拒绝邀请
-    // ============================================
-
+    /**
+     * 拒绝邀请：进入 rejected 终态，此后不再推进褪色。
+     * 与 acceptInvitation 互斥，仅在 invitation 阶段有效。
+     */
     rejectInvitation(maiden: Maiden, gameTimePassed: number): { description: string; maidenUpdate: Partial<Maiden> } {
         const state = maiden.narcissusState;
         if (!state || state.stage !== 'invitation') {
@@ -1624,22 +1600,11 @@ class MaidenNarcissus {
         };
     }
 
-    // ============================================
-    // 状态查询
-    // ============================================
-
-    getState(maiden: Maiden): NarcissusState | undefined {
-        return maiden?.narcissusState;
-    }
-
+    /** 是否已进入协议（含已回归/已拒绝等终态，仅 `none` 与未初始化算作"未进入"） */
     isInProtocol(maiden: Maiden): boolean {
         const state = maiden?.narcissusState;
         return state !== undefined && state.stage !== 'none';
     }
-
-    // ============================================
-    // 序列化
-    // ============================================
 
     serialize(maidens: Map<string, Maiden>): [string, NarcissusState][] {
         if (!maidens || !(maidens instanceof Map)) return [];
@@ -1683,8 +1648,6 @@ const EVENT_CONFIG = {
         friendship: 300000,
         conflict: 300000,
         comfort: 300000,
-        hub_anomaly: 600000,
-        resonance: 600000,
     } as Partial<Record<EventType, number>>,
     PROBABILITY: {
         nightmare: 0.02,
@@ -1693,24 +1656,17 @@ const EVENT_CONFIG = {
         friendship: 0.03,
         conflict: 0.02,
         comfort: 0.04,
-        hub_anomaly: 0.005,
-        resonance: 0.008,
     }
 } as const;
 
 /**
- * @少女随机事件系统 - 核心领域服务
- * 负责处理少女的随机事件，包括事件的触发、结算和效果应用。
+ * 随机事件子系统：按概率与冷却轮询触发梦魇、崩溃、觉醒等事件，并结算其属性/状态/记忆效果。
+ * 冷却记录在 `globalEventTimestamps`，可随存档序列化，避免读档后事件连发。
  */
 class MaidenRandomEvent {
-    // ============================================
-    // 系统全局时序状态
-    // ============================================
     private globalEventTimestamps: Map<EventType, number> = new Map();
 
-    // ============================================
     // [核心 API] 随机事件轮询调度
-    // ============================================
     public checkForEvents(
         maidens: Map<string, Maiden>,
         carriages: Map<string, Carriage>,
@@ -1720,13 +1676,9 @@ class MaidenRandomEvent {
         const events: GameEvent[] = [];
         const now = gameTimePassed;
 
-        // 1. 系统级宏观事件判定
-        if (probabilityCheck(EVENT_CONFIG.PROBABILITY.hub_anomaly) && this.canTriggerGlobal('hub_anomaly', now)) {
-            events.push(this.createHubAnomalyEvent());
-        }
-        if (probabilityCheck(EVENT_CONFIG.PROBABILITY.resonance) && this.canTriggerGlobal('resonance', now)) {
-            events.push(this.createResonanceSurgeEvent());
-        }
+        // 系统级宏观事件（枢纽异常、共振激增）不在这里产生：
+        // 它们由 CarriageSystem.checkSystemAnomalies 拥有并在同一 tick 结算，
+        // 本处重复产生会得到两个矛盾的熵值效果，且本模块没有 system 效果的落地点。
 
         const candidates = targetIds
             ? targetIds.reduce<Maiden[]>((acc, id) => {
@@ -1838,9 +1790,7 @@ class MaidenRandomEvent {
         return events;
     }
 
-    // ============================================
     // [核心 API] 领域事件效能结算
-    // ============================================
     public applyEventEffects(
         event: GameEvent,
         ctx: EventEffectContext
@@ -1888,9 +1838,7 @@ class MaidenRandomEvent {
         return changedMaidens;
     }
 
-    // ============================================
     // [私有辅助] 单体事件实例构造工厂
-    // ============================================
 
     private createNightmareEvent(maiden: Maiden, carriage: Carriage): GameEvent {
         const descriptions = [
@@ -1984,9 +1932,7 @@ class MaidenRandomEvent {
         };
     }
 
-    // ============================================
     // [私有辅助] 社交动态与系统事件构造工厂
-    // ============================================
 
     private createFriendshipEvent(maiden: Maiden, peer: Maiden, carriage: Carriage): GameEvent {
         const descriptions = [
@@ -2049,31 +1995,7 @@ class MaidenRandomEvent {
         };
     }
 
-    private createHubAnomalyEvent(): GameEvent {
-        return {
-            type: 'hub_anomaly',
-            description: '警告：检测到空间异常。列车枢纽拓扑结构正在发生不可逆的随机重组。',
-            effects: [
-                { type: 'system', target: 'system', key: 'entropyLevel', value: 10 }
-            ],
-            logType: 'system',
-        };
-    }
-
-    private createResonanceSurgeEvent(): GameEvent {
-        return {
-            type: 'resonance',
-            description: '共振圣歌达到临界频率。所有单位的感官被强行剥夺，生理同步率急剧上升。',
-            effects: [
-                { type: 'system', target: 'system', key: 'resonanceFrequency', value: 15 }
-            ],
-            logType: 'system',
-        };
-    }
-
-    // ============================================
     // [私有辅助] 算子变动写入策略
-    // ============================================
 
     private applyAttributeEffect(
         sourceMaidens: Map<string, Maiden>,
@@ -2215,9 +2137,7 @@ class MaidenRandomEvent {
         changedMaidens.set(maidenId, newMaiden);
     }
 
-    // ============================================
     // [私有计算] 机制校验与状态探测
-    // ============================================
 
     private shouldTriggerBreakdown(sanity: number, isCurrentlyBroken: boolean): boolean {
         if (isCurrentlyBroken) return false;
@@ -2236,10 +2156,6 @@ class MaidenRandomEvent {
         return true;
     }
 
-    // ============================================
-    // 时序追踪持久化
-    // ============================================
-
     public serialize(): [string, number][] {
         return Array.from(this.globalEventTimestamps.entries());
     }
@@ -2249,7 +2165,6 @@ class MaidenRandomEvent {
     }
 }
 
-/** 生成完整姓名 */
 function generateFullName(): { fullName: string; origin: NameOrigin } {
     const dataset = ALL_NAME_DATASETS[Math.floor(Math.random() * ALL_NAME_DATASETS.length)];
     const { origin, data } = dataset;
@@ -2259,11 +2174,6 @@ function generateFullName(): { fullName: string; origin: NameOrigin } {
     return { fullName, origin };
 }
 
-// ============================================
-// 行为权重计算
-// ============================================
-
-/** 从HEXACO档案计算行为权重 */
 function calculateBehaviorWeights(profile: HexacoProfile, facets: HexacoFacets) {
     const { H, E, X, A, C, O } = profile;
 
@@ -2280,10 +2190,6 @@ function calculateBehaviorWeights(profile: HexacoProfile, facets: HexacoFacets) 
         impulsivity: ((100 - facets.prudence) + facets.liveliness) / 200,
     };
 }
-
-// ============================================
-// HEXACO 人格生成函数
-// ============================================
 
 function generateHexacoScore(): number {
     const u1 = Math.random();
@@ -2434,8 +2340,16 @@ function identifyArchetype(
     return { primary, dominated };
 }
 
+/**
+ * 实体生成子系统：从人格模型出发，一次性生成完整自洽的少女实体。
+ * 生成顺序有依赖：人格 → 行为权重 → 属性/生理/行为，后者读取前者。
+ */
 class MaidenGenerator {
 
+    /**
+     * 生成单个实体。
+     * 姓名在 `usedNames` 内去重，超过重试上限时追加随机后缀以保证必然终止。
+     */
     generateUnit(id: string, carriageId: string, usedNames: Set<string>, gameTimePassed: number): Maiden {
         let name: string;
         let nameOrigin: NameOrigin;
@@ -2491,7 +2405,7 @@ class MaidenGenerator {
             attributes,
             physiology,
             behavior,
-            movement: createUnifiedMovementState(carriageId), // 修正为对齐接口
+            movement: createUnifiedMovementState(carriageId),
             isshex,
             profile,
             mood: 'content',
@@ -2697,7 +2611,7 @@ class MaidenGenerator {
             },
             accessories,
             state: 'intact',
-            dressLevel, // 补全着装层级字段
+            dressLevel,
         };
     }
 
@@ -2798,11 +2712,10 @@ class MaidenGenerator {
 
     generateBehavior(gameTimePassed: number): BehaviorState {
         return {
-            currentActivity: 'wandering', // 对齐合法的 ActivityStatus 定义
+            currentActivity: 'wandering',
             activityStartTime: gameTimePassed,
             activityDuration: 30 * 60 * 1000,
             lastInteractionTime: 0,
-            // 废弃原有的独立空间导航逻辑与散装社交对象结构，遵照元契约精简
             previousActivity: undefined,
             socialContext: undefined,
         };
@@ -2845,11 +2758,9 @@ class MaidenGenerator {
     }
 }
 
-// ============================================
 // 少女行为决策 - 需求计算与行为选择
 // Maiden Behavior - Need calculation & behavior decisions
 // 基于 IS-SHEX 六维层级人格模型
-// ============================================
 
 /** 情境-特质激活映射 */
 const SITUATION_TRAIT_ACTIVATION: Record<SituationType, {
@@ -2865,21 +2776,20 @@ const SITUATION_TRAIT_ACTIVATION: Record<SituationType, {
     ambiguous: { primary: 'O', secondary: 'E', description: '认知开放与焦虑反应' },
 };
 
-// 情绪对行为的影响权重
+/** 心境对行为倾向的概率修正 */
 const MOOD_BEHAVIOR_MODIFIERS: Record<MoodState, {
     socialChance: number;      // 社交概率修正
     moveChance: number;        // 移动概率修正
     restPreference: number;    // 休息偏好
-    riskTolerance: number;     // 风险容忍修正
 }> = {
-    'content': { socialChance: 1.0, moveChance: 1.0, restPreference: 1.0, riskTolerance: 1.0 },
-    'anxious': { socialChance: 0.6, moveChance: 1.5, restPreference: 0.5, riskTolerance: 0.3 },
-    'melancholy': { socialChance: 0.4, moveChance: 0.5, restPreference: 1.5, riskTolerance: 0.5 },
-    'irritable': { socialChance: 0.7, moveChance: 1.2, restPreference: 0.8, riskTolerance: 1.2 },
-    'lustful': { socialChance: 1.5, moveChance: 1.3, restPreference: 0.3, riskTolerance: 1.5 },
-    'fearful': { socialChance: 1.2, moveChance: 0.3, restPreference: 0.5, riskTolerance: 0.1 },
-    'euphoric': { socialChance: 1.8, moveChance: 1.0, restPreference: 0.5, riskTolerance: 1.3 },
-    'numb': { socialChance: 0.2, moveChance: 0.3, restPreference: 1.0, riskTolerance: 0.8 },
+    'content': { socialChance: 1.0, moveChance: 1.0, restPreference: 1.0 },
+    'anxious': { socialChance: 0.6, moveChance: 1.5, restPreference: 0.5 },
+    'melancholy': { socialChance: 0.4, moveChance: 0.5, restPreference: 1.5 },
+    'irritable': { socialChance: 0.7, moveChance: 1.2, restPreference: 0.8 },
+    'lustful': { socialChance: 1.5, moveChance: 1.3, restPreference: 0.3 },
+    'fearful': { socialChance: 1.2, moveChance: 0.3, restPreference: 0.5 },
+    'euphoric': { socialChance: 1.8, moveChance: 1.0, restPreference: 0.5 },
+    'numb': { socialChance: 0.2, moveChance: 0.3, restPreference: 1.0 },
 };
 
 /** 车厢类型到情境类型的映射 */
@@ -2911,6 +2821,10 @@ const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {
     'ENTROPY_CLOCK': 'threat',
 };
 
+/**
+ * 行为决策子系统：把需求、人格与情境折算为下一次活动或移动意图。
+ * 移动中的实体不重新决策，否则会在抵达前反复改写路径。
+ */
 class MaidenBehavior {
     // 当前游戏时间（毫秒累计），确保行为决策基于游戏逻辑流转时间
     private currentGameTime: number = 0;
@@ -2919,7 +2833,6 @@ class MaidenBehavior {
         return this.currentGameTime;
     }
 
-    // 获取情境对人格特质的激活修正
     private getTraitActivationMultiplier(personality: ISShexPersonality, situation: SituationType): number {
         const activation = SITUATION_TRAIT_ACTIVATION[situation];
         const primaryTrait = personality.hexaco[activation.primary];
@@ -2927,7 +2840,6 @@ class MaidenBehavior {
         return 0.85 + Math.abs(primaryTrait - 50) * 0.008;
     }
 
-    // 获取行为权重映射矩阵
     private getWeights(personality: ISShexPersonality) {
         return personality.behaviorWeights;
     }
@@ -3040,7 +2952,6 @@ class MaidenBehavior {
         return needs.sort((a, b) => b.urgency - a.urgency);
     }
 
-    // 核心决策入口
     decideMaidenBehavior(
         maiden: Maiden,
         currentCarriage: Carriage,
@@ -3139,7 +3050,6 @@ class MaidenBehavior {
         return this.createDefaultBehavior(maiden, currentCarriage, allCarriages, allMaidens, behavior, gameTimePassed, moodMod);
     }
 
-    // 深渊诱惑计算系统
     private checkForAbyssObservation(
         maiden: Maiden,
         currentCarriage: Carriage,
@@ -3197,7 +3107,6 @@ class MaidenBehavior {
         return null;
     }
 
-    // 应激与恐慌行为代理
     private createPanicBehavior(
         maiden: Maiden,
         currentCarriage: Carriage,
@@ -3232,7 +3141,6 @@ class MaidenBehavior {
         return { behavior: this.createActivityBehavior('wandering', 5, behavior, gameTimePassed) };
     }
 
-    // 默认游荡状态路由计算
     private createDefaultBehavior(
         maiden: Maiden,
         currentCarriage: Carriage,
@@ -3296,7 +3204,6 @@ class MaidenBehavior {
         return { behavior: this.createActivityBehavior('wandering', 15, behavior, gameTimePassed) };
     }
 
-    // 纯净状态机切面隔离构建
     private createActivityBehavior(
         activity: ActivityStatus,
         durationMinutes: number,
@@ -3319,7 +3226,6 @@ class MaidenBehavior {
         };
     }
 
-    // 跨节点拓扑路由计算与移动意图封装
     private executeMovement(
         maiden: Maiden,
         targetCarriageId: string,
@@ -3340,7 +3246,11 @@ class MaidenBehavior {
         return { behavior, movement };
     }
 
-    // BFS寻路算法拓扑推导
+    /**
+     * BFS 网格寻路。
+     * 只走 `isAccessible` 的车厢；无路径或坐标非法时退化为"直达目标"，
+     * 这样移动仍会推进（可被后续 tick 纠正），而不是把实体卡死在原地。
+     */
     private findPath(
         startCarriageId: string,
         targetCarriageId: string,
@@ -3394,7 +3304,6 @@ class MaidenBehavior {
         return [targetCarriageId];
     }
 
-    // 验证目标设施物理机能可行性
     private canSatisfyNeed(carriage: Carriage, need: string): boolean {
         const func = CARRIAGE_FUNCTIONS[carriage.type];
         switch (need) {
@@ -3408,7 +3317,6 @@ class MaidenBehavior {
         }
     }
 
-    // 社交热点安全区扫描
     private findCrowdedSafeCarriage(allCarriages: Map<string, Carriage>): string | null {
         let best: string | null = null;
         let maxOccupants = 2;
@@ -3423,7 +3331,6 @@ class MaidenBehavior {
         return best;
     }
 
-    // 深渊边缘锚点提取 (T1级隔离区)
     private findSafeAbyssCarriage(allCarriages: Map<string, Carriage>): string | null {
         const tier1Abyss = [
             'SILENT_SALON',
@@ -3439,15 +3346,17 @@ class MaidenBehavior {
         return null;
     }
 
-    // 状态机时间轴基数测算
-    getDurationForActivity(activity: string): number {
+    /**
+     * 活动对应的计划时长（游戏分钟）。
+     * 取值始终来自 GAME_CONFIG.DURATIONS，未列出的活动回落到游荡时长。
+     */
+    getDurationForActivity(activity: ActivityStatus): number {
         const { DURATIONS } = GAME_CONFIG;
         switch (activity) {
             case 'sleeping': return DURATIONS.SLEEP;
             case 'eating': return DURATIONS.EAT;
             case 'bathing': return DURATIONS.BATH;
             case 'confessing': return DURATIONS.CONFESS;
-            case 'devoted': return DURATIONS.CONFESS * 1.5;
             case 'chatting': return 20;
             case 'observing': return 10;
             default: return DURATIONS.WANDER;
@@ -3455,17 +3364,11 @@ class MaidenBehavior {
     }
 }
 
-
-// ==========================================================================
 // 情绪与自发行为
-// ==========================================================================
 
-// ============================================
 // 少女情绪系统 - 情绪计算与自发行为
 // Maiden Mood System - Mood calculation & spontaneous actions
 // 基于 IS-SHEX 六维层级人格模型
-// ============================================
-
 
 // 情绪对行为的影响权重
 const SPONTANEOUS_ACTION_CONFIG: Record<SpontaneousAction, {
@@ -3575,12 +3478,17 @@ const SPONTANEOUS_ACTION_CONFIG: Record<SpontaneousAction, {
     },
 };
 
+/**
+ * 心境子系统：由属性与状态台阶推导心境，并在心境稳定期后触发自发小动作。
+ * 心境切换有最短持续期，防止属性临界时每 tick 反复横跳。
+ */
 class MaidenMood {
-    // 情绪持续时间阈值（毫秒）
-    private readonly MOOD_MIN_DURATION = 5 * 60 * 1000; // 5分钟
-
-    // 自发行为冷却时间（毫秒）
-    private readonly SPONTANEOUS_COOLDOWN = 2 * 60 * 1000; // 2分钟
+    /**
+     * 心境与自发行为的节流阈值。
+     * 复用 GAME_CONFIG.MOOD，避免同一条规则在此处出现第二份数值。
+     */
+    private readonly MOOD_MIN_DURATION = GAME_CONFIG.MOOD.MIN_DURATION;
+    private readonly SPONTANEOUS_COOLDOWN = GAME_CONFIG.MOOD.ACTION_COOLDOWN;
 
     /**
      * 根据属性和复合状态机计算当前应有的情绪状态
@@ -3710,7 +3618,7 @@ class MaidenMood {
             return { updatedMaiden: maiden };
         }
 
-        // 修正领域模型游离，适配 UnifiedMovementState
+        // 移动中、睡眠或已崩溃的实体不产生自发小动作
         if (maiden.movement?.isMoving ||
             maiden.status.includes('sleeping') ||
             maiden.status.includes('broken')) {
@@ -3769,13 +3677,6 @@ class MaidenMood {
         }
 
         return { updatedMaiden: maiden };
-    }
-
-    /**
-     * 获取情绪对行为的修正
-     */
-    getMoodBehaviorModifier(mood: MoodState): typeof MOOD_BEHAVIOR_MODIFIERS[MoodState] {
-        return MOOD_BEHAVIOR_MODIFIERS[mood];
     }
 
     /**
@@ -3907,25 +3808,12 @@ class MaidenMood {
     }
 }
 
-
-// ==========================================================================
 // 着装
-// ==========================================================================
 
-/** 基础空物品标识 */
-const NONE_ITEM = { id: 'none', name: '无' };
-
-/** 裸露状态 */
-const NAKED_CLOTHING_STATE: ClothingState = {
-    intimate: NAKED_INTIMATE_LAYER,
-    undergarment: NAKED_UNDERGARMENT_LAYER,
-    outerwear: NAKED_OUTERWEAR_LAYER,
-    accessories: [],
-    state: 'intact',
-    dressLevel: 'naked',
-};
-
-/** 洗浴状态 */
+/**
+ * 洗浴时替换的外显层（浴巾 + 拖鞋）。
+ * dressLevel 在派生时由 calculateDressLevel 现算，这里无需也无法预设。
+ */
 const BATHING_CLOTHING_STATE: ClothingState = {
     intimate: NAKED_INTIMATE_LAYER,
     undergarment: NAKED_UNDERGARMENT_LAYER,
@@ -3935,7 +3823,7 @@ const BATHING_CLOTHING_STATE: ClothingState = {
     dressLevel: 'underwear_only',
 };
 
-/** 睡眠状态 */
+/** 睡眠时替换的外显层（睡裙） */
 const SLEEPING_CLOTHING_STATE: ClothingState = {
     intimate: NAKED_INTIMATE_LAYER,
     undergarment: NAKED_UNDERGARMENT_LAYER,
@@ -3947,12 +3835,10 @@ const SLEEPING_CLOTHING_STATE: ClothingState = {
     },
     accessories: [],
     state: 'intact',
-    dressLevel: 'naked',
+    dressLevel: 'partially_dressed',
 };
 
-// ==========================================
 // 服装变化触发器
-// ============================================
 
 /** 活动对应的服装状态 */
 const ACTIVITY_CLOTHING_MAP: Partial<Record<CharacterStatus, Partial<ClothingState>>> = {
@@ -3978,293 +3864,103 @@ const CARRIAGE_CLOTHING_EFFECTS: Partial<Record<CarriageType, Partial<ClothingSt
 };
 
 /**
- * @少女着装系统
- * 处理服装随活动/场景的自动变化
+ * 比较两份着装是否等值（按层与饰品逐项）。
+ * 用于让换装成为幂等操作：无变化时返回 null，避免每 tick 都产生新的 clothing 引用，
+ * 否则 Array/Map 的引用比较会判定"少女已改变"，触发无意义的重渲染与立绘更新。
+ */
+function isSameClothing(a: ClothingState, b: ClothingState): boolean {
+    if (a.state !== b.state || a.dressLevel !== b.dressLevel) return false;
+    if (a.accessories.length !== b.accessories.length) return false;
+
+    const sameId = (x?: { id: string }, y?: { id: string }) => x?.id === y?.id;
+
+    if (!sameId(a.intimate.bra.type, b.intimate.bra.type)) return false;
+    if (!sameId(a.intimate.panties.type, b.intimate.panties.type)) return false;
+    if (!sameId(a.undergarment.stockings.type, b.undergarment.stockings.type)) return false;
+    if (!sameId(a.undergarment.undershirt.type, b.undergarment.undershirt.type)) return false;
+    if (!sameId(a.undergarment.underpants.type, b.undergarment.underpants.type)) return false;
+    if (!sameId(a.outerwear.top.type, b.outerwear.top.type)) return false;
+    if (!sameId(a.outerwear.bottom.type, b.outerwear.bottom.type)) return false;
+    if (!sameId(a.outerwear.gloves.type, b.outerwear.gloves.type)) return false;
+    if (!sameId(a.outerwear.shoes.type, b.outerwear.shoes.type)) return false;
+
+    return a.accessories.every((acc, i) =>
+        acc.type.id === b.accessories[i].type.id &&
+        sameId(acc.color, b.accessories[i].color) &&
+        sameId(acc.material, b.accessories[i].material)
+    );
+}
+
+/**
+ * 少女着装系统。
+ *
+ * 着装是**派生态**：唯一权威是 `maiden.clothing`，基准是 `maiden.initialClothing`。
+ * 因此不保存"进入活动前的服装副本"——那种副本无法随存档持久化，
+ * 读档后必然与 clothing 脱节（这正是它此前从未被接线的根因）。
+ * 一切换装都由当前活动与车厢现算，读档后自动回到正确状态。
  */
 class MaidenClothing {
-    /** 存储少女的原始服装 (用于恢复) */
-    private originalClothing: Map<string, ClothingState> = new Map();
-
-    /** 存储服装保存时间戳，用于定期清理 */
-    private clothingTimestamps: Map<string, number> = new Map();
 
     /**
-     * 根据活动更新服装状态
-     * @param maiden 少女实体
-     * @param newActivity 新活动
-     * @param gameTimePassed 当前流逝时间
-     * @returns 更新后的服装状态，如果无需更新则返回null
+     * 依据当前活动与车厢推导应有的着装；无需变化时返回 null。
+     *
+     * - 沐浴/睡眠使用专用层级，其余活动回到基准着装
+     * - 饰品按活动过滤：沐浴仅保留束缚类，其余活动只放下携带物
+     * - `state`（破损/湿透等）与着装结构解耦，换装时保留现状，仅由车厢效果覆写
      */
-    updateClothingForActivity(
-        maiden: Maiden,
-        newActivity: CharacterStatus,
-        gameTimePassed: number
-    ): ClothingState | null {
+    deriveClothing(maiden: Maiden, carriageType: CarriageType): ClothingState | null {
         const currentClothing = maiden.clothing;
+        const activity = maiden.behavior.currentActivity;
+        const activityClothing = ACTIVITY_CLOTHING_MAP[activity];
+        // 基准着装即"正常穿着"的唯一来源；睡眠/沐浴只临时覆写层级，不修改基准
+        const baseline = maiden.initialClothing ?? currentClothing;
 
-        // 检查是否需要特殊服装
-        const activityClothing = ACTIVITY_CLOTHING_MAP[newActivity];
-
-        if (activityClothing) {
-            // 保存原始服装以便恢复（使用深拷贝避免嵌套对象共享引用）
-            if (!this.originalClothing.has(maiden.id)) {
-                this.originalClothing.set(maiden.id, deepCopy(currentClothing));
-                // 记录保存时间戳
-                this.clothingTimestamps.set(maiden.id, gameTimePassed);
-            }
-
-            // 安全合并：保留当前服装结构，仅覆盖活动指定的字段
-            const newClothing: ClothingState = {
-                intimate: activityClothing.intimate ?? currentClothing.intimate,
-                undergarment: activityClothing.undergarment ?? currentClothing.undergarment,
-                outerwear: activityClothing.outerwear ?? currentClothing.outerwear,
-                accessories: this.filterAccessoriesForActivity(
-                    currentClothing.accessories,
-                    newActivity
-                ),
+        const target: ClothingState = activityClothing
+            ? {
+                intimate: activityClothing.intimate ?? baseline.intimate,
+                undergarment: activityClothing.undergarment ?? baseline.undergarment,
+                outerwear: activityClothing.outerwear ?? baseline.outerwear,
+                accessories: this.filterAccessoriesForActivity(currentClothing.accessories, activity),
                 state: activityClothing.state ?? currentClothing.state,
-                dressLevel: currentClothing.dressLevel,
-            };
-
-            newClothing.dressLevel = this.getDressLevel(newClothing);
-            return newClothing;
-        }
-
-        // 检查是否需要放下携带物
-        if (DROP_CARRYABLES_ACTIVITIES.includes(newActivity)) {
-            const filteredAccessories = this.filterAccessoriesForActivity(
-                currentClothing.accessories,
-                newActivity
-            );
-
-            if (filteredAccessories.length !== currentClothing.accessories.length) {
-                return {
-                    ...currentClothing,
-                    accessories: filteredAccessories,
-                };
+                dressLevel: 'fully_dressed',
             }
-        }
-
-        // 检查是否应该恢复原始服装
-        if (this.originalClothing.has(maiden.id) && !ACTIVITY_CLOTHING_MAP[newActivity]) {
-            const original = this.originalClothing.get(maiden.id)!;
-            this.originalClothing.delete(maiden.id);
-            this.clothingTimestamps.delete(maiden.id);
-
-            // 保留当前服装的状态信息（如损伤、湿润等），但恢复原始服装的结构
-            const restoredClothing: ClothingState = {
-                ...original,
-                state: currentClothing.state || original.state,
-                accessories: original.accessories.map(originalAcc => {
-                    const currentAcc = currentClothing.accessories.find(ca => ca.type.id === originalAcc.type.id);
-                    return currentAcc || originalAcc;
-                }),
+            : {
+                ...baseline,
+                accessories: this.filterAccessoriesForActivity(currentClothing.accessories, activity),
+                state: currentClothing.state,
+                dressLevel: 'fully_dressed',
             };
 
-            restoredClothing.dressLevel = this.getDressLevel(restoredClothing);
-            return restoredClothing;
-        }
+        const carriageEffect = CARRIAGE_CLOTHING_EFFECTS[carriageType];
+        if (carriageEffect?.state) target.state = carriageEffect.state;
 
-        return null;
+        target.dressLevel = calculateDressLevel(target);
+
+        return isSameClothing(currentClothing, target) ? null : target;
     }
 
     /**
-     * 根据车厢类型更新服装状态
+     * 覆写着装污损状态（`state` 与着装结构正交，是污损/修复动作的唯一写入口）。
+     * 破损、弄湿、染血、透光、恢复整洁都通过同一参数表达。
      */
-    updateClothingForCarriage(
-        maiden: Maiden,
-        carriageType: CarriageType
-    ): Partial<ClothingState> | null {
-        const effect = CARRIAGE_CLOTHING_EFFECTS[carriageType];
-        return effect ? effect : null;
+    setAttireState(clothing: ClothingState, state: AttireState): ClothingState {
+        return { ...clothing, state };
     }
 
     /**
-     * 应用服装损坏
-     */
-    damageClothing(
-        clothing: ClothingState,
-        severity: 'minor' | 'moderate' | 'severe'
-    ): ClothingState {
-        const stateMap: Record<string, AttireState> = {
-            minor: 'disheveled',
-            moderate: 'torn',
-            severe: 'torn',
-        };
-
-        return {
-            ...clothing,
-            state: stateMap[severity],
-        };
-    }
-
-    /**
-     * 弄湿服装
-     */
-    wetClothing(clothing: ClothingState): ClothingState {
-        return {
-            ...clothing,
-            state: 'wet',
-        };
-    }
-
-    /**
-     * 弄脏服装
-     */
-    dirtyClothing(clothing: ClothingState): ClothingState {
-        return {
-            ...clothing,
-            state: 'dirty',
-        };
-    }
-
-    /**
-     * 染血服装
-     */
-    bloodyClothing(clothing: ClothingState): ClothingState {
-        return {
-            ...clothing,
-            state: 'bloody',
-        };
-    }
-
-    /**
-     * 浸透透明服装
-     */
-    transparentClothing(clothing: ClothingState): ClothingState {
-        return {
-            ...clothing,
-            state: 'transparent',
-        };
-    }
-
-    /**
-     * 恢复服装状态为整洁
-     */
-    cleanClothing(clothing: ClothingState): ClothingState {
-        return {
-            ...clothing,
-            state: 'intact',
-        };
-    }
-
-    /**
-     * 强制脱除所有服装
-     */
-    stripAll(maiden: Maiden): ClothingState {
-        const currentClothing = maiden.clothing;
-
-        // 保留不可移除的饰品
-        const permanentAccessories = currentClothing.accessories.filter(
-            acc => acc.isRemovable === false
-        );
-
-        return {
-            ...NAKED_CLOTHING_STATE,
-            accessories: permanentAccessories,
-        };
-    }
-
-    /**
-     * 脱除指定层级
-     */
-    removeLayer(
-        clothing: ClothingState,
-        layer: 'intimate' | 'undergarment' | 'outerwear'
-    ): ClothingState {
-        switch (layer) {
-            case 'intimate':
-                return {
-                    ...clothing,
-                    intimate: {
-                        bra: { type: NONE_ITEM },
-                        panties: { type: NONE_ITEM },
-                    },
-                    dressLevel: this.getDressLevel({
-                        ...clothing,
-                        intimate: { bra: { type: NONE_ITEM }, panties: { type: NONE_ITEM } }
-                    })
-                };
-            case 'undergarment':
-                return {
-                    ...clothing,
-                    undergarment: {
-                        stockings: { type: NONE_ITEM },
-                        undershirt: { type: NONE_ITEM },
-                        underpants: { type: NONE_ITEM },
-                    },
-                    dressLevel: this.getDressLevel({
-                        ...clothing,
-                        undergarment: { stockings: { type: NONE_ITEM }, undershirt: { type: NONE_ITEM }, underpants: { type: NONE_ITEM } }
-                    })
-                };
-            case 'outerwear':
-                return {
-                    ...clothing,
-                    outerwear: {
-                        top: { type: NONE_ITEM },
-                        bottom: { type: NONE_ITEM },
-                        gloves: { type: NONE_ITEM },
-                        shoes: { type: NONE_ITEM },
-                    },
-                    dressLevel: this.getDressLevel({
-                        ...clothing,
-                        outerwear: { top: { type: NONE_ITEM }, bottom: { type: NONE_ITEM }, gloves: { type: NONE_ITEM }, shoes: { type: NONE_ITEM } }
-                    })
-                };
-        }
-    }
-
-    /**
-     * 添加饰品
-     */
-    addAccessory(
-        clothing: ClothingState,
-        accessory: AccessoryItem
-    ): ClothingState {
-        return {
-            ...clothing,
-            accessories: [...clothing.accessories, accessory],
-        };
-    }
-
-    /**
-     * 移除饰品
-     */
-    removeAccessory(
-        clothing: ClothingState,
-        accessoryTypeId: string
-    ): ClothingState {
-        return {
-            ...clothing,
-            accessories: clothing.accessories.filter(
-                acc => acc.type.id !== accessoryTypeId && acc.isRemovable !== false
-            ),
-        };
-    }
-
-    // ============================================
-    // 私有方法
-    // ============================================
-
-    /**
-     * 根据活动过滤饰品
-     * 移除携带物，保留不可移除的饰品
+     * 根据活动过滤饰品：不可移除的始终保留，沐浴仅留束缚类，其余活动只放下携带物。
      */
     private filterAccessoriesForActivity(
         accessories: AccessoryItem[],
         activity: CharacterStatus
     ): AccessoryItem[] {
         return accessories.filter(acc => {
-            // 不可移除的饰品始终保留
             if (acc.isRemovable === false) return true;
 
-            // 洗浴时移除所有可移除饰品（除了束缚类）
             if (activity === 'bathing') {
                 return isBondageAccessory(acc.type.id);
             }
 
-            // 其他活动只移除携带物
             if (DROP_CARRYABLES_ACTIVITIES.includes(activity)) {
                 return !isCarryableItem(acc.type.id);
             }
@@ -4272,113 +3968,22 @@ class MaidenClothing {
             return true;
         });
     }
-
-    // ============================================
-    // 生命周期管理 (Lifecycle)
-    // ============================================
-
-    /**
-     * 少女离开/死亡时调用，清理 originalClothing 防止内存泄漏
-     */
-    clearMaiden(maidenId: string): void {
-        this.originalClothing.delete(maidenId);
-        this.clothingTimestamps.delete(maidenId);
-    }
-
-    /**
-     * 定期清理过期的服装备份，防止内存泄漏
-     * @param maxAge 最大保存时间（毫秒），默认为1小时
-     */
-    cleanupExpiredClothing(currentGameTime: number, maxAge: number = 60 * 60 * 1000): void {
-        const now = currentGameTime;
-        const expiredIds: string[] = [];
-
-        for (const [maidId, timestamp] of this.clothingTimestamps.entries()) {
-            if (now - timestamp > maxAge) {
-                expiredIds.push(maidId);
-            }
-        }
-
-        for (const maidId of expiredIds) {
-            this.originalClothing.delete(maidId);
-            this.clothingTimestamps.delete(maidId);
-        }
-    }
-
-    // ============================================
-    // 序列化 / 反序列化 (Save & Load)
-    // ============================================
-
-    /**
-     * 序列化原始服装备份，用于存档
-     */
-    serialize(): [string, ClothingState][] {
-        return Array.from(this.originalClothing.entries());
-    }
-
-    /**
-     * 序列化时间戳数据，用于存档
-     */
-    serializeTimestamps(): [string, number][] {
-        return Array.from(this.clothingTimestamps.entries());
-    }
-
-    /**
-     * 获取服装穿着层级
-     */
-    getDressLevel(clothing: ClothingState): DressLevel {
-        const hasOuterwear = clothing.outerwear.top.type.id !== 'none' || clothing.outerwear.bottom.type.id !== 'none';
-        const hasUndergarment = clothing.undergarment.undershirt.type.id !== 'none' || clothing.undergarment.underpants.type.id !== 'none';
-        const hasIntimate = clothing.intimate.bra.type.id !== 'none' || clothing.intimate.panties.type.id !== 'none';
-
-        if (hasOuterwear) return 'fully_dressed';
-        if (hasUndergarment || hasIntimate) return hasIntimate && !hasUndergarment ? 'underwear_only' : 'partially_dressed';
-        return 'naked';
-    }
-
-    /**
-     * 从存档恢复原始服装备份，防止读档后服装恢复机制失效
-     */
-    deserialize(data: [string, ClothingState][]): void {
-        if (!Array.isArray(data)) return;
-        this.originalClothing = new Map(
-            data.filter(entry =>
-                Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string'
-            )
-        );
-    }
-
-    /**
-     * 从存档恢复时间戳数据
-     */
-    deserializeTimestamps(data: [string, number][]): void {
-        if (!Array.isArray(data)) return;
-        this.clothingTimestamps = new Map(
-            data.filter(entry =>
-                Array.isArray(entry) && entry.length === 2 && typeof entry[0] === 'string' && typeof entry[1] === 'number'
-            )
-        );
-    }
 }
 
-// 单例导出
-
-
-// ==========================================================================
 // 妊娠
-// ==========================================================================
 
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 const TOTAL_PREGNANCY_WEEKS = 40;
 const ABORTION_RISK_THRESHOLD = 85;
 
 /**
- * @少女怀孕系统 - 生育循环模拟
+ * 妊娠子系统：受孕判定、孕期推进、并发症与分娩结算。
+ * 孕周由时长推导，`Maiden.physiology.pregnancy` 是唯一状态载体。
  */
 class MaidenPregnancy {
     /**
-     * 受孕检测
-     * 结合生理特征与当前维生属性，测算是否触发新循环。
+     * 受孕检测。
+     * 受生理特征与维生状态共同抑制；已孕时直接返回 null。
      */
     attemptConception(maiden: Maiden, gameTimePassed: number, fertilityBonus: number = 0): PregnancyEvent | null {
         if (this.isPregnant(maiden)) return null;
@@ -4728,10 +4333,7 @@ class MaidenPregnancy {
         };
     }
 
-    // ============================================
-    // 状态查询器
-    // ============================================
-
+    /** 是否处于妊娠中（唯一判定入口；`pregnancy` 为 null 表示未孕） */
     isPregnant(maiden: Maiden): boolean {
         return maiden.physiology.pregnancy !== null && maiden.physiology.pregnancy !== undefined;
     }
@@ -4740,15 +4342,7 @@ class MaidenPregnancy {
         return maiden.physiology.pregnancy || undefined;
     }
 
-    getPregnancyWeek(maiden: Maiden): number {
-        const state = maiden.physiology.pregnancy;
-        return state ? Math.floor(state.weekNumber) : 0;
-    }
-
-    isInLabor(maiden: Maiden): boolean {
-        return maiden.physiology.pregnancy?.stage === 'labor';
-    }
-
+    /** 全部在孕实体的 id 列表，供统计与 UI 计数使用 */
     getAllPregnantMaidens(maidens: Map<string, Maiden>): string[] {
         const result: string[] = [];
         for (const maiden of maidens.values()) {
@@ -4792,8 +4386,11 @@ class MaidenPregnancy {
     }
 
     /**
-     * 同步状态至 Maiden 对象层
-     * 保障属性与外部状态机的绝对一致性，严格遵循防劣化约束。
+     * 把妊娠状态同步到实体层，并维护派生的状态标签。
+     *
+     * `event.newState` 优先于实体现值（用于流产/分娩这类"事件即结论"的场景，
+     * 其中 `newState: null` 表示终止妊娠）；标签按 isDiscovered 与阶段推导，
+     * 禁止在别处另行增删 'pregnant'/'gestating'。
      */
     syncToMaiden(maiden: Maiden, event?: PregnancyEvent): Maiden {
         const state = event?.newState !== undefined ? event.newState : maiden.physiology.pregnancy;
@@ -4831,10 +4428,7 @@ class MaidenPregnancy {
     }
 }
 
-
-// ==========================================================================
 // 子系统实例
-// ==========================================================================
 
 const maidenMemory = new MaidenMemory();
 const maidenRelationship = new MaidenRelationship();
@@ -4846,15 +4440,6 @@ const maidenBehavior = new MaidenBehavior();
 const maidenMood = new MaidenMood();
 const maidenClothing = new MaidenClothing();
 const maidenPregnancy = new MaidenPregnancy();
-
-
-// ==========================================================================
-// 协调器
-// ==========================================================================
-
-// 导入子模块
-
-// 导入外部服务
 
 /** 值得追踪开始/结束的活动 */
 const TRACKABLE_ACTIVITIES: CharacterStatus[] = [
@@ -4933,17 +4518,19 @@ function determinePersonalityState(alpha: number): PersonalityState {
     return 'dissociated';
 }
 
-// ============================================
-// 少女系统协调器类
-// MaidenSystem Coordinator Class
-// ============================================
-
+/**
+ * 少女系统协调器。
+ *
+ * 对外唯一出口（`maidenSystem` 单例）。职责是把各子系统的调用编排进一帧的更新顺序：
+ * 属性推进 → 行为决策 → 事件结算 → 心境 → 状态 diff。
+ *
+ * 子系统通过 `readonly` 字段暴露，但它们各自持有的数据都内嵌于 `Maiden` 实体，
+ * 因此本类不持有任何需要与存档同步的独立状态。
+ */
 class MaidenSystem {
-    // 内部逻辑模块 (私有/封装)
     private generator = maidenGenerator;
     private behavior = maidenBehavior;
 
-    // 公共子系统 (暴露给外部服务使用)
     readonly socialization = maidenSocialization;
     readonly memory = maidenMemory;
     readonly narcissus = maidenNarcissus;
@@ -4951,15 +4538,12 @@ class MaidenSystem {
     readonly mood = maidenMood;
 
     /**
-     * 随机事件系统 - 公共 API 门面（适配外部调用约定）
-     * checkForEvents 接受完整的 SystemState + masterCarriageId 签名，内部桥接至实现层
+     * 随机事件系统门面：把事件轮询与冷却时序的序列化合并到一处。
      */
     readonly event = {
         checkForEvents: (
             maidens: Map<string, Maiden>,
             carriages: Map<string, Carriage>,
-            _systemState: SystemState,
-            _masterCarriageId: string,
             gameTimePassed: number,
             targetIds?: string[]
         ): GameEvent[] =>
@@ -4970,21 +4554,15 @@ class MaidenSystem {
             maidenRandomEvent.deserialize(data.map(d => [d.eventType, d.timestamp])),
     };
 
-    /** @deprecated 改名为 event，此别名保留向后兼容 */
-    readonly randomEvent = maidenRandomEvent;
-
-    /**
-     * 事件效果结算器 - 与 event 共用同一底层实现
-     */
+    /** 事件效果结算器，与 event 共用同一底层实现 */
     readonly eventEffects = {
         applyEventEffects: (event: GameEvent, ctx: EventEffectContext): Map<string, Maiden> =>
             maidenRandomEvent.applyEventEffects(event, ctx),
     };
 
     /**
-     * 妊娠子系统 - 附加序列化接口
-     * 妊娠状态内嵌于 Maiden.physiology，全量存档通过 Maiden 序列化完成；
-     * 此处 serialize/deserialize 用于子系统数据与 SubsystemsData 规范对齐。
+     * 妊娠子系统（附加序列化接口）。
+     * 妊娠状态内嵌于 Maiden.physiology，随 Maiden 全量存档；此处仅为满足 SubsystemsData 规范。
      */
     readonly pregnancy = Object.assign(maidenPregnancy, {
         serialize: (maidens?: Map<string, Maiden>): PregnancyData[] => {
@@ -5003,8 +4581,8 @@ class MaidenSystem {
     });
 
     /**
-     * 关系子系统 - 附加序列化接口
-     * 关系数据内嵌于 Maiden.relationships，全量存档通过 Maiden 序列化完成。
+     * 关系子系统（附加序列化接口）。
+     * 关系数据内嵌于 Maiden.relationships，随 Maiden 全量存档；此处仅为满足 SubsystemsData 规范。
      */
     readonly relationship = Object.assign(maidenRelationship, {
         serialize: (maidens?: Map<string, Maiden>): RelationshipNetworkData[] => {
@@ -5025,7 +4603,11 @@ class MaidenSystem {
         },
     });
 
-    // 生成配置常量指定数量的少女（使用IS-SHEX人格系统）
+    /**
+     * 生成初始少女种群并写入车厢占用。
+     * 返回值为新实体表；同时会就地修改传入的 `carriages`（追加 occupants），
+     * 因此调用方必须传入本轮可变的地图副本。
+     */
     generateMaidens(carriages: Map<string, Carriage>): Map<string, Maiden> {
         const maidens = new Map<string, Maiden>();
         const carriageIds = Array.from(carriages.keys()).filter(id => {
@@ -5058,24 +4640,30 @@ class MaidenSystem {
         return maidens;
     }
 
-    // ==========================================
-    // 动态系统 - 状态更新
-    // ==========================================
-
+    /** 游戏内小时（0-23），由绝对游戏时间换算 */
     getGameHour(gameTimePassed: number): number {
         return Math.floor((gameTimePassed / TIME_CONFIG.MS_PER_HOUR) % 24);
     }
-    getGameMinute(gameTimePassed: number): number {
-        return Math.floor((gameTimePassed / TIME_CONFIG.MS_PER_MINUTE) % 60);
-    }
-    getGameSecond(gameTimePassed: number): number {
-        return Math.floor((gameTimePassed / TIME_CONFIG.MS_PER_SECOND) % 60);
-    }
+
+    /** 是否处于夜间休息时段（跨零点，因此判定必须用"或"而非区间） */
     isRestTime(gameTimePassed: number): boolean {
         const hour = this.getGameHour(gameTimePassed);
         return hour >= TIME_CONFIG.REST_START_HOUR || hour < TIME_CONFIG.REST_END_HOUR;
     }
 
+    /**
+     * 推进单帧的属性与状态。
+     *
+     * 依赖顺序不可调换：车厢周期效应 → 共振 → 维生消耗 → 活动效应 → 深渊效应 →
+     * 状态标签 → 生理周期 → 人格状态。人格状态最后计算，因为它要读取本帧的新压力值。
+     *
+     * @param maiden 本帧开始时的实体快照（不会被修改）
+     * @param carriage 实体当前所在车厢；类型未知时抛错，而非静默套用默认值
+     * @param gameDeltaMs 本帧推进的游戏毫秒数（已乘 timeScale）
+     * @param resonanceFrequency 全局共振频率，越低越容易推高欲望
+     * @param gameTimePassed 推进后的**绝对**游戏时间，用于休息时段与生理周期判定
+     * @returns 新的实体快照，属性/状态/生理/人格均已更新
+     */
     updateMaidenState(
         maiden: Maiden,
         carriage: Carriage,
@@ -5234,14 +4822,16 @@ class MaidenSystem {
         else if (attrs.lust <= THRESHOLDS.LUST_NORMAL) statusSet.delete('aroused');
         if (attrs.stress > THRESHOLDS.STRESS_HIGH) statusSet.add('panicked');
         else if (attrs.stress <= CHANGE_THRESHOLDS.stressRelieved) statusSet.delete('panicked');
+        // 每项状态都成对增删并留出滞回区间：只在阈值单侧增删会让标签永久驻留
         if (attrs.devotion > THRESHOLDS.DEVOTION_FANATIC) statusSet.add('devoted');
+        else if (attrs.devotion <= CHANGE_THRESHOLDS.devotionCalm) statusSet.delete('devoted');
         if (attrs.corruption > THRESHOLDS.CORRUPTION_COMPLICIT) statusSet.add('complicit');
+        else if (attrs.corruption <= CHANGE_THRESHOLDS.corruptionCleared) statusSet.delete('complicit');
         return statusSet;
     }
 
     private _updatePhysiology(maiden: Maiden, deltaMinutes: number, gameTimePassed: number): Maiden['physiology'] {
         const physiology = { ...maiden.physiology };
-        const MS_PER_DAY = 24 * 60 * 60 * 1000;
         const gameDeltaMs = deltaMinutes * 60 * 1000;
         const previousTime = gameTimePassed - gameDeltaMs;
         const daysToAdvance = Math.floor(gameTimePassed / MS_PER_DAY) - Math.floor(previousTime / MS_PER_DAY);
@@ -5302,10 +4892,10 @@ class MaidenSystem {
         return order.indexOf(newState) > order.indexOf(oldState);
     }
 
-    // ==========================================
-    // 动态系统 - 变化追踪
-    // ==========================================
-
+    /**
+     * 对比同一实体的前后快照，产出可直接写入日志的状态变化列表。
+     * 每个变化都带 old/new 值，供日志与 UI 呈现；只在阈值被跨越时产生条目。
+     */
     compareStates(before: Maiden, after: Maiden): StateChange[] {
         const changes: StateChange[] = [];
         const currentCarriageId = getCurrentCarriageId(after);
@@ -5461,7 +5051,6 @@ class MaidenSystem {
         }
     }
 
-    // 委托给行为决策器
     decideMaidenBehavior(
         maiden: Maiden,
         currentCarriage: Carriage,
@@ -5474,7 +5063,6 @@ class MaidenSystem {
         );
     }
 
-    // 委托给事件系统
     processSocialInteractions(
         maiden: Maiden,
         othersInCarriage: string[],
@@ -5487,30 +5075,29 @@ class MaidenSystem {
         );
     }
 
-    // 处理水仙协议逻辑
-    // 返回 log（可选）与 maidenUpdate（已离开者的褪色状态更新）
+    /**
+     * 水仙协议单帧推进：已在协议中则推进褪色，否则按稀有概率尝试触发。
+     * 返回的 `maidenUpdate` 必须由调用方合并进实体——本方法不直接改写入参。
+     */
     processNarcissusLogic(
         maiden: Maiden,
         gameTimePassed: number
     ): { log?: string; maidenUpdate?: Partial<Maiden> } {
-        const state = this.narcissus.getState(maiden);
-
-        // 已在协议中：处理离开后的褪色演进
+        // 已在协议中：推进褪色。终态（returned/rejected）由 updateFading 自行拒绝，
+        // 因此这里无需再判一次阶段。
         if (this.narcissus.isInProtocol(maiden)) {
-            if (state?.stage === 'departed' || state?.stage === 'fading' || state?.stage === 'invitation') {
-                const fadingResult = this.narcissus.updateFading(maiden, gameTimePassed);
-                if (fadingResult.updatedState) {
-                    const maidenUpdate: Partial<Maiden> = { narcissusState: fadingResult.updatedState };
-                    if (fadingResult.stageChanged && fadingResult.description) {
-                        return { log: `>>> 水仙平原 >>> ${fadingResult.description}`, maidenUpdate };
-                    }
-                    return { maidenUpdate };
-                }
+            const fadingResult = this.narcissus.updateFading(maiden, gameTimePassed);
+            if (!fadingResult.updatedState) return {};
+
+            const maidenUpdate: Partial<Maiden> = { narcissusState: fadingResult.updatedState };
+            // 仅在阶段真正切换时输出叙述，避免每帧刷屏
+            if (fadingResult.stageChanged && fadingResult.description) {
+                return { log: `>>> 水仙平原 >>> ${fadingResult.description}`, maidenUpdate };
             }
-            return {};
+            return { maidenUpdate };
         }
 
-        // 未在协议中：检查是否应自动触发
+        // 未在协议中：按稀有概率尝试触发
         if (this.narcissus.shouldAutonomousTrigger(maiden, gameTimePassed)) {
             const result = this.narcissus.initiateProtocol(maiden, gameTimePassed);
             if (result.success) {
@@ -5523,7 +5110,7 @@ class MaidenSystem {
         return {};
     }
 
-    // 获取少女摘要列表
+    /** 卡片列表所需的轻量投影，避免把完整实体传进 UI 层 */
     getMaidenSummaries(maidens: Map<string, Maiden>): MaidenSummary[] {
         return Array.from(maidens.values()).map(m => ({
             id: m.id,
@@ -5535,28 +5122,13 @@ class MaidenSystem {
         }));
     }
 
-    // 获取少女状态描述
-    getMaidenStatusDescription(maiden: Maiden): string {
-        const { attributes: a, behavior: b } = maiden;
-        const parts: string[] = [];
-
-        parts.push(ACTIVITY_STATUS_NAMES[b.currentActivity] || '状态未知');
-
-        if (a.hunger > NEED_THRESHOLDS.URGENT) parts.push('饥肠辘辘');
-        if (a.fatigue > NEED_THRESHOLDS.URGENT) parts.push('疲惫不堪');
-        if (a.hygiene < CHANGE_THRESHOLDS.hygieneDirty) parts.push('急需清洁');
-        if (a.stress > NEED_THRESHOLDS.HIGH) parts.push('压力过大');
-        if (a.lust > NEED_THRESHOLDS.HIGH) parts.push('欲望难耐');
-
-        return parts.join('，');
-    }
-
-    // 获取IS-SHEX人格描述（用于UI显示）
-    // 简化版，去除不必要的排序和过滤逻辑，使用核心特征
+    /**
+     * 人格原型的中文标签，用于卡片展示。
+     * 优先取第一个主导原型；无主导原型时退化为稳定性等级描述。
+     */
     getPersonalityDescription(maiden: Maiden): string {
         const { archetype, metaTraits } = maiden.isshex;
 
-        // 优先显示主要原型
         if (archetype.dominated.length > 0) {
             const archetypeLabels: Record<string, string> = {
                 machiavellian: '操纵者',
