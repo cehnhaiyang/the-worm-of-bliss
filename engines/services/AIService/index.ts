@@ -4,10 +4,9 @@
 // 组合 TextService 和 ImageService
 // ============================================
 
-import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode } from '../../../meta';
+import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, ChainRejection } from '../../../meta';
 import { TextService } from './TextService';
 import { ImageService } from './ImageService';
-import { ChainRejection } from '../../systems/MaidenSystem/MaidenMemory';
 
 class AIService {
   private textService: TextService;

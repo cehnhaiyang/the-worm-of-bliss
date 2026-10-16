@@ -12,7 +12,8 @@ import {
   NarcissusData,
   EventTimestampData,
   Maiden,
-  CharacterAttributes
+  CharacterAttributes,
+  MemoryNode
 } from './interface';
 import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from '../constants';
 
@@ -90,6 +91,14 @@ export function modifiedProbability(
     modifier *= 1 + (value / 100 - 0.5) * weight;
   }
   return clamp(baseProbability * modifier, 0, 1);
+}
+
+/**
+ * 判断记忆节点是否"被改动过"——篡改或植入。
+ * 登车瞬间（死节点）只是不可编辑，不属于被污染的记忆，故不计入。
+ */
+export function isAlteredMemory(node: MemoryNode): boolean {
+  return node.type === 'corrupted' || node.type === 'implanted';
 }
 
 // ============================================

@@ -5,7 +5,7 @@
 
 import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData } from '../../../meta';
 import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, WORLD_LORE } from '../../../constants';
-import { maidenMemory } from '../../systems/MaidenSystem/MaidenMemory';
+import { maidenSystem } from '../../systems';
 
 // ============================================
 // Helper Functions
@@ -128,7 +128,7 @@ ${profile.fetish ? `潜在癖好: ${profile.fetish}` : ''}
 孕周: ${physiology.pregnancy?.weekNumber ? `${physiology.pregnancy.weekNumber}周` : '无'}
 
 [记忆索引]
-${maidenMemory.generateSummaryFromChain(maiden.memoryChain)}
+${maidenSystem.memory.generateSummaryFromChain(maiden.memoryChain)}
 近期记忆: ${maiden.memoryChain.slice(-3).map(n => n.title).join(' → ') || '无'}
 `.trim();
 }

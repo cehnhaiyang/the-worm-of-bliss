@@ -438,6 +438,35 @@ export interface MemoryNode {
   history?: MemoryHistoryEntry[];
 }
 
+// ---------------------------------------------------------------------------
+// 记忆链的写入契约
+// 这些形状描述"外部交给记忆系统的原始数据"，因此与 MemoryNode 同处类型层，
+// 而不是留在实现里——AI 服务层需要它们，但不该依赖记忆系统的实现模块。
+// ---------------------------------------------------------------------------
+
+/** AI 返回的原始节点：位于信任边界之外，字段可能缺失或类型错误 */
+export interface RawMemoryNode {
+  title?: unknown;
+  objectiveTruth?: unknown;
+  subjectiveNarrative?: unknown;
+  selfOpinion?: unknown;
+  timeLabel?: unknown;
+  category?: unknown;
+}
+
+/** 一次插叙请求。层级（depth）不在其中：新节点层级由锚点推导 */
+export interface RawInsertion {
+  insertAfterNodeId: string;
+  nodes: RawMemoryNode[];
+}
+
+/** 被拒绝的插叙及其原因，供调用方汇总后告知玩家 */
+export interface ChainRejection {
+  anchorId: string;
+  titles: string[];
+  reason: string;
+}
+
 /**
  * 人际关系双向边
  */

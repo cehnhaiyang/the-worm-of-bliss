@@ -7,7 +7,7 @@
 // ============================================
 
 import { Maiden, MemoryNode } from '../../meta';
-import { maidenMemory } from '../systems/MaidenSystem/MaidenMemory';
+import { maidenSystem } from '../systems';
 
 export type MaidenMapUpdater = (updater: (prev: Map<string, Maiden>) => Map<string, Maiden>) => void;
 
@@ -33,7 +33,7 @@ export function commitNodeEdit(update: MaidenMapUpdater, maidenId: string, node:
     const current = prev.get(maidenId);
     if (!current) return prev;
     const next = new Map(prev);
-    next.set(maidenId, { ...current, memoryChain: maidenMemory.replaceNode(current.memoryChain, node) });
+    next.set(maidenId, { ...current, memoryChain: maidenSystem.memory.replaceNode(current.memoryChain, node) });
     return next;
   });
 }
@@ -52,7 +52,7 @@ export function commitNodeInsert(
     const current = prev.get(maidenId);
     if (!current) return prev;
     const next = new Map(prev);
-    next.set(maidenId, { ...current, memoryChain: maidenMemory.insertNode(current.memoryChain, node, afterNodeId) });
+    next.set(maidenId, { ...current, memoryChain: maidenSystem.memory.insertNode(current.memoryChain, node, afterNodeId) });
     return next;
   });
 }

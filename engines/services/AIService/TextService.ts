@@ -3,7 +3,7 @@
 // AI 文本生成服务 (Groq / Agent2API)
 // ============================================
 
-import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, generateId } from '../../../meta';
+import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, RawInsertion, ChainRejection, generateId } from '../../../meta';
 import {
   responseSchemaDesc,
   memoryChainSchemaDesc,
@@ -14,7 +14,7 @@ import {
 } from './schema';
 import * as Builder from './builder';
 import { TAMPER_PERMISSIONS } from '../../../constants';
-import { maidenMemory, RawInsertion, ChainRejection } from '../../systems/MaidenSystem/MaidenMemory';
+import { maidenSystem } from '../../systems';
 
 // ============================================
 // 配置常量
@@ -196,7 +196,7 @@ ${schemaDescription}`;
       );
 
       const raw = Array.isArray(data.nodes) ? data.nodes : [];
-      return maidenMemory.buildInitialChain(raw, gameTimePassed);
+      return maidenSystem.memory.buildInitialChain(raw, gameTimePassed);
 
     } catch (error) {
       console.error("Memory Generation Error:", error);
@@ -228,7 +228,7 @@ ${schemaDescription}`;
         nodes: Array.isArray(insertion?.newNodes) ? insertion.newNodes : [],
       }));
 
-      return maidenMemory.insertInputs(maiden.memoryChain, insertions, gameTimePassed);
+      return maidenSystem.memory.insertInputs(maiden.memoryChain, insertions, gameTimePassed);
 
     } catch (error) {
       console.error("Deepen Memory Error:", error);

@@ -5,10 +5,9 @@
 // ============================================
 
 import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
-import { Maiden, MemoryNode, MemoryHistoryEntry, formatGameTimeDisplay } from '../../../../meta';
+import { Maiden, MemoryNode, MemoryHistoryEntry, formatGameTimeDisplay, isAlteredMemory } from '../../../../meta';
 import { aiService } from '../../../../engines/services';
 import { maidenSystem } from '../../../../engines/systems';
-import { isAlteredMemory } from '../../../../engines/systems/MaidenSystem/MaidenMemory';
 import { TAMPER_PERMISSIONS } from '../../../../constants';
 
 interface MemoryProps {
