@@ -311,7 +311,9 @@ class PersistenceService {
     const maidens = new Map<string, Maiden>();
 
     for (const [id, maiden] of saveData.maidens) {
-      maidens.set(id, { ...maiden, isshex: normalizePersonality(maiden.isshex) });
+      // 传入实体自己的游戏时钟：老存档没有 dynamics，lastDriftTime 需由它播种，
+      // 否则会被当成"从时间原点起就没漂移过"
+      maidens.set(id, { ...maiden, isshex: normalizePersonality(maiden.isshex, maiden.lastUpdateTime) });
     }
 
     return {

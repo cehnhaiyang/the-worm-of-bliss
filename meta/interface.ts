@@ -300,21 +300,6 @@ export interface SignatureMatch {
 }
 
 /**
- * 过程平面 P1 的一次情境表达取样（z 分）。
- *
- * 状态由特质、特质激活增益与情境规范共同决定；它刻意**不**持久化，
- * 而是随调用重算——持久化会让"当前状态"多出一份需要同步的副本。
- */
-export interface StateExpression {
-  /** 各子维度在该情境下的预期表达水平 */
-  facets: HexacoFacets;
-  /** 各子维度相对个人基线的偏离量 |x − θ| 之和，用于背离负荷 */
-  deviationSum: number;
-  /** 情境强度 ς ∈ [0,1] */
-  situationalStrength: number;
-}
-
-/**
  * 人格状态与过程平面的可变部分。
  *
  * 这是 `ISShexPersonality` 中**唯一需要持久化**的状态：特质水平 θ 存在 facets，

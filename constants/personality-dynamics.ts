@@ -19,7 +19,6 @@ import {
   OctantAffinity,
   SignatureId,
   SignatureMatch,
-  StateExpression,
   PersonalityState,
   MoodState,
   SituationType,
@@ -200,9 +199,6 @@ export function deriveMetaTraits(facets: HexacoFacets): MetaTraits {
 // ============================================================================
 // 构型（§3.4）
 // ============================================================================
-
-/** 构型判定阈值：档位 ±0.5，签名 ±0.5 / ±1.0（§3.4.1、§3.4.2） */
-const OCTANT_BAND = 0.5;
 
 /** 八分构型的原型向量 p_k ∈ {±1}³ */
 const OCTANT_PROTOTYPES: Record<OctantId, [number, number, number]> = {
@@ -403,47 +399,6 @@ function sampleStandardNormal(): number {
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
-/**
- * 计算一次情境下的**子维度**状态表达（§4.1）。
- *
- * `x_jt = (1 − ς)·g_jt·θ_j + ς·n_jt + ε_jt`，`g_jt = 1 + κ·(r_jt − 0.5)`。
- * 弱情境下状态由特质主导、并在相关线索下放大（特质激活）；
- * 强情境下状态向规范收敛、个体差异被压缩。
- *
- * 子维度级表达用于叙事与背离负荷；状态偏离 D² 走 `expressDomains`——
- * 两者不可互换，见该函数的说明。
- *
- * @param withNoise 是否注入 ε ~ N(0, σ_w²)；传 false 得到期望值（用于展示与测试）
- */
-export function expressState(
-  facets: HexacoFacets,
-  situation: SituationType,
-  situationalStrength: number,
-  withNoise = true
-): StateExpression {
-  const strength = Math.max(0, Math.min(1, situationalStrength));
-  const cues = SITUATION_CUE_RELEVANCE[situation];
-  const norms = SITUATION_NORM_PRESSURE[situation];
-
-  const expressed = {} as HexacoFacets;
-  let deviationSum = 0;
-
-  for (const key of Object.keys(facets) as (keyof HexacoFacets)[]) {
-    const theta = facets[key];
-    const relevance = cues[key] ?? 0.5;              // 未列出的子维度视为中性线索
-    const gain = 1 + TRAIT_ACTIVATION_GAIN * (relevance - 0.5);
-    const norm = norms[key] ?? 0;
-    const expected = (1 - strength) * gain * theta + strength * norm;
-    const noise = withNoise ? sampleStandardNormal() * WITHIN_PERSON_SD : 0;
-    const value = expected + noise;
-
-    expressed[key] = value;
-    deviationSum += Math.abs(value - theta);
-  }
-
-  return { facets: expressed, deviationSum, situationalStrength: strength };
-}
-
 /** 情境在某个维度上的线索相关度：取该维度内子维度线索的均值 */
 export function domainCueRelevance(situation: SituationType, domain: keyof HexacoProfile): number {
   const cues = SITUATION_CUE_RELEVANCE[situation];
@@ -554,13 +509,31 @@ export function computeDiscrepancyLoad(
 /**
  * 负荷递推 `F_t = max(0, ρ·F_{t−1} + L_t − λ·N_t)`（§4.2）。
  *
+ * 时间基是**游戏日**（ρ 的定义即"日际保持"），而调用方按帧推进，因此这里显式
+ * 接收经过的天数并统一缩放三项。只缩放 L 会让 λ·N 以整日量级逐帧扣减，
+ * 单帧净变化恒为负，`max(0, …)` 便把 F 永久钉在 0——P2 静默失效。
+ *
+ * 缩放方式是"保留按 ρ^Δ 指数衰减、负荷按 Δ 线性累加"。Δ = 1 天时与规范递推
+ * 逐位相等；亚日步进则是把日粒度递推拆细，稳态 F* = (L − λ·N)·Δ / (1 − ρ^Δ)
+ * 随 Δ 变化，Δ→0 时收敛到 (L − λ·N) / (−ln ρ)（Δ=1 时为 2.93，极限为 2.47）。
+ * 这一离散化差异是规范只定义日粒度递推的必然结果，且 ρ 本身是 [D] 未校准默认值，
+ * 故不做补偿；需要严格对齐规范时按整天调用即可。
+ *
  * @param previousLoad 上一时点的累积负荷 F
- * @param load 本时点新增负荷 L
+ * @param load 该情境下的**单日**负荷 L
  * @param restorativeAccess 恢复性生态位可及度 N ∈ [0,1]
+ * @param elapsedDays 距上次递推经过的游戏日；≤ 0 时保持原值（无时间推进则无变化）
  */
-export function accumulateLoad(previousLoad: number, load: number, restorativeAccess: number): number {
+export function accumulateLoad(
+  previousLoad: number,
+  load: number,
+  restorativeAccess: number,
+  elapsedDays: number
+): number {
+  if (elapsedDays <= 0) return previousLoad;
   const recovery = LOAD_PARAMS.recoveryEfficiency * Math.max(0, Math.min(1, restorativeAccess));
-  return Math.max(0, LOAD_PARAMS.retention * previousLoad + load - recovery);
+  const retention = Math.pow(LOAD_PARAMS.retention, elapsedDays);
+  return Math.max(0, retention * previousLoad + (load - recovery) * elapsedDays);
 }
 
 // ============================================================================

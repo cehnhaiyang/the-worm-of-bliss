@@ -164,7 +164,6 @@ import {
     deriveProxies,
     deriveSignatureMatches,
     expressDomains,
-    expressState,
     isBondageAccessory,
     isCarryableItem,
     normalizeFacets,
@@ -726,7 +725,6 @@ class MaidenRelationship {
         let targetTrustDelta = 0;
         let sharedTraumaFlag = false;
 
-        const iDomains = personalityView(initiator).domains;
         const tDomains = personalityView(target).domains;
         const iProxies = personalityView(initiator).proxies;
 
@@ -1287,7 +1285,6 @@ class MaidenSocialization {
 
 /** 水仙协议：褪色速度与阶段阈值，与 GAME_CONFIG.NARCISSUS 保持一致 */
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const MINUTES_PER_DAY = 24 * 60;
 const FADING_RATE_PER_DAY = GAME_CONFIG.NARCISSUS.FADING_RATE;
 const FADING_STAGE_THRESHOLD = 30;
 const INVITATION_THRESHOLD = GAME_CONFIG.NARCISSUS.INVITATION_THRESHOLD;
@@ -2335,8 +2332,15 @@ function generateHexacoFacets(): HexacoFacets {
  * 子维度的换算与补足交给 `normalizeFacets`（唯一的人格读档入口），这里只负责
  * 过程平面：v1 的 `traitFatigue` 是 0–100 的"特质疲劳"，与背离负荷不是同一个量，
  * 故不做换算而直接归零——量纲不同，强行映射只会产生一个没有依据的初值。
+ *
+ * `lastDriftTime` 与 `maiden.lastUpdateTime` 共用同一条游戏时钟，缺失时必须用
+ * `now` 播种而非 0：老存档没有 `dynamics`，若播成 0，首帧的 elapsedDays 会等于
+ * 整个游戏时长（实测 20574 天 ≈ 56 年），于是 P4 在加载瞬间一次性漂移约 1.1 SD。
+ * 没有记录的时间就当没有发生——与 `traitFatigue` 归零是同一条理由。
+ *
+ * @param now 该实体当前的游戏时间（`maiden.lastUpdateTime`）
  */
-function normalizeIsshex(raw: unknown): ISShexPersonality {
+function normalizeIsshex(raw: unknown, now: number): ISShexPersonality {
     const source = (raw ?? {}) as { dynamics?: Partial<PersonalityDynamics> };
     const rawDynamics = source.dynamics;
 
@@ -2345,14 +2349,14 @@ function normalizeIsshex(raw: unknown): ISShexPersonality {
         dynamics: {
             discrepancyLoad: rawDynamics?.discrepancyLoad ?? 0,
             deviationSquared: rawDynamics?.deviationSquared ?? 0,
-            lastDriftTime: rawDynamics?.lastDriftTime ?? 0,
+            lastDriftTime: rawDynamics?.lastDriftTime ?? now,
         },
     };
 }
 
 /** 读档时的人格规范化门面，供持久化层调用（唯一入口） */
-export function normalizePersonality(raw: unknown): ISShexPersonality {
-    return normalizeIsshex(raw);
+export function normalizePersonality(raw: unknown, now: number): ISShexPersonality {
+    return normalizeIsshex(raw, now);
 }
 
 /**
@@ -2894,10 +2898,6 @@ class MaidenBehavior {
      */
     private getTraitActivationMultiplier(situation: SituationType): number {
         return traitActivationGain(situation, SITUATION_TRAIT_ACTIVATION[situation].primary);
-    }
-
-    private getWeights(personality: ISShexPersonality): BehaviorWeights {
-        return deriveBehaviorWeights(personality.facets);
     }
 
     // 计算需求优先级（基于IS-SHEX人格与当前情境）
@@ -4720,7 +4720,7 @@ class MaidenSystem {
      * 推进单帧的属性与状态。
      *
      * 依赖顺序不可调换：车厢周期效应 → 共振 → 维生消耗 → 活动效应 → 深渊效应 →
-     * 状态标签 → 生理周期 → 人格状态。人格状态最后计算，因为它要读取本帧的新压力值。
+     * 状态标签 → 生理周期 → 人格状态。
      *
      * @param maiden 本帧开始时的实体快照（不会被修改）
      * @param carriage 实体当前所在车厢；类型未知时抛错，而非静默套用默认值
@@ -4794,7 +4794,7 @@ class MaidenSystem {
 
         const statusSet = this._updateStatusTags(maiden, attrs, THRESHOLDS);
         const updatedPhysiology = this._updatePhysiology(syncedMaiden, deltaMinutes, gameTimePassed);
-        const isshex = this._updatePersonalityState(maiden, attrs, deltaMinutes, carriage);
+        const isshex = this._updatePersonalityState(maiden, carriage);
 
         return {
             ...maiden,
@@ -4931,16 +4931,22 @@ class MaidenSystem {
      * `PersonalityView`。v1 在此同时改写 traitFatigue 与 shadowActivation，
      * 又把 currentState 按 α 的绝对阈值迁移——α 是静态量，不可能"崩溃"，
      * 于是状态与特质长期互相矛盾（§4.3.1）。
+     *
+     * 推进量取自 `maiden.lastUpdateTime` 与 `dynamics.lastDriftTime` 之差，而不是
+     * 本帧的 deltaMinutes：P2 的 ρ 是"日际保持"，用帧长当步长会让负荷随帧率变化。
      */
     private _updatePersonalityState(
         maiden: Maiden,
-        newAttrs: Maiden['attributes'],
-        deltaMinutes: number,
         carriage: Carriage
     ): Maiden['isshex'] {
         const view = personalityView(maiden);
         const situation = CARRIAGE_SITUATION_MAP[carriage.type];
         const strength = SITUATION_STRENGTH[carriage.type];
+
+        // 时间基：P2 的 ρ 与 P4 的漂移率都以**游戏日**定义，因此两者共用
+        // lastDriftTime 这一个时钟，按实际经过的天数推进，与调用频率无关
+        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / MS_PER_DAY;
+        if (elapsedDays <= 0) return maiden.isshex;
 
         // P1：本时点的状态表达与情境期待
         const expressedDomains = expressDomains(maiden.isshex.facets, situation, strength, false);
@@ -4950,25 +4956,24 @@ class MaidenSystem {
         const load = computeDiscrepancyLoad(maiden.isshex.facets, situation, strength);
         const restored = accumulateLoad(
             view.dynamics.discrepancyLoad,
-            load * (deltaMinutes / MINUTES_PER_DAY),            RESTORATIVE_ACCESS[maiden.behavior.currentActivity] ?? 0.2
+            load,
+            RESTORATIVE_ACCESS[maiden.behavior.currentActivity] ?? 0.2,
+            elapsedDays
         );
 
         // P3：状态偏离相对个人基线分档；压力放大威胁评价（§4.3.2 的 η 项）
         const threatBias = 1 + PERSONALITY_MODS.THREAT_APPRAISAL_ETA * maiden.isshex.facets.anxiety;
         const deviationSquared = computeDeviationSquared(expressedDomains, thetaDomains) * Math.max(0, threatBias);
 
-        // P4：长期漂移按经过的游戏时间计算，与调用频率无关
-        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / MS_PER_DAY;
-        const facets = elapsedDays > 0
-            ? applyTraitDrift(maiden.isshex.facets, elapsedDays)
-            : maiden.isshex.facets;
+        // P4：长期漂移
+        const facets = applyTraitDrift(maiden.isshex.facets, elapsedDays);
 
         return {
             facets,
             dynamics: {
                 discrepancyLoad: restored,
                 deviationSquared,
-                lastDriftTime: elapsedDays > 0 ? maiden.lastUpdateTime : view.dynamics.lastDriftTime,
+                lastDriftTime: maiden.lastUpdateTime,
             },
         };
     }
