@@ -34,7 +34,7 @@ const AGENT2API_MODELS = new Set([
   "global:step-5-preview",
   "cn:step-5-preview",
   "GLM-5.3-Flash",
-  "GLM-5.2",
+  "glm-5.3",
 ]);
 
 // 可用模型列表，值即请求中直接使用的模型 id
@@ -49,7 +49,7 @@ export const AVAILABLE_TEXT_MODELS = {
   STEP_5_PREVIEW_GLOBAL: "global:step-5-preview",
   STEP_5_PREVIEW_CN: "cn:step-5-preview",
   GLM_5_3_FLASH: "GLM-5.3-Flash",
-  GLM_5_2: "GLM-5.2",
+  GLM_5_3: "glm-5.3",
 } as const;
 
 export class TextService {
@@ -59,8 +59,8 @@ export class TextService {
   constructor(apiKey?: string) {
     // 优先使用构造函数传入的 key，否则使用硬编码的 key
     this.apiKey = GROQ_API_KEY;
-    // 默认使用 GLM-5.2 (Agent2API)
-    this.currentModel = AVAILABLE_TEXT_MODELS.GLM_5_2;
+    // 默认使用 glm-5.3 (Agent2API)
+    this.currentModel = AVAILABLE_TEXT_MODELS.GLM_5_3;
   }
 
   // ============================================

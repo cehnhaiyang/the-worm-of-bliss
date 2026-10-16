@@ -20,6 +20,16 @@ export const GAME_CONFIG = {
   // ========== 少女系统 (Maiden System) ==========
   /** 少女总数 */
   TOTAL_MAIDENS: 250,
+  /**
+   * 登车年龄区间（岁）。
+   *
+   * 下限是硬约束：`age` 会作为提示词进入图像请求，低于下限即等于向图像模型
+   * 索取未成年角色的图像，因此生成与读档两条路径都不得低于此值。
+   */
+  MAIDEN_AGE: {
+    MIN: 18,
+    MAX: 22,
+  },
 
   // ========== 时间系统 (Time System) ==========
   /** 枢纽重组间隔(毫秒) - 10分钟 */
@@ -224,9 +234,6 @@ export const PORTRAIT_PREGNANCY_MILESTONES = [
   GAME_CONFIG.PREGNANCY.IMMINENT_WEEK,
   GAME_CONFIG.PREGNANCY.TOTAL_WEEKS,
 ] as const;
-
-/** 最小立绘更新间隔 (毫秒) */
-export const MIN_PORTRAIT_UPDATE_INTERVAL = 30000;
 
 // 类型导出
 export type GameConfigType = typeof GAME_CONFIG;

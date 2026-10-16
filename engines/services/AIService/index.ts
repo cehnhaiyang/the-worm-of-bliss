@@ -86,11 +86,9 @@ class AIService {
   // ============================================
 
   /**
-   * 生成角色立绘（异步）
-   * 使用 Pollinations API (gen.pollinations.ai)
-   * 返回: { url: string, model: string }
+   * 生成角色立绘（返回图片 URL 与所用模型；URL 由调用方交给浏览器加载）
    */
-  async generateCharacterImage(maiden: Maiden, carriageType?: CarriageType): Promise<{ url: string; model: string }> {
+  generateCharacterImage(maiden: Maiden, carriageType?: CarriageType): { url: string; model: string } {
     return this.imageService.generateCharacterImage(maiden, carriageType);
   }
 
@@ -107,16 +105,6 @@ class AIService {
 
   getSceneImageUrl(carriageType: CarriageType, description?: string): string {
     return this.imageService.getSceneImageUrl(carriageType, description);
-  }
-
-  /**
-   * 判断是否应更新立绘
-   * @param before 之前的状态
-   * @param after 当前的状态
-   * @param carriageType 当前车厢类型
-   */
-  shouldUpdatePortrait(before: Maiden, after: Maiden, carriageType?: CarriageType): boolean {
-    return this.imageService.shouldUpdatePortrait(before, after, carriageType);
   }
 
   /**

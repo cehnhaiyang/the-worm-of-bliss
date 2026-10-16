@@ -6,9 +6,6 @@
 
 import { BodyArchetypeConfig } from '../meta';
 
-/** 罩杯列表 (从平胸到巨乳) */
-export const CUP_SIZES = ['AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'];
-
 /** 身体原型配置 - 用于保证数值的一致性 */
 export const BODY_ARCHETYPES: Record<string, BodyArchetypeConfig> = {
   'petite': {

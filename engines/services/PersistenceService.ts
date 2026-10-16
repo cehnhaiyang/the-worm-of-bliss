@@ -15,8 +15,10 @@ import {
   SaveSlotInfo,
   SubsystemsData,
   NarcissusData,
-  NarcissusState
+  NarcissusState,
+  formatPreciseAge
 } from '../../meta';
+import { GAME_CONFIG, TIME_CONFIG } from '../../constants';
 import { maidenSystem, normalizePersonality } from '../systems';
 
 // ============================================
@@ -303,6 +305,11 @@ class PersistenceService {
    *
    * 人格在这里统一规范化：`normalizePersonality` 负责把 v1 的 0–100 分量表
    * 换算为现行模型的 z 分，并丢弃全部派生副本（见该函数的说明）。
+   *
+   * 年龄同样在此收敛：`age` 会进入图像提示词，老存档里的未成年值必须在读档时
+   * 抬到下限，否则"生成路径已设下限"只是一句空话——旧档一载入就绕过了它。
+   * 抬升是整体平移：`initialAgeMs` 加、`birthTimestamp` 减，`boardingAge` 由平移后的
+   * 值重算，使精确年龄、出生时刻与登车年龄三者仍然互相自洽。
    */
   restoreMaps(saveData: SaveData): {
     carriages: Map<string, Carriage>;
@@ -313,7 +320,23 @@ class PersistenceService {
     for (const [id, maiden] of saveData.maidens) {
       // 传入实体自己的游戏时钟：老存档没有 dynamics，lastDriftTime 需由它播种，
       // 否则会被当成"从时间原点起就没漂移过"
-      maidens.set(id, { ...maiden, isshex: normalizePersonality(maiden.isshex, maiden.lastUpdateTime) });
+      const age = Math.max(maiden.age, GAME_CONFIG.MAIDEN_AGE.MIN);
+      const ageShiftMs = (age - maiden.age) * TIME_CONFIG.MS_PER_YEAR;
+      const initialAgeMs = maiden.initialAgeMs + ageShiftMs;
+
+      // 登车年龄 = 初始年龄 - 在车时长，与 generateAgeData 同一算法；
+      // 平移后必须重算，否则会显示成"18 岁登车、当时年龄 15"
+      const timeOnTrain = Math.max(0, maiden.lastUpdateTime - maiden.arrivalTimestamp);
+      const boardingAge = formatPreciseAge(Math.max(0, initialAgeMs - timeOnTrain));
+
+      maidens.set(id, {
+        ...maiden,
+        age,
+        initialAgeMs,
+        boardingAge,
+        birthTimestamp: maiden.birthTimestamp - ageShiftMs,
+        isshex: normalizePersonality(maiden.isshex, maiden.lastUpdateTime),
+      });
     }
 
     return {

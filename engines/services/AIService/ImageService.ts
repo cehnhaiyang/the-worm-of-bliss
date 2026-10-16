@@ -5,8 +5,8 @@
 // API 文档：https://enter.pollinations.ai/api/docs
 // ============================================
 
-import { Maiden, CarriageType, ISShexPersonality, PhysicalStats, NameOrigin, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot } from '../../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, MIN_PORTRAIT_UPDATE_INTERVAL, GAME_CONFIG } from '../../../constants';
+import { Maiden, CarriageType, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../../meta';
+import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../../constants';
 import { PersonalityView, personalityView } from '../../systems';
 import { hashCode } from '../../../meta';
 
@@ -46,7 +46,7 @@ const PORTRAIT_SIGNIFICANT_STATUSES: CharacterStatus[] = [
 ];
 
 // 等级视觉 - 项圈 + 光效
-const RANK_VISUALS: Record<string, string> = {
+const RANK_VISUALS: Record<CharacterRank, string> = {
   unranked: '',
   copper: 'wearing a rustic copper collar, warm subtle rim lighting',
   silver: 'wearing a polished silver collar, cold clinical lighting',
@@ -54,36 +54,78 @@ const RANK_VISUALS: Record<string, string> = {
   obsidian: 'wearing a black obsidian collar pulsating with purple veins, void energy aura',
 };
 
-// 孕期视觉
+// 孕期视觉 - 键必须与 PORTRAIT_PREGNANCY_MILESTONES 的档位一致，
+// 否则里程碑判定触发了重算，产出的提示词却与上一档逐字相同（图不变）
 const PREGNANCY_VISUALS: Record<number, string> = {
   [GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK]: 'slightly soft belly',
-  13: 'visible small baby bump, hand gently resting on stomach',
+  [GAME_CONFIG.PREGNANCY.VISIBLE_WEEK]: 'visible small baby bump, hand gently resting on stomach',
   [GAME_CONFIG.PREGNANCY.LATE_WEEK]: 'heavily pregnant, large round belly, stretch marks, glowing maternal skin',
   [GAME_CONFIG.PREGNANCY.IMMINENT_WEEK]: 'extremely pregnant, massive belly, swollen figure, expression of endurance',
 };
 
-// 种族特征映射
-const ETHNICITY_MAP: Partial<Record<NameOrigin, string>> = {
+// 种族特征映射 - 键集必须覆盖 NameOrigin 全部取值：
+// 写成 Partial 时漏掉的语源会静默丢掉族群描述，提示词里就只剩一个无名少女
+const ETHNICITY_MAP: Record<NameOrigin, string> = {
+  // 东亚
   chinese: 'East Asian woman, delicate porcelain skin, elegant features',
   japanese: 'Japanese woman, soft facial features, anime-esque aesthetic',
   korean: 'Korean woman, flawless glass skin, trendy makeup',
   vietnamese: 'Southeast Asian woman, elegant and slender',
+  // 英语文化圈
   english: 'British Caucasian woman, pale fair skin, aristocratic features',
   american: 'Caucasian woman, sun-kissed skin',
   irish: 'Irish woman, pale skin, light freckles',
   scottish: 'Scottish woman, pale skin, sharp defined features',
+  // 罗曼语族
   french: 'French woman, sophisticated chic look',
+  spanish: 'Spanish woman, olive skin, dark wavy hair',
+  italian: 'Italian woman, warm olive skin, expressive features',
+  portuguese: 'Portuguese woman, olive skin, dark eyes',
+  romanian: 'Romanian woman, olive complexion, striking features',
+  // 日耳曼/北欧
   german: 'German woman, strong facial structure',
+  dutch: 'Dutch woman, fair skin, light brown hair',
+  swedish: 'Swedish woman, blonde hair, pale blue eyes',
+  norwegian: 'Norwegian woman, fair skin, light hair',
+  danish: 'Danish woman, fair complexion, soft features',
+  finnish: 'Finnish woman, pale skin, light eyes, high cheekbones',
+  icelandic: 'Icelandic woman, very pale skin, light hair',
+  // 斯拉夫/东欧
   russian: 'Russian woman, cold Slavic beauty, pale skin',
+  ukrainian: 'Ukrainian woman, fair skin, Slavic features',
+  polish: 'Polish woman, fair skin, light eyes',
+  czech: 'Czech woman, fair skin, delicate features',
+  hungarian: 'Hungarian woman, dark hair, olive complexion',
+  serbian: 'Serbian woman, dark hair, strong features',
+  croatian: 'Croatian woman, olive skin, dark hair',
+  bulgarian: 'Bulgarian woman, dark hair, olive complexion',
+  // 中东/地中海
+  greek: 'Greek woman, olive skin, dark curly hair',
+  turkish: 'Turkish woman, olive skin, dark expressive eyes',
+  arabic: 'Arab woman, olive skin, dark eyes, elegant features',
+  persian: 'Persian woman, olive skin, thick dark hair, striking eyes',
+  hebrew: 'Middle Eastern woman, olive skin, dark wavy hair',
+  // 南亚/东南亚
   indian: 'Indian woman, rich tan skin, sharp eyes',
+  thai: 'Thai woman, warm tan skin, delicate features',
+  indonesian: 'Southeast Asian woman, warm tan skin, dark hair',
+  filipino: 'Filipina woman, warm tan skin, dark hair',
+  // 拉美
   brazilian: 'Brazilian woman, mixed heritage, sun-kissed skin',
   mexican: 'Mexican woman, warm olive skin tone',
+  argentinian: 'Argentinian woman, olive skin, European features',
+  // 非洲
   nigerian: 'Nigerian woman, dark ebony skin, striking features',
+  ethiopian: 'Ethiopian woman, dark skin, fine features, high cheekbones',
   egyptian: 'Egyptian woman, olive skin, cat-like eyes',
+  southafrican: 'South African woman, warm brown skin, striking features',
+  // 神话语源
+  mythical: 'ethereal woman, otherworldly beauty, faintly luminous skin',
 };
 
 // 服装状态映射
-const CLOTHING_STATE_MAP: Record<string, string> = {
+const CLOTHING_STATE_MAP: Record<AttireState, string | null> = {
+  intact: null,
   torn: 'clothes are torn and shredded, exposing skin underneath',
   wet: 'clothes are soaking wet and clinging to the body, translucent fabric',
   disheveled: 'clothes are disheveled and messy, buttons undone, straps falling',
@@ -102,15 +144,6 @@ export class ImageService {
   // ============================================
   // 立绘更新判定逻辑
   // ============================================
-
-  shouldUpdatePortrait(before: Maiden, after: Maiden, carriageType?: CarriageType): boolean {
-    if (after.lastPortraitUpdate && Date.now() - after.lastPortraitUpdate < MIN_PORTRAIT_UPDATE_INTERVAL) {
-      return false;
-    }
-    const beforeSnapshot = this.createPortraitSnapshot(before, carriageType);
-    const afterSnapshot = this.createPortraitSnapshot(after, carriageType);
-    return this.hasSignificantPortraitChange(beforeSnapshot, afterSnapshot);
-  }
 
   generatePortraitHash(maiden: Maiden, carriageType?: CarriageType): string {
     return JSON.stringify(this.createPortraitSnapshot(maiden, carriageType));
@@ -143,6 +176,7 @@ export class ImageService {
       pregnancyMilestone,
       isInAbyss: carriageType ? ABYSS_TYPES.includes(carriageType) : false,
       personalityState: personalityView(maiden).state,
+      rank: maiden.rank,
     };
   }
 
@@ -151,22 +185,6 @@ export class ImageService {
       if (value < thresholds[i]) return i;
     }
     return thresholds.length;
-  }
-
-  private hasSignificantPortraitChange(before: PortraitSnapshot, after: PortraitSnapshot): boolean {
-    if (before.lustBracket !== after.lustBracket) return true;
-    if (before.sanityBracket !== after.sanityBracket) return true;
-    if (before.obedienceBracket !== after.obedienceBracket) return true;
-    if (before.stressBracket !== after.stressBracket) return true;
-    if (before.corruptionBracket !== after.corruptionBracket) return true;
-    if (before.devotionBracket !== after.devotionBracket) return true;
-    if (before.significantStatuses.join(',') !== after.significantStatuses.join(',')) return true;
-    if (before.dressLevel !== after.dressLevel) return true;
-    if (before.clothingState !== after.clothingState) return true;
-    if (before.pregnancyMilestone !== after.pregnancyMilestone) return true;
-    if (before.isInAbyss !== after.isInAbyss) return true;
-    if (before.personalityState !== after.personalityState) return true;
-    return false;
   }
 
   // ============================================
@@ -190,8 +208,10 @@ export class ImageService {
    * 生成角色立绘
    * 使用 Pollinations API (gen.pollinations.ai)
    * 返回图片URL和使用的模型名称
+   *
+   * 纯字符串拼装，无网络 I/O——真正的请求发生在调用方把 `url` 交给浏览器加载时。
    */
-  async generateCharacterImage(maiden: Maiden, carriageType?: CarriageType): Promise<{ url: string; model: string }> {
+  generateCharacterImage(maiden: Maiden, carriageType?: CarriageType): { url: string; model: string } {
     return {
       url: this.getPollinationsUrl(maiden, carriageType),
       model: this.currentModel
@@ -254,10 +274,14 @@ export class ImageService {
   // 提示词构建器 (Prompt Helpers)
   // ============================================
 
+  /**
+   * 年龄标签。
+   *
+   * 年龄下限由 `GAME_CONFIG.MAIDEN_AGE.MIN` 保证为成年，因此这里不再有
+   * "young girl" 之类的未成年措辞分支——那种分支只会让下限失效时无人察觉。
+   */
   private getAgeTag(age: number): string {
-    if (age <= 16) return `young girl, ${age} years old`;
-    if (age <= 19) return `teenage girl, ${age} years old`;
-    return `young woman, ${age} years old`;
+    return age <= 25 ? `young adult woman, ${age} years old` : `mature woman, ${age} years old`;
   }
 
   private buildBodyPrompt(phy: PhysicalStats): string {
@@ -267,15 +291,18 @@ export class ImageService {
 
     parts.push(`${phy.bodyType} body type`);
 
-    const cupIndex = ['AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K'].indexOf(phy.cupSize);
+    const cupIndex = CUP_SIZES.indexOf(phy.cupSize);
     if (cupIndex >= 8) parts.push('extremely large breasts');
     else if (cupIndex >= 6) parts.push('large breasts');
     else if (cupIndex >= 4) parts.push('medium-large breasts');
     else if (cupIndex <= 1) parts.push('flat chest');
 
+    // 腰臀比的分界取 0.70：实测分布 p50≈0.698、极值 0.637~0.763，
+    // 因此两侧各约占一半。原实现的上侧阈值 0.85 落在分布之外，
+    // 那一支永远不会执行（且措辞把"腰更粗"写成了"腰更细"）。
     const whRatio = phy.waist / phy.hips;
-    if (whRatio < 0.7) parts.push('wide hips, hourglass figure');
-    else if (whRatio > 0.85) parts.push('slender waist');
+    if (whRatio < 0.70) parts.push('narrow waist, hourglass figure');
+    else parts.push('fuller waist, soft figure');
 
     return parts.join(', ');
   }
@@ -422,7 +449,8 @@ export class ImageService {
     if (top) parts.push(top);
     if (bottom && !isDress) parts.push(bottom);
 
-    if (outerwear.shoes.type.id === 'barefoot') parts.push('barefoot');
+    // 鞋子只有 'none' 表示赤脚（SHOE_TYPES 没有 barefoot 这个 id）
+    if (outerwear.shoes.type.id === 'none') parts.push('barefoot');
     else {
       const shoes = describe(outerwear.shoes);
       if (shoes) parts.push(shoes);
@@ -452,10 +480,13 @@ export class ImageService {
 
   private getPregnancyTag(week: number): string | null {
     if (week <= 0) return null;
-    if (week >= GAME_CONFIG.PREGNANCY.IMMINENT_WEEK) return PREGNANCY_VISUALS[GAME_CONFIG.PREGNANCY.IMMINENT_WEEK];
-    if (week >= GAME_CONFIG.PREGNANCY.LATE_WEEK) return PREGNANCY_VISUALS[GAME_CONFIG.PREGNANCY.LATE_WEEK];
-    if (week >= 13) return PREGNANCY_VISUALS[13];
-    if (week >= GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK) return PREGNANCY_VISUALS[GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK];
+    // 从高到低取第一个已达成的档位。里程碑表比视觉表多一个 TOTAL_WEEKS
+    // （终孕期沿用临产档），因此跳过没有视觉定义的档位而不是返回空。
+    for (let i = PORTRAIT_PREGNANCY_MILESTONES.length - 1; i >= 0; i--) {
+      const milestone = PORTRAIT_PREGNANCY_MILESTONES[i];
+      const visual = PREGNANCY_VISUALS[milestone];
+      if (week >= milestone && visual) return visual;
+    }
     return null;
   }
 

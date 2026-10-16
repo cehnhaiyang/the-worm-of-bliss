@@ -17,7 +17,7 @@ import {
     CharacterRank,
     CharacterStatus,
     ClothingState,
-    CupSize,
+    CUP_SIZES,
     DressLevel,
     EventEffectContext,
     EventTimestampData,
@@ -107,7 +107,6 @@ import {
     CARRIAGE_TYPE_INFO,
     CHANGE_THRESHOLDS,
     COPING_MECHANISMS,
-    CUP_SIZES,
     DISLIKES,
     EYE_COLORS,
     EYE_EXPRESSIONS,
@@ -2460,8 +2459,7 @@ class MaidenGenerator {
         const hips = Math.round(hipBase + randomFloat(-2, 3));
 
         const cupIndex = randomInt(config.cupRange[0], config.cupRange[1]);
-        const validCupSizes = CUP_SIZES.filter(size => ['AAA', 'AA', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].includes(size));
-        const cupSize = validCupSizes[Math.min(cupIndex, validCupSizes.length - 1)] as CupSize;
+        const cupSize = CUP_SIZES[Math.min(cupIndex, CUP_SIZES.length - 1)];
 
         return {
             height,
@@ -2753,9 +2751,9 @@ class MaidenGenerator {
     }
 
     generateAgeData(arrivalTimestamp: number, gameTimePassed: number): { age: number; initialAgeMs: number; boardingAge: string } {
-        const ageYears = randomInt(14, 22);
+        const ageYears = randomInt(GAME_CONFIG.MAIDEN_AGE.MIN, GAME_CONFIG.MAIDEN_AGE.MAX);
         const now = gameTimePassed;
-        const msPerYear = 365 * 24 * 60 * 60 * 1000;
+        const msPerYear = TIME_CONFIG.MS_PER_YEAR;
         const initialAgeMs = (ageYears * msPerYear) + randomInt(0, msPerYear);
         const timeOnTrain = Math.max(0, now - arrivalTimestamp);
         const boardingAgeMs = Math.max(0, initialAgeMs - timeOnTrain);

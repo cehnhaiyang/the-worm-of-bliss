@@ -1,0 +1,4657 @@
+[
+  [
+    "R0C0",
+    {
+      "id": "R0C0",
+      "position": {
+        "row": 0,
+        "col": 0
+      },
+      "type": "SILENT_SALON",
+      "name": "静默雅集 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R0C1",
+    {
+      "id": "R0C1",
+      "position": {
+        "row": 0,
+        "col": 1
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-068",
+        "Unit-108"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R0C2",
+    {
+      "id": "R0C2",
+      "position": {
+        "row": 0,
+        "col": 2
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-048",
+        "Unit-061",
+        "Unit-154",
+        "Unit-219"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R0C3",
+    {
+      "id": "R0C3",
+      "position": {
+        "row": 0,
+        "col": 3
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-033",
+        "Unit-138",
+        "Unit-230"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C4",
+    {
+      "id": "R0C4",
+      "position": {
+        "row": 0,
+        "col": 4
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #2",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C5",
+    {
+      "id": "R0C5",
+      "position": {
+        "row": 0,
+        "col": 5
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-149"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R0C6",
+    {
+      "id": "R0C6",
+      "position": {
+        "row": 0,
+        "col": 6
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #3",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-040",
+        "Unit-095"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C7",
+    {
+      "id": "R0C7",
+      "position": {
+        "row": 0,
+        "col": 7
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #4",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-071",
+        "Unit-200"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C8",
+    {
+      "id": "R0C8",
+      "position": {
+        "row": 0,
+        "col": 8
+      },
+      "type": "ALTAR",
+      "name": "祭坛 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-179",
+        "Unit-184"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R0C9",
+    {
+      "id": "R0C9",
+      "position": {
+        "row": 0,
+        "col": 9
+      },
+      "type": "ARCHIVE",
+      "name": "回声档案馆 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-231"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C10",
+    {
+      "id": "R0C10",
+      "position": {
+        "row": 0,
+        "col": 10
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-158"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R0C11",
+    {
+      "id": "R0C11",
+      "position": {
+        "row": 0,
+        "col": 11
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #5",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-236"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C12",
+    {
+      "id": "R0C12",
+      "position": {
+        "row": 0,
+        "col": 12
+      },
+      "type": "NEGATIVE_GALLERY",
+      "name": "负空间画廊 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R0C13",
+    {
+      "id": "R0C13",
+      "position": {
+        "row": 0,
+        "col": 13
+      },
+      "type": "TIME_INFIRMARY",
+      "name": "时滞病房 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_clock"
+    }
+  ],
+  [
+    "R0C14",
+    {
+      "id": "R0C14",
+      "position": {
+        "row": 0,
+        "col": 14
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #6",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C15",
+    {
+      "id": "R0C15",
+      "position": {
+        "row": 0,
+        "col": 15
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #7",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C16",
+    {
+      "id": "R0C16",
+      "position": {
+        "row": 0,
+        "col": 16
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #8",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-014",
+        "Unit-238"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C17",
+    {
+      "id": "R0C17",
+      "position": {
+        "row": 0,
+        "col": 17
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #9",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-115",
+        "Unit-186"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C18",
+    {
+      "id": "R0C18",
+      "position": {
+        "row": 0,
+        "col": 18
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #10",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C19",
+    {
+      "id": "R0C19",
+      "position": {
+        "row": 0,
+        "col": 19
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #11",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-085",
+        "Unit-234"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C20",
+    {
+      "id": "R0C20",
+      "position": {
+        "row": 0,
+        "col": 20
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #12",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-009"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C21",
+    {
+      "id": "R0C21",
+      "position": {
+        "row": 0,
+        "col": 21
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #13",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C22",
+    {
+      "id": "R0C22",
+      "position": {
+        "row": 0,
+        "col": 22
+      },
+      "type": "ESCHER_STAIRS",
+      "name": "埃舍尔阶梯 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R0C23",
+    {
+      "id": "R0C23",
+      "position": {
+        "row": 0,
+        "col": 23
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #14",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C24",
+    {
+      "id": "R0C24",
+      "position": {
+        "row": 0,
+        "col": 24
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #15",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C25",
+    {
+      "id": "R0C25",
+      "position": {
+        "row": 0,
+        "col": 25
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #16",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-008"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C26",
+    {
+      "id": "R0C26",
+      "position": {
+        "row": 0,
+        "col": 26
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #17",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C27",
+    {
+      "id": "R0C27",
+      "position": {
+        "row": 0,
+        "col": 27
+      },
+      "type": "ORACLE_WHISPER",
+      "name": "神谕之声 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R0C28",
+    {
+      "id": "R0C28",
+      "position": {
+        "row": 0,
+        "col": 28
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #18",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-054",
+        "Unit-204"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C29",
+    {
+      "id": "R0C29",
+      "position": {
+        "row": 0,
+        "col": 29
+      },
+      "type": "ESCHER_STAIRS",
+      "name": "埃舍尔阶梯 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R0C30",
+    {
+      "id": "R0C30",
+      "position": {
+        "row": 0,
+        "col": 30
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #3",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-029",
+        "Unit-032",
+        "Unit-164",
+        "Unit-194"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R0C31",
+    {
+      "id": "R0C31",
+      "position": {
+        "row": 0,
+        "col": 31
+      },
+      "type": "DISSOLUTION_CHAMBER",
+      "name": "自我消融室 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R0C32",
+    {
+      "id": "R0C32",
+      "position": {
+        "row": 0,
+        "col": 32
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #19",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-030"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C33",
+    {
+      "id": "R0C33",
+      "position": {
+        "row": 0,
+        "col": 33
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-025"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R0C34",
+    {
+      "id": "R0C34",
+      "position": {
+        "row": 0,
+        "col": 34
+      },
+      "type": "SCALES_CONSERVATORY",
+      "name": "天秤温室 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-096",
+        "Unit-103"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C35",
+    {
+      "id": "R0C35",
+      "position": {
+        "row": 0,
+        "col": 35
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #20",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-170"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C36",
+    {
+      "id": "R0C36",
+      "position": {
+        "row": 0,
+        "col": 36
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #21",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-126"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C37",
+    {
+      "id": "R0C37",
+      "position": {
+        "row": 0,
+        "col": 37
+      },
+      "type": "MIRROR_HALL",
+      "name": "异变映厅 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R0C38",
+    {
+      "id": "R0C38",
+      "position": {
+        "row": 0,
+        "col": 38
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #22",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-050",
+        "Unit-056"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C39",
+    {
+      "id": "R0C39",
+      "position": {
+        "row": 0,
+        "col": 39
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #23",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-187",
+        "Unit-203",
+        "Unit-206"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C40",
+    {
+      "id": "R0C40",
+      "position": {
+        "row": 0,
+        "col": 40
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #24",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-041",
+        "Unit-110"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C41",
+    {
+      "id": "R0C41",
+      "position": {
+        "row": 0,
+        "col": 41
+      },
+      "type": "SILENT_SALON",
+      "name": "静默雅集 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R0C42",
+    {
+      "id": "R0C42",
+      "position": {
+        "row": 0,
+        "col": 42
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #25",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-211"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C43",
+    {
+      "id": "R0C43",
+      "position": {
+        "row": 0,
+        "col": 43
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #4",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-140"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R0C44",
+    {
+      "id": "R0C44",
+      "position": {
+        "row": 0,
+        "col": 44
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #26",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-072"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C45",
+    {
+      "id": "R0C45",
+      "position": {
+        "row": 0,
+        "col": 45
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #27",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C46",
+    {
+      "id": "R0C46",
+      "position": {
+        "row": 0,
+        "col": 46
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #28",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-175"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C47",
+    {
+      "id": "R0C47",
+      "position": {
+        "row": 0,
+        "col": 47
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #29",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-099"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R0C48",
+    {
+      "id": "R0C48",
+      "position": {
+        "row": 0,
+        "col": 48
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-156"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594601,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R0C49",
+    {
+      "id": "R0C49",
+      "position": {
+        "row": 0,
+        "col": 49
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #30",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-031"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C0",
+    {
+      "id": "R1C0",
+      "position": {
+        "row": 1,
+        "col": 0
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #31",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-004",
+        "Unit-218"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C1",
+    {
+      "id": "R1C1",
+      "position": {
+        "row": 1,
+        "col": 1
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #32",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C2",
+    {
+      "id": "R1C2",
+      "position": {
+        "row": 1,
+        "col": 2
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #33",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C3",
+    {
+      "id": "R1C3",
+      "position": {
+        "row": 1,
+        "col": 3
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #34",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-053"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C4",
+    {
+      "id": "R1C4",
+      "position": {
+        "row": 1,
+        "col": 4
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #5",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-159"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R1C5",
+    {
+      "id": "R1C5",
+      "position": {
+        "row": 1,
+        "col": 5
+      },
+      "type": "SILENT_SALON",
+      "name": "静默雅集 #3",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C6",
+    {
+      "id": "R1C6",
+      "position": {
+        "row": 1,
+        "col": 6
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #35",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-088"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C7",
+    {
+      "id": "R1C7",
+      "position": {
+        "row": 1,
+        "col": 7
+      },
+      "type": "TIME_INFIRMARY",
+      "name": "时滞病房 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_clock"
+    }
+  ],
+  [
+    "R1C8",
+    {
+      "id": "R1C8",
+      "position": {
+        "row": 1,
+        "col": 8
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #36",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-178",
+        "Unit-235"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C9",
+    {
+      "id": "R1C9",
+      "position": {
+        "row": 1,
+        "col": 9
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #6",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-049",
+        "Unit-087"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R1C10",
+    {
+      "id": "R1C10",
+      "position": {
+        "row": 1,
+        "col": 10
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #37",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-094"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C11",
+    {
+      "id": "R1C11",
+      "position": {
+        "row": 1,
+        "col": 11
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #38",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-002"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C12",
+    {
+      "id": "R1C12",
+      "position": {
+        "row": 1,
+        "col": 12
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #39",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-144"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C13",
+    {
+      "id": "R1C13",
+      "position": {
+        "row": 1,
+        "col": 13
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #40",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C14",
+    {
+      "id": "R1C14",
+      "position": {
+        "row": 1,
+        "col": 14
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #41",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-212"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C15",
+    {
+      "id": "R1C15",
+      "position": {
+        "row": 1,
+        "col": 15
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #42",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-130"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C16",
+    {
+      "id": "R1C16",
+      "position": {
+        "row": 1,
+        "col": 16
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #43",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-028"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C17",
+    {
+      "id": "R1C17",
+      "position": {
+        "row": 1,
+        "col": 17
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #44",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-036",
+        "Unit-213"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C18",
+    {
+      "id": "R1C18",
+      "position": {
+        "row": 1,
+        "col": 18
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #45",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-066"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C19",
+    {
+      "id": "R1C19",
+      "position": {
+        "row": 1,
+        "col": 19
+      },
+      "type": "VEIL",
+      "name": "薄纱车厢 #1",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C20",
+    {
+      "id": "R1C20",
+      "position": {
+        "row": 1,
+        "col": 20
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #46",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-128",
+        "Unit-242"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C21",
+    {
+      "id": "R1C21",
+      "position": {
+        "row": 1,
+        "col": 21
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #47",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-026",
+        "Unit-125",
+        "Unit-168"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C22",
+    {
+      "id": "R1C22",
+      "position": {
+        "row": 1,
+        "col": 22
+      },
+      "type": "SILENT_SALON",
+      "name": "静默雅集 #4",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C23",
+    {
+      "id": "R1C23",
+      "position": {
+        "row": 1,
+        "col": 23
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #48",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C24",
+    {
+      "id": "R1C24",
+      "position": {
+        "row": 1,
+        "col": 24
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #3",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C25",
+    {
+      "id": "R1C25",
+      "position": {
+        "row": 1,
+        "col": 25
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #49",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-163"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C26",
+    {
+      "id": "R1C26",
+      "position": {
+        "row": 1,
+        "col": 26
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #50",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C27",
+    {
+      "id": "R1C27",
+      "position": {
+        "row": 1,
+        "col": 27
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #51",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-064",
+        "Unit-136",
+        "Unit-172",
+        "Unit-195"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C28",
+    {
+      "id": "R1C28",
+      "position": {
+        "row": 1,
+        "col": 28
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #52",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-047",
+        "Unit-141"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C29",
+    {
+      "id": "R1C29",
+      "position": {
+        "row": 1,
+        "col": 29
+      },
+      "type": "NURSERY",
+      "name": "育婴室 #1",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-177"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_heartbeat"
+    }
+  ],
+  [
+    "R1C30",
+    {
+      "id": "R1C30",
+      "position": {
+        "row": 1,
+        "col": 30
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #53",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C31",
+    {
+      "id": "R1C31",
+      "position": {
+        "row": 1,
+        "col": 31
+      },
+      "type": "ARCHIVE",
+      "name": "回声档案馆 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-232"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C32",
+    {
+      "id": "R1C32",
+      "position": {
+        "row": 1,
+        "col": 32
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #54",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-021"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C33",
+    {
+      "id": "R1C33",
+      "position": {
+        "row": 1,
+        "col": 33
+      },
+      "type": "NURSERY",
+      "name": "育婴室 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-142"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_heartbeat"
+    }
+  ],
+  [
+    "R1C34",
+    {
+      "id": "R1C34",
+      "position": {
+        "row": 1,
+        "col": 34
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #55",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C35",
+    {
+      "id": "R1C35",
+      "position": {
+        "row": 1,
+        "col": 35
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #56",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-012",
+        "Unit-160"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C36",
+    {
+      "id": "R1C36",
+      "position": {
+        "row": 1,
+        "col": 36
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #57",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-225"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C37",
+    {
+      "id": "R1C37",
+      "position": {
+        "row": 1,
+        "col": 37
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #58",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-017",
+        "Unit-100"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C38",
+    {
+      "id": "R1C38",
+      "position": {
+        "row": 1,
+        "col": 38
+      },
+      "type": "VEIL",
+      "name": "薄纱车厢 #2",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C39",
+    {
+      "id": "R1C39",
+      "position": {
+        "row": 1,
+        "col": 39
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #59",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-161",
+        "Unit-196"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C40",
+    {
+      "id": "R1C40",
+      "position": {
+        "row": 1,
+        "col": 40
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #3",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-060",
+        "Unit-229"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R1C41",
+    {
+      "id": "R1C41",
+      "position": {
+        "row": 1,
+        "col": 41
+      },
+      "type": "ESCHER_STAIRS",
+      "name": "埃舍尔阶梯 #3",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R1C42",
+    {
+      "id": "R1C42",
+      "position": {
+        "row": 1,
+        "col": 42
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #60",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-221"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C43",
+    {
+      "id": "R1C43",
+      "position": {
+        "row": 1,
+        "col": 43
+      },
+      "type": "ORACLE_WHISPER",
+      "name": "神谕之声 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C44",
+    {
+      "id": "R1C44",
+      "position": {
+        "row": 1,
+        "col": 44
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #7",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R1C45",
+    {
+      "id": "R1C45",
+      "position": {
+        "row": 1,
+        "col": 45
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #61",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C46",
+    {
+      "id": "R1C46",
+      "position": {
+        "row": 1,
+        "col": 46
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #62",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-092",
+        "Unit-152",
+        "Unit-165"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C47",
+    {
+      "id": "R1C47",
+      "position": {
+        "row": 1,
+        "col": 47
+      },
+      "type": "SILENT_SALON",
+      "name": "静默雅集 #5",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R1C48",
+    {
+      "id": "R1C48",
+      "position": {
+        "row": 1,
+        "col": 48
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #63",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-105"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R1C49",
+    {
+      "id": "R1C49",
+      "position": {
+        "row": 1,
+        "col": 49
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #64",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-070",
+        "Unit-101",
+        "Unit-129"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C0",
+    {
+      "id": "R2C0",
+      "position": {
+        "row": 2,
+        "col": 0
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #65",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-104"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C1",
+    {
+      "id": "R2C1",
+      "position": {
+        "row": 2,
+        "col": 1
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #66",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-042"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C2",
+    {
+      "id": "R2C2",
+      "position": {
+        "row": 2,
+        "col": 2
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #67",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C3",
+    {
+      "id": "R2C3",
+      "position": {
+        "row": 2,
+        "col": 3
+      },
+      "type": "ORACLE_WHISPER",
+      "name": "神谕之声 #3",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R2C4",
+    {
+      "id": "R2C4",
+      "position": {
+        "row": 2,
+        "col": 4
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #68",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-051",
+        "Unit-052",
+        "Unit-180",
+        "Unit-214"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C5",
+    {
+      "id": "R2C5",
+      "position": {
+        "row": 2,
+        "col": 5
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #69",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C6",
+    {
+      "id": "R2C6",
+      "position": {
+        "row": 2,
+        "col": 6
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #70",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C7",
+    {
+      "id": "R2C7",
+      "position": {
+        "row": 2,
+        "col": 7
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #4",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R2C8",
+    {
+      "id": "R2C8",
+      "position": {
+        "row": 2,
+        "col": 8
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #71",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C9",
+    {
+      "id": "R2C9",
+      "position": {
+        "row": 2,
+        "col": 9
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #72",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-079"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C10",
+    {
+      "id": "R2C10",
+      "position": {
+        "row": 2,
+        "col": 10
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #73",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-176"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C11",
+    {
+      "id": "R2C11",
+      "position": {
+        "row": 2,
+        "col": 11
+      },
+      "type": "VOID_WINDOW",
+      "name": "利维坦之窗 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R2C12",
+    {
+      "id": "R2C12",
+      "position": {
+        "row": 2,
+        "col": 12
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #74",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C13",
+    {
+      "id": "R2C13",
+      "position": {
+        "row": 2,
+        "col": 13
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #75",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-065",
+        "Unit-134"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C14",
+    {
+      "id": "R2C14",
+      "position": {
+        "row": 2,
+        "col": 14
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #76",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-192"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C15",
+    {
+      "id": "R2C15",
+      "position": {
+        "row": 2,
+        "col": 15
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #77",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-062"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C16",
+    {
+      "id": "R2C16",
+      "position": {
+        "row": 2,
+        "col": 16
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #78",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C17",
+    {
+      "id": "R2C17",
+      "position": {
+        "row": 2,
+        "col": 17
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #79",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-097"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C18",
+    {
+      "id": "R2C18",
+      "position": {
+        "row": 2,
+        "col": 18
+      },
+      "type": "ORACLE_WHISPER",
+      "name": "神谕之声 #4",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R2C19",
+    {
+      "id": "R2C19",
+      "position": {
+        "row": 2,
+        "col": 19
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #80",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-003",
+        "Unit-005",
+        "Unit-217"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C20",
+    {
+      "id": "R2C20",
+      "position": {
+        "row": 2,
+        "col": 20
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #81",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-063"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C21",
+    {
+      "id": "R2C21",
+      "position": {
+        "row": 2,
+        "col": 21
+      },
+      "type": "ESCHER_STAIRS",
+      "name": "埃舍尔阶梯 #4",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R2C22",
+    {
+      "id": "R2C22",
+      "position": {
+        "row": 2,
+        "col": 22
+      },
+      "type": "VEIL",
+      "name": "薄纱车厢 #3",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R2C23",
+    {
+      "id": "R2C23",
+      "position": {
+        "row": 2,
+        "col": 23
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #82",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-116"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C24",
+    {
+      "id": "R2C24",
+      "position": {
+        "row": 2,
+        "col": 24
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #83",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-090",
+        "Unit-183",
+        "Unit-191"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C25",
+    {
+      "id": "R2C25",
+      "position": {
+        "row": 2,
+        "col": 25
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #84",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C26",
+    {
+      "id": "R2C26",
+      "position": {
+        "row": 2,
+        "col": 26
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #85",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-190",
+        "Unit-243"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C27",
+    {
+      "id": "R2C27",
+      "position": {
+        "row": 2,
+        "col": 27
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #86",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-037",
+        "Unit-118"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C28",
+    {
+      "id": "R2C28",
+      "position": {
+        "row": 2,
+        "col": 28
+      },
+      "type": "FLESH_HIVE",
+      "name": "血肉巢穴 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_flesh"
+    }
+  ],
+  [
+    "R2C29",
+    {
+      "id": "R2C29",
+      "position": {
+        "row": 2,
+        "col": 29
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #87",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-098"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C30",
+    {
+      "id": "R2C30",
+      "position": {
+        "row": 2,
+        "col": 30
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #88",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-076"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C31",
+    {
+      "id": "R2C31",
+      "position": {
+        "row": 2,
+        "col": 31
+      },
+      "type": "NEGATIVE_GALLERY",
+      "name": "负空间画廊 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R2C32",
+    {
+      "id": "R2C32",
+      "position": {
+        "row": 2,
+        "col": 32
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #89",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C33",
+    {
+      "id": "R2C33",
+      "position": {
+        "row": 2,
+        "col": 33
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #90",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-248"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C34",
+    {
+      "id": "R2C34",
+      "position": {
+        "row": 2,
+        "col": 34
+      },
+      "type": "SCALES_CONSERVATORY",
+      "name": "天秤温室 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-013"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C35",
+    {
+      "id": "R2C35",
+      "position": {
+        "row": 2,
+        "col": 35
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #91",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-001"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C36",
+    {
+      "id": "R2C36",
+      "position": {
+        "row": 2,
+        "col": 36
+      },
+      "type": "MUSE_THEATRE",
+      "name": "苦痛缪斯剧场 #1",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C37",
+    {
+      "id": "R2C37",
+      "position": {
+        "row": 2,
+        "col": 37
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #92",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-010",
+        "Unit-210"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C38",
+    {
+      "id": "R2C38",
+      "position": {
+        "row": 2,
+        "col": 38
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #4",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-018",
+        "Unit-201",
+        "Unit-240"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R2C39",
+    {
+      "id": "R2C39",
+      "position": {
+        "row": 2,
+        "col": 39
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #93",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-247"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C40",
+    {
+      "id": "R2C40",
+      "position": {
+        "row": 2,
+        "col": 40
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #94",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-007"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C41",
+    {
+      "id": "R2C41",
+      "position": {
+        "row": 2,
+        "col": 41
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #95",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-237"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C42",
+    {
+      "id": "R2C42",
+      "position": {
+        "row": 2,
+        "col": 42
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #96",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-227"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C43",
+    {
+      "id": "R2C43",
+      "position": {
+        "row": 2,
+        "col": 43
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #97",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-188"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C44",
+    {
+      "id": "R2C44",
+      "position": {
+        "row": 2,
+        "col": 44
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #98",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-135"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C45",
+    {
+      "id": "R2C45",
+      "position": {
+        "row": 2,
+        "col": 45
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #99",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-109",
+        "Unit-207"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C46",
+    {
+      "id": "R2C46",
+      "position": {
+        "row": 2,
+        "col": 46
+      },
+      "type": "TIME_INFIRMARY",
+      "name": "时滞病房 #3",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_clock"
+    }
+  ],
+  [
+    "R2C47",
+    {
+      "id": "R2C47",
+      "position": {
+        "row": 2,
+        "col": 47
+      },
+      "type": "MUSE_THEATRE",
+      "name": "苦痛缪斯剧场 #2",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-239"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C48",
+    {
+      "id": "R2C48",
+      "position": {
+        "row": 2,
+        "col": 48
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #100",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R2C49",
+    {
+      "id": "R2C49",
+      "position": {
+        "row": 2,
+        "col": 49
+      },
+      "type": "INVERTED_TREE",
+      "name": "倒生之树 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R3C0",
+    {
+      "id": "R3C0",
+      "position": {
+        "row": 3,
+        "col": 0
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #101",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-074",
+        "Unit-216"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C1",
+    {
+      "id": "R3C1",
+      "position": {
+        "row": 3,
+        "col": 1
+      },
+      "type": "DISSOLUTION_CHAMBER",
+      "name": "自我消融室 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R3C2",
+    {
+      "id": "R3C2",
+      "position": {
+        "row": 3,
+        "col": 2
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #102",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-127"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C3",
+    {
+      "id": "R3C3",
+      "position": {
+        "row": 3,
+        "col": 3
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #103",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C4",
+    {
+      "id": "R3C4",
+      "position": {
+        "row": 3,
+        "col": 4
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #104",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-046",
+        "Unit-181"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C5",
+    {
+      "id": "R3C5",
+      "position": {
+        "row": 3,
+        "col": 5
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #105",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C6",
+    {
+      "id": "R3C6",
+      "position": {
+        "row": 3,
+        "col": 6
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #106",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C7",
+    {
+      "id": "R3C7",
+      "position": {
+        "row": 3,
+        "col": 7
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #107",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C8",
+    {
+      "id": "R3C8",
+      "position": {
+        "row": 3,
+        "col": 8
+      },
+      "type": "NEGATIVE_GALLERY",
+      "name": "负空间画廊 #3",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R3C9",
+    {
+      "id": "R3C9",
+      "position": {
+        "row": 3,
+        "col": 9
+      },
+      "type": "NURSERY",
+      "name": "育婴室 #3",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-167",
+        "Unit-208"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_heartbeat"
+    }
+  ],
+  [
+    "R3C10",
+    {
+      "id": "R3C10",
+      "position": {
+        "row": 3,
+        "col": 10
+      },
+      "type": "MUSE_THEATRE",
+      "name": "苦痛缪斯剧场 #3",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-086"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C11",
+    {
+      "id": "R3C11",
+      "position": {
+        "row": 3,
+        "col": 11
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #5",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R3C12",
+    {
+      "id": "R3C12",
+      "position": {
+        "row": 3,
+        "col": 12
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #108",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-148"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C13",
+    {
+      "id": "R3C13",
+      "position": {
+        "row": 3,
+        "col": 13
+      },
+      "type": "ARCHIVE",
+      "name": "回声档案馆 #3",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-015",
+        "Unit-147",
+        "Unit-169",
+        "Unit-250"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C14",
+    {
+      "id": "R3C14",
+      "position": {
+        "row": 3,
+        "col": 14
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #109",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-035"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C15",
+    {
+      "id": "R3C15",
+      "position": {
+        "row": 3,
+        "col": 15
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #110",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-022",
+        "Unit-043"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C16",
+    {
+      "id": "R3C16",
+      "position": {
+        "row": 3,
+        "col": 16
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #5",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-069"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R3C17",
+    {
+      "id": "R3C17",
+      "position": {
+        "row": 3,
+        "col": 17
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #8",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-162",
+        "Unit-185",
+        "Unit-249"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R3C18",
+    {
+      "id": "R3C18",
+      "position": {
+        "row": 3,
+        "col": 18
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #111",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C19",
+    {
+      "id": "R3C19",
+      "position": {
+        "row": 3,
+        "col": 19
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #112",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C20",
+    {
+      "id": "R3C20",
+      "position": {
+        "row": 3,
+        "col": 20
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #113",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-059"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C21",
+    {
+      "id": "R3C21",
+      "position": {
+        "row": 3,
+        "col": 21
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #114",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-080",
+        "Unit-209",
+        "Unit-241"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C22",
+    {
+      "id": "R3C22",
+      "position": {
+        "row": 3,
+        "col": 22
+      },
+      "type": "INVERTED_TREE",
+      "name": "倒生之树 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R3C23",
+    {
+      "id": "R3C23",
+      "position": {
+        "row": 3,
+        "col": 23
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #115",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-055"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C24",
+    {
+      "id": "R3C24",
+      "position": {
+        "row": 3,
+        "col": 24
+      },
+      "type": "SCALES_CONSERVATORY",
+      "name": "天秤温室 #3",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C25",
+    {
+      "id": "R3C25",
+      "position": {
+        "row": 3,
+        "col": 25
+      },
+      "type": "SYMBIOTIC_GALLERY",
+      "name": "共生回廊 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_flesh"
+    }
+  ],
+  [
+    "R3C26",
+    {
+      "id": "R3C26",
+      "position": {
+        "row": 3,
+        "col": 26
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #116",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-123"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C27",
+    {
+      "id": "R3C27",
+      "position": {
+        "row": 3,
+        "col": 27
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #117",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-091",
+        "Unit-131",
+        "Unit-226"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C28",
+    {
+      "id": "R3C28",
+      "position": {
+        "row": 3,
+        "col": 28
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #118",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C29",
+    {
+      "id": "R3C29",
+      "position": {
+        "row": 3,
+        "col": 29
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #119",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-202"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C30",
+    {
+      "id": "R3C30",
+      "position": {
+        "row": 3,
+        "col": 30
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #6",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-027",
+        "Unit-189",
+        "Unit-246"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R3C31",
+    {
+      "id": "R3C31",
+      "position": {
+        "row": 3,
+        "col": 31
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #120",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C32",
+    {
+      "id": "R3C32",
+      "position": {
+        "row": 3,
+        "col": 32
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #121",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C33",
+    {
+      "id": "R3C33",
+      "position": {
+        "row": 3,
+        "col": 33
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #122",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-089"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C34",
+    {
+      "id": "R3C34",
+      "position": {
+        "row": 3,
+        "col": 34
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #123",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-113",
+        "Unit-151"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C35",
+    {
+      "id": "R3C35",
+      "position": {
+        "row": 3,
+        "col": 35
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #124",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C36",
+    {
+      "id": "R3C36",
+      "position": {
+        "row": 3,
+        "col": 36
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #125",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-157"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C37",
+    {
+      "id": "R3C37",
+      "position": {
+        "row": 3,
+        "col": 37
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #126",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C38",
+    {
+      "id": "R3C38",
+      "position": {
+        "row": 3,
+        "col": 38
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #127",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-117"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C39",
+    {
+      "id": "R3C39",
+      "position": {
+        "row": 3,
+        "col": 39
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #128",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-222",
+        "Unit-233"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C40",
+    {
+      "id": "R3C40",
+      "position": {
+        "row": 3,
+        "col": 40
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #6",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R3C41",
+    {
+      "id": "R3C41",
+      "position": {
+        "row": 3,
+        "col": 41
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #129",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C42",
+    {
+      "id": "R3C42",
+      "position": {
+        "row": 3,
+        "col": 42
+      },
+      "type": "CONFESSIONAL",
+      "name": "忏情室 #7",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R3C43",
+    {
+      "id": "R3C43",
+      "position": {
+        "row": 3,
+        "col": 43
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #130",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-081",
+        "Unit-083"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C44",
+    {
+      "id": "R3C44",
+      "position": {
+        "row": 3,
+        "col": 44
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #131",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C45",
+    {
+      "id": "R3C45",
+      "position": {
+        "row": 3,
+        "col": 45
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #132",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-020",
+        "Unit-078",
+        "Unit-150",
+        "Unit-174"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C46",
+    {
+      "id": "R3C46",
+      "position": {
+        "row": 3,
+        "col": 46
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #133",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-034",
+        "Unit-077"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C47",
+    {
+      "id": "R3C47",
+      "position": {
+        "row": 3,
+        "col": 47
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #134",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C48",
+    {
+      "id": "R3C48",
+      "position": {
+        "row": 3,
+        "col": 48
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #135",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R3C49",
+    {
+      "id": "R3C49",
+      "position": {
+        "row": 3,
+        "col": 49
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #136",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-139",
+        "Unit-193"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C0",
+    {
+      "id": "R4C0",
+      "position": {
+        "row": 4,
+        "col": 0
+      },
+      "type": "ESCHER_STAIRS",
+      "name": "埃舍尔阶梯 #5",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R4C1",
+    {
+      "id": "R4C1",
+      "position": {
+        "row": 4,
+        "col": 1
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #9",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-107",
+        "Unit-122",
+        "Unit-155",
+        "Unit-220"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C2",
+    {
+      "id": "R4C2",
+      "position": {
+        "row": 4,
+        "col": 2
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #137",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C3",
+    {
+      "id": "R4C3",
+      "position": {
+        "row": 4,
+        "col": 3
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #138",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-073"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C4",
+    {
+      "id": "R4C4",
+      "position": {
+        "row": 4,
+        "col": 4
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #139",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-075",
+        "Unit-137"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C5",
+    {
+      "id": "R4C5",
+      "position": {
+        "row": 4,
+        "col": 5
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #140",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-038",
+        "Unit-132"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C6",
+    {
+      "id": "R4C6",
+      "position": {
+        "row": 4,
+        "col": 6
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #141",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C7",
+    {
+      "id": "R4C7",
+      "position": {
+        "row": 4,
+        "col": 7
+      },
+      "type": "DISSOLUTION_CHAMBER",
+      "name": "自我消融室 #3",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R4C8",
+    {
+      "id": "R4C8",
+      "position": {
+        "row": 4,
+        "col": 8
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #142",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-215"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C9",
+    {
+      "id": "R4C9",
+      "position": {
+        "row": 4,
+        "col": 9
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #7",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-153"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C10",
+    {
+      "id": "R4C10",
+      "position": {
+        "row": 4,
+        "col": 10
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #10",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-011"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C11",
+    {
+      "id": "R4C11",
+      "position": {
+        "row": 4,
+        "col": 11
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #11",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-057"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C12",
+    {
+      "id": "R4C12",
+      "position": {
+        "row": 4,
+        "col": 12
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #143",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C13",
+    {
+      "id": "R4C13",
+      "position": {
+        "row": 4,
+        "col": 13
+      },
+      "type": "NURSERY",
+      "name": "育婴室 #4",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-006",
+        "Unit-067"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_heartbeat"
+    }
+  ],
+  [
+    "R4C14",
+    {
+      "id": "R4C14",
+      "position": {
+        "row": 4,
+        "col": 14
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #144",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-106"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C15",
+    {
+      "id": "R4C15",
+      "position": {
+        "row": 4,
+        "col": 15
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #145",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C16",
+    {
+      "id": "R4C16",
+      "position": {
+        "row": 4,
+        "col": 16
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #146",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C17",
+    {
+      "id": "R4C17",
+      "position": {
+        "row": 4,
+        "col": 17
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #147",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-111"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C18",
+    {
+      "id": "R4C18",
+      "position": {
+        "row": 4,
+        "col": 18
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #148",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-016"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C19",
+    {
+      "id": "R4C19",
+      "position": {
+        "row": 4,
+        "col": 19
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #149",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-114",
+        "Unit-244"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C20",
+    {
+      "id": "R4C20",
+      "position": {
+        "row": 4,
+        "col": 20
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #8",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-245"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C21",
+    {
+      "id": "R4C21",
+      "position": {
+        "row": 4,
+        "col": 21
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #12",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-082"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C22",
+    {
+      "id": "R4C22",
+      "position": {
+        "row": 4,
+        "col": 22
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #150",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-121",
+        "Unit-124",
+        "Unit-133"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C23",
+    {
+      "id": "R4C23",
+      "position": {
+        "row": 4,
+        "col": 23
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #151",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-143",
+        "Unit-182"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C24",
+    {
+      "id": "R4C24",
+      "position": {
+        "row": 4,
+        "col": 24
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #152",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-145"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C25",
+    {
+      "id": "R4C25",
+      "position": {
+        "row": 4,
+        "col": 25
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #153",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-228"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C26",
+    {
+      "id": "R4C26",
+      "position": {
+        "row": 4,
+        "col": 26
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #154",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-044"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C27",
+    {
+      "id": "R4C27",
+      "position": {
+        "row": 4,
+        "col": 27
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #155",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C28",
+    {
+      "id": "R4C28",
+      "position": {
+        "row": 4,
+        "col": 28
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #156",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-166",
+        "Unit-205"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C29",
+    {
+      "id": "R4C29",
+      "position": {
+        "row": 4,
+        "col": 29
+      },
+      "type": "ARCHIVE",
+      "name": "回声档案馆 #4",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C30",
+    {
+      "id": "R4C30",
+      "position": {
+        "row": 4,
+        "col": 30
+      },
+      "type": "ENTROPY_CLOCK",
+      "name": "零熵之钟 #1",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_clock"
+    }
+  ],
+  [
+    "R4C31",
+    {
+      "id": "R4C31",
+      "position": {
+        "row": 4,
+        "col": 31
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #157",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C32",
+    {
+      "id": "R4C32",
+      "position": {
+        "row": 4,
+        "col": 32
+      },
+      "type": "ARCHIVE",
+      "name": "回声档案馆 #5",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-146"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C33",
+    {
+      "id": "R4C33",
+      "position": {
+        "row": 4,
+        "col": 33
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #158",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-199"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C34",
+    {
+      "id": "R4C34",
+      "position": {
+        "row": 4,
+        "col": 34
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #159",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-023",
+        "Unit-171"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C35",
+    {
+      "id": "R4C35",
+      "position": {
+        "row": 4,
+        "col": 35
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #160",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-019",
+        "Unit-120"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C36",
+    {
+      "id": "R4C36",
+      "position": {
+        "row": 4,
+        "col": 36
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #161",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-119"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C37",
+    {
+      "id": "R4C37",
+      "position": {
+        "row": 4,
+        "col": 37
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #9",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C38",
+    {
+      "id": "R4C38",
+      "position": {
+        "row": 4,
+        "col": 38
+      },
+      "type": "ARCHIVE",
+      "name": "回声档案馆 #6",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-039",
+        "Unit-102"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C39",
+    {
+      "id": "R4C39",
+      "position": {
+        "row": 4,
+        "col": 39
+      },
+      "type": "POOLS",
+      "name": "月光浴池 #13",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-112"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C40",
+    {
+      "id": "R4C40",
+      "position": {
+        "row": 4,
+        "col": 40
+      },
+      "type": "MIRROR_HALL",
+      "name": "异变映厅 #2",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R4C41",
+    {
+      "id": "R4C41",
+      "position": {
+        "row": 4,
+        "col": 41
+      },
+      "type": "VEIL",
+      "name": "薄纱车厢 #4",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-223"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R4C42",
+    {
+      "id": "R4C42",
+      "position": {
+        "row": 4,
+        "col": 42
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #162",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-024",
+        "Unit-084"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C43",
+    {
+      "id": "R4C43",
+      "position": {
+        "row": 4,
+        "col": 43
+      },
+      "type": "VEIL",
+      "name": "薄纱车厢 #5",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_whisper"
+    }
+  ],
+  [
+    "R4C44",
+    {
+      "id": "R4C44",
+      "position": {
+        "row": 4,
+        "col": 44
+      },
+      "type": "GARDEN",
+      "name": "永绽花园 #10",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-173",
+        "Unit-197"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_water"
+    }
+  ],
+  [
+    "R4C45",
+    {
+      "id": "R4C45",
+      "position": {
+        "row": 4,
+        "col": 45
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #163",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-093"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C46",
+    {
+      "id": "R4C46",
+      "position": {
+        "row": 4,
+        "col": 46
+      },
+      "type": "CAULDRON",
+      "name": "熔炉 #1",
+      "category": "sanctuary",
+      "occupants": [],
+      "isAccessible": false,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ],
+  [
+    "R4C47",
+    {
+      "id": "R4C47",
+      "position": {
+        "row": 4,
+        "col": 47
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #164",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-045"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C48",
+    {
+      "id": "R4C48",
+      "position": {
+        "row": 4,
+        "col": 48
+      },
+      "type": "ATRIUM",
+      "name": "中庭 #165",
+      "category": "sanctuary",
+      "occupants": [
+        "Unit-058",
+        "Unit-198",
+        "Unit-224"
+      ],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_train"
+    }
+  ],
+  [
+    "R4C49",
+    {
+      "id": "R4C49",
+      "position": {
+        "row": 4,
+        "col": 49
+      },
+      "type": "NEGATIVE_GALLERY",
+      "name": "负空间画廊 #4",
+      "category": "abyss",
+      "occupants": [],
+      "isAccessible": true,
+      "lastHubShuffle": 1792143594602,
+      "ambientSoundId": "ambient_horror"
+    }
+  ]
+]

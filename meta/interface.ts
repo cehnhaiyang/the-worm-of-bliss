@@ -611,10 +611,6 @@ export interface Maiden {
   clothing: ClothingState;
   initialClothing: ClothingState; // 基准着装（防腐参考）
 
-  // --- 肖像缓存 ---
-  lastPortraitHash?: string;
-  lastPortraitUpdate?: number;
-
   // --- 人格 ---
   isshex: ISShexPersonality;
   profile: PersonalityProfile;
@@ -893,6 +889,7 @@ export interface PortraitSnapshot {
   pregnancyMilestone: number;
   isInAbyss: boolean;
   personalityState: PersonalityState;
+  rank: CharacterRank;
 }
 
 /**
