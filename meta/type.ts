@@ -135,13 +135,16 @@ export const MoodState = {
 export type MoodState = (typeof MoodState)[keyof typeof MoodState];
 
 /**
- * 人格统合状态
+ * 人格状态档位：由「此刻状态相对个人基线的偏离」D² 划分（personality.md §4.3.1）。
+ *
+ * 刻意不使用临床词汇：偏离是描述，不是诊断。特质水平 θ 是静态量，
+ * 不随压力"崩溃"，因此档位只能由状态偏离给出，不能由 θ 的绝对阈值给出。
  */
 export type PersonalityState =
-  | 'integrated'   // 人格统合完整
-  | 'adaptive'     // 表面适应
-  | 'stressed'     // 应激抗拒
-  | 'dissociated'; // 彻底解离
+  | 'typical'    // 常态范围：D² 在第 80 分位内
+  | 'stretched'  // 拉伸：80–95 分位，通常可由情境解释
+  | 'atypical'   // 非典型：95–99 分位，明显偏离个人常态
+  | 'extreme';   // 极端偏离：> 99 分位，少见，应关注情境与恢复
 
 /**
  * 移动状态枚举

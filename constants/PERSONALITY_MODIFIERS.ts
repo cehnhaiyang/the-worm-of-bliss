@@ -2,8 +2,6 @@
 export const PERSONALITY_MODS = {
   // 属性变化修正
   SANITY_C_MOD: 0.008,         // 高C -> 理智流失更慢
-  STRESS_RESIST_MOD: 1,        // 通过 behaviorWeights.stressResistance 间接计算
-  LUST_SENSITIVITY_MOD: 1,     // 通过 behaviorWeights.lustSensitivity 间接计算
 
   // 行为需求修正
   FATIGUE_C_AWARENESS: 0.01,   // 高C对疲劳的敏感度
@@ -13,6 +11,9 @@ export const PERSONALITY_MODS = {
   // 情境特质激活
   TRAIT_ACTIVATION_BASE: 0.85,
   TRAIT_ACTIVATION_SCALE: 0.008,
+
+  // 过程平面：威胁评价偏差 η（§4.3.2），焦虑对压力感知的放大
+  THREAT_APPRAISAL_ETA: 0.25,
 
   // 深渊观测
   ABYSS_PEEK_BASE: 0.05,
@@ -39,14 +40,6 @@ export const PERSONALITY_MODS = {
   FATIGUE_OBSERVE_HIGH_C: 0.01, // 观测疲劳系数（高C）
   FATIGUE_RECOVERY_SLEEP: 0.5,  // 睡眠恢复率
   FATIGUE_RECOVERY_NORMAL: 0.1,  // 正常恢复率
-
-  // 影子人格激活
-  SHADOW_ACTIVATION_LOW_ALPHA: 0.2,  // 低α激活率
-  SHADOW_RECOVERY_HIGH_ALPHA: 0.3,   // 高α恢复率
-
-  // 人格状态转移
-  STATE_TRANSITION_WORSENING: 0.1,   // 恶化转移概率
-  STATE_TRANSITION_IMPROVING: 0.05,  // 改善转移概率
 
   // 生理周期修正
   FERTILITY_BASE_MULTIPLIER: 1.0,

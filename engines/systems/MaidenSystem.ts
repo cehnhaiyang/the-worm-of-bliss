@@ -18,7 +18,6 @@ import {
     CharacterStatus,
     ClothingState,
     CupSize,
-    DarkTetrad,
     DressLevel,
     EventEffectContext,
     EventTimestampData,
@@ -28,7 +27,6 @@ import {
     HexacoProfile,
     ISShexPersonality,
     ItemDef,
-    LightTriad,
     LogType,
     Maiden,
     MaidenSummary,
@@ -42,7 +40,8 @@ import {
     NarcissusEligibility,
     NarcissusStage,
     NarcissusState,
-    PersonalityArchetype,
+    OctantAffinity,
+    PersonalityDynamics,
     PersonalityProfile,
     PersonalityState,
     PhysicalStats,
@@ -51,11 +50,13 @@ import {
     PregnancyEvent,
     PregnancyStage,
     PregnancyState,
+    ProxyId,
     RawInsertion,
     RawMemoryNode,
     RelationType,
     Relationship,
     RelationshipNetworkData,
+    SignatureMatch,
     SituationType,
     SocialContext,
     SocialInteractionType,
@@ -126,6 +127,7 @@ import {
     NAKED_UNDERGARMENT_LAYER,
     NEED_THRESHOLDS,
     NEGATIVE_TRAITS,
+    OCTANT_STYLES,
     PANTY_COLORS,
     PANTY_MATERIALS,
     PANTY_TYPES,
@@ -134,6 +136,7 @@ import {
     SHOE_COLORS,
     SHOE_MATERIALS,
     SHOE_TYPES,
+    SIGNATURE_STYLES,
     SKIN_TEXTURES,
     SKIN_TONES,
     STOCKING_COLORS,
@@ -150,8 +153,24 @@ import {
     UNDERSHIRT_MATERIALS,
     UNDERSHIRT_TYPES,
     calculateDressLevel,
+    accumulateLoad,
+    applyTraitDrift,
+    computeDeviationSquared,
+    computeDiscrepancyLoad,
+    deriveBehaviorWeights,
+    deriveDomains,
+    deriveMetaTraits,
+    deriveOctantAffinities,
+    deriveProxies,
+    deriveSignatureMatches,
+    expressDomains,
+    expressState,
     isBondageAccessory,
     isCarryableItem,
+    normalizeFacets,
+    stateFromDeviation,
+    traitActivationGain,
+    type BehaviorWeights,
 } from '../../constants';
 
 const MEMORY_CATEGORIES: readonly MemoryCategory[] = [
@@ -505,47 +524,59 @@ class MaidenRelationship {
     }
 
     /**
-     * 计算单向初始关系参数（深度计算人格耦合）
+     * 计算单向初始关系参数（深度计算人格耦合）。
+     *
+     * 全部阈值以 z 为单位：v1 里的 20/30/65/35/70 是 0–100 量表上的刻度，
+     * 换算后即 2σ/3σ/±1.5σ/±2σ。相似度与互补性取自 PERSONALITY_MODS，
+     * 不再就地写数字。
      */
     private createInitialRelationship(maiden: Maiden, target: Maiden, gameTimePassed: number): Relationship {
         let baseAffinity = Math.floor(Math.random() * 40) - 10;
 
-        const m = maiden.isshex;
-        const t = target.isshex;
+        const m = personalityView(maiden);
+        const t = personalityView(target);
+        const mDomain = m.domains;
+        const tDomain = t.domains;
 
-        const hexacoSimilarity = (
-            Math.abs(m.hexaco.H - t.hexaco.H) +
-            Math.abs(m.hexaco.E - t.hexaco.E) +
-            Math.abs(m.hexaco.X - t.hexaco.X) +
-            Math.abs(m.hexaco.A - t.hexaco.A) +
-            Math.abs(m.hexaco.C - t.hexaco.C) +
-            Math.abs(m.hexaco.O - t.hexaco.O)
+        const domainDistance = (
+            Math.abs(mDomain.H - tDomain.H) +
+            Math.abs(mDomain.E - tDomain.E) +
+            Math.abs(mDomain.X - tDomain.X) +
+            Math.abs(mDomain.A - tDomain.A) +
+            Math.abs(mDomain.C - tDomain.C) +
+            Math.abs(mDomain.O - tDomain.O)
         ) / 6;
 
-        if (hexacoSimilarity < 20) {
-            baseAffinity += 15;
-        } else if (hexacoSimilarity < 30) {
-            baseAffinity += 8;
+        // 相似度按平均域间距离（z）分档
+        if (domainDistance < 1.0) {
+            baseAffinity += PERSONALITY_MODS.RELATIONSHIP_SIMILARITY_HIGH_BONUS;
+        } else if (domainDistance < 2.0) {
+            baseAffinity += PERSONALITY_MODS.RELATIONSHIP_SIMILARITY_MEDIUM_BONUS;
         }
 
-        if ((m.hexaco.E > 65 && t.hexaco.E < 35) || (m.hexaco.E < 35 && t.hexaco.E > 65)) {
-            baseAffinity += 12;
+        // 情绪性互补：一方高一方低时相互补足
+        if ((mDomain.E > 1.5 && tDomain.E < -1.5) || (mDomain.E < -1.5 && tDomain.E > 1.5)) {
+            baseAffinity += PERSONALITY_MODS.RELATIONSHIP_COMPLEMENTARY_E_BONUS;
         }
 
-        if ((m.hexaco.X > 70 && t.hexaco.X < 30) || (m.hexaco.X < 30 && t.hexaco.X > 70)) {
-            baseAffinity -= 5;
+        if ((mDomain.X > 2 && tDomain.X < -2) || (mDomain.X < -2 && tDomain.X > 2)) {
+            baseAffinity -= PERSONALITY_MODS.RELATIONSHIP_CONFLICT_X_PENALTY;
         }
-        if (m.hexaco.A < 35 && t.hexaco.A > 65) {
-            baseAffinity -= 10;
+        if (mDomain.A < -1.5 && tDomain.A > 1.5) {
+            baseAffinity -= PERSONALITY_MODS.RELATIONSHIP_CONFLICT_A_PENALTY;
         }
 
-        const avgEmpathy = (m.behaviorWeights.empathy + t.behaviorWeights.empathy) / 2;
-        baseAffinity += Math.round((avgEmpathy - 50) / 5);
+        // 共情差异：权重为 0–1（0.5 即人群均值），换算为对好感度的修正
+        const avgEmpathy = (m.weights.empathy + t.weights.empathy) / 2;
+        baseAffinity += Math.round((avgEmpathy - 0.5) * PERSONALITY_MODS.RELATIONSHIP_EMPATHY_MOD);
 
-        if (m.darkTetrad.psychopathy > 70) {
+        // 诚信极低者与被剥削倾向者之间更易形成依附型关系
+        const mHonesty = (maiden.isshex.facets.sincerity + maiden.isshex.facets.fairness
+            + maiden.isshex.facets.greedAvoidance + maiden.isshex.facets.modesty) / 4;
+        if (mHonesty < -1.0) {
             baseAffinity -= 15;
         }
-        if (m.darkTetrad.machiavellianism > 60 && t.hexaco.A > 60) {
+        if (mHonesty < -0.5 && tDomain.A > 1.0) {
             baseAffinity += 10;
         }
 
@@ -695,9 +726,9 @@ class MaidenRelationship {
         let targetTrustDelta = 0;
         let sharedTraumaFlag = false;
 
-        const iHex = initiator.isshex.hexaco;
-        const tHex = target.isshex.hexaco;
-        const iDark = initiator.isshex.darkTetrad;
+        const iDomains = personalityView(initiator).domains;
+        const tDomains = personalityView(target).domains;
+        const iProxies = personalityView(initiator).proxies;
 
         switch (interactionType) {
             case 'chat':
@@ -706,7 +737,7 @@ class MaidenRelationship {
                 initTrustDelta = baseVal * 0.2;
                 targetTrustDelta = baseVal * 0.2;
                 // 内向者对频繁闲聊可能产生微弱反感
-                if (tHex.X < 30) targetAffinityDelta -= 1;
+                if (tDomains.X < -2) targetAffinityDelta -= 1;
                 break;
 
             case 'comfort':
@@ -715,8 +746,9 @@ class MaidenRelationship {
                 initTrustDelta = baseVal * 0.8;
                 targetTrustDelta = baseVal * 1.2;
                 // 共情修正
-                if (tHex.E > 60) targetTrustDelta *= 1.5;
-                if (iDark.machiavellianism > 60) initAffinityDelta = 0; // 马基雅维利者仅为操纵，不产生真实亲和
+                if (tDomains.E > 1.0) targetTrustDelta *= 1.5;
+                // 操纵倾向高者仅为操纵，不产生真实亲和
+                if (iProxies.machiavellianism > 1.0) initAffinityDelta = 0;
                 break;
 
             case 'gossip':
@@ -731,12 +763,13 @@ class MaidenRelationship {
                 targetAffinityDelta = -baseVal * 1.2;
                 initTrustDelta = -baseVal * 0.5;
                 targetTrustDelta = -baseVal * 0.5;
-                // 高对抗性（低宜人性）者不易在争吵中大幅度掉信任
-                if (tHex.A < 30) targetTrustDelta *= 0.5;
+                // 低宜人性者不易在争吵中大幅度掉信任
+                if (tDomains.A < -2) targetTrustDelta *= 0.5;
                 break;
 
             case 'bully':
-                initAffinityDelta = iDark.sadism > 50 ? baseVal * 0.5 : -baseVal; // 施虐者可能产生病态愉悦
+                // 施虐倾向高者可能产生病态愉悦
+                initAffinityDelta = iProxies.sadism > 0.5 ? baseVal * 0.5 : -baseVal;
                 targetAffinityDelta = -baseVal * 2.5;
                 initTrustDelta = -baseVal;
                 targetTrustDelta = -baseVal * 3.0;
@@ -754,7 +787,7 @@ class MaidenRelationship {
                 targetAffinityDelta = baseVal;
                 initTrustDelta = baseVal * 2.0;
                 targetTrustDelta = baseVal * 1.5;
-                if (tHex.A > 70) targetTrustDelta *= 1.2;
+                if (tDomains.A > 2) targetTrustDelta *= 1.2;
                 break;
 
             case 'pray':
@@ -811,19 +844,19 @@ class MaidenRelationship {
         target?: Maiden
     ): RelationType {
         if (maiden && target && affinity >= 30) {
-            const mHex = maiden.isshex.hexaco;
-            const tHex = target.isshex.hexaco;
-            const mDark = maiden.isshex.darkTetrad;
+            const mDomains = personalityView(maiden).domains;
+            const tDomains = personalityView(target).domains;
+            const mMachiavellianism = personalityView(maiden).proxies.machiavellianism;
 
-            if (mHex.E > 60 && mHex.A < 40 && tHex.E < 40 && tHex.A > 60 && trust >= 50) {
+            if (mDomains.E > 1.0 && mDomains.A < -0.5 && tDomains.E < -0.5 && tDomains.A > 1.0 && trust >= 50) {
                 return 'protector';
             }
 
-            if (mHex.E < 40 && mHex.A > 60 && tHex.E > 60 && tHex.A < 40 && trust >= 40) {
+            if (mDomains.E < -0.5 && mDomains.A > 1.0 && tDomains.E > 1.0 && tDomains.A < -0.5 && trust >= 40) {
                 return 'dependent';
             }
 
-            if (sharedTrauma && mDark.machiavellianism > 60 && trust >= 30) {
+            if (sharedTrauma && mMachiavellianism > 1.0 && trust >= 30) {
                 return 'accomplice';
             }
         }
@@ -855,7 +888,7 @@ class MaidenRelationship {
         for (const [id, maiden] of maidens) {
             if (!maiden.relationships || maiden.relationships.length === 0) continue;
 
-            const mHex = maiden.isshex.hexaco;
+            const mDomains = personalityView(maiden).domains;
             const updatedRelationships: Relationship[] = [];
             let changed = false;
 
@@ -869,10 +902,10 @@ class MaidenRelationship {
                 if (affinity > 50) dampingFactor *= 0.6;
                 if (sharedTrauma) dampingFactor *= 0.2; // 强化共享创伤的抗遗忘性
 
-                // 依赖性强（高情绪性+高依附倾向）的角色遗忘正向关系更慢
-                if (mHex.E > 70 && affinity > 0) dampingFactor *= 0.7;
+                // 情绪性高（依恋深）的角色遗忘正向关系更慢
+                if (mDomains.E > 2 && affinity > 0) dampingFactor *= 0.7;
                 // 孤僻倾向（极低外向性）加速泛泛之交的衰退
-                if (mHex.X < 30 && affinity < 30 && affinity > 0) dampingFactor *= 1.3;
+                if (mDomains.X < -2 && affinity < 30 && affinity > 0) dampingFactor *= 1.3;
 
                 const currentDecay = baseDecayAmount * dampingFactor;
 
@@ -987,7 +1020,7 @@ class MaidenSocialization {
             return {};
         }
 
-        const weights = maiden.isshex.behaviorWeights;
+        const weights = personalityView(maiden).weights;
         const socialChance = SOCIAL_INTERACTION_BASE_CHANCE * (weights.socialSeek + 0.5);
 
         if (Math.random() > socialChance) return {};
@@ -1039,51 +1072,52 @@ class MaidenSocialization {
         target: Maiden,
         carriage: Carriage
     ): SocialInteractionType {
-        const m = maiden.isshex;
-        const t = target.isshex;
+        const mView = personalityView(maiden);
+        const tView = personalityView(target);
+        const mFacets = maiden.isshex.facets;
         const attrs = maiden.attributes;
         const tAttrs = target.attributes;
 
         if (carriage.type === 'ALTAR' || carriage.type === 'CONFESSIONAL') {
-            if (m.behaviorWeights.devotionTendency > 0.5 || t.behaviorWeights.devotionTendency > 0.5) {
+            if (mView.weights.devotionTendency > 0.5 || tView.weights.devotionTendency > 0.5) {
                 return 'pray';
             }
         }
 
         if (attrs.stress > 70 || tAttrs.stress > 70) {
-            if (m.facets.fearfulness > 55 || m.facets.dependence > 55) {
+            if (mFacets.fearfulness > 0.5 || mFacets.dependence > 0.5) {
                 return 'huddle';
             }
-            if (m.facets.gentleness > 50 && m.behaviorWeights.empathy > 0.5) {
+            if (mFacets.gentleness > 0 && mView.weights.empathy > 0.5) {
                 return 'comfort';
             }
             return 'huddle';
         }
 
-        if (m.behaviorWeights.aggressiveness > 0.5 && m.hexaco.A < 40) {
-            if (t.hexaco.A > 60 && Math.random() < 0.4) {
+        if (mView.weights.aggressiveness > 0.5 && mView.domains.A < -1.0) {
+            if (tView.domains.A > 1.0 && Math.random() < 0.4) {
                 return 'bully';
             }
-            if (t.behaviorWeights.aggressiveness > 0.4) {
+            if (tView.weights.aggressiveness > 0.4) {
                 return Math.random() < 0.3 ? 'argue' : 'gossip';
             }
         }
 
-        if (m.behaviorWeights.lustSensitivity > 0.6 && m.hexaco.X > 50) {
+        if (mView.weights.lustSensitivity > 0.6 && mView.domains.X > 0) {
             if (attrs.lust > 50 || tAttrs.lust > 50) {
                 return 'seduce';
             }
             return 'gossip';
         }
 
-        if (m.facets.fearfulness > 50 && m.facets.dependence > 50 && m.hexaco.X < 50) {
+        if (mFacets.fearfulness > 0 && mFacets.dependence > 0 && mView.domains.X < 0) {
             if (tAttrs.sanity > 60) {
                 return 'confide';
             }
             return 'huddle';
         }
 
-        if (m.behaviorWeights.devotionTendency > 0.5) {
+        if (mView.weights.devotionTendency > 0.5) {
             return Math.random() < 0.5 ? 'pray' : 'chat';
         }
 
@@ -1253,6 +1287,7 @@ class MaidenSocialization {
 
 /** 水仙协议：褪色速度与阶段阈值，与 GAME_CONFIG.NARCISSUS 保持一致 */
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MINUTES_PER_DAY = 24 * 60;
 const FADING_RATE_PER_DAY = GAME_CONFIG.NARCISSUS.FADING_RATE;
 const FADING_STAGE_THRESHOLD = 30;
 const INVITATION_THRESHOLD = GAME_CONFIG.NARCISSUS.INVITATION_THRESHOLD;
@@ -1321,7 +1356,7 @@ class MaidenNarcissus {
         const eligibility = this.checkEligibility(maiden, gameTimePassed);
         if (!eligibility.eligible) return false;
 
-        if (!maiden.isshex || !maiden.isshex.hexaco || !maiden.isshex.facets || !maiden.isshex.behaviorWeights || !maiden.isshex.metaTraits) {
+        if (!maiden.isshex || !maiden.isshex.facets || !maiden.isshex.dynamics) {
             return false; // 阻断残缺的人格模型导致的计算错误
         }
 
@@ -1337,28 +1372,30 @@ class MaidenNarcissus {
         // 3. 深渊暴露修正
         chance += maiden.abyssExposureCount * 0.0005;
 
-        // 4. IS-SHEX人格修正
-        const { hexaco, facets, behaviorWeights, metaTraits } = maiden.isshex;
+        // 4. IS-SHEX人格修正：危险取舍靠风险承受与低诚信，顺从与虔诚抑制觉醒
+        const view = personalityView(maiden);
+        const facets = maiden.isshex.facets;
 
-        chance *= (1 + (facets.fearfulness - 50) * 0.01);
+        chance *= (1 + facets.fearfulness * 0.1);
 
-        if (behaviorWeights.riskTolerance > 0.5 && hexaco.H < 40) {
+        if (view.weights.riskTolerance > 0.5 && view.domains.H < -1.0) {
             chance *= 2.0;
         }
 
-        if (hexaco.A > 60 && behaviorWeights.obedienceBase > 10) {
+        if (view.domains.A > 1.0 && view.weights.obedienceBase > 10) {
             chance *= 0.5;
         }
 
-        if (behaviorWeights.devotionTendency > 0.6) {
+        if (view.weights.devotionTendency > 0.6) {
             chance *= 0.1;
         }
 
-        if (hexaco.O > 60 && hexaco.C < 40) {
+        if (view.domains.O > 1.0 && view.domains.C < -1.0) {
             chance *= 0.6;
         }
 
-        if (metaTraits.alpha < 40) {
+        // 稳定性低者更易被水仙协议吸引（γ 偏低即对抗性更高）
+        if (view.meta.alpha < -1.0) {
             chance *= 1.3;
         }
 
@@ -2165,6 +2202,70 @@ class MaidenRandomEvent {
     }
 }
 
+/**
+ * 人格读取门面：把派生值集中到一处算出。
+ *
+ * `ISShexPersonality` 只存权威（facets + dynamics），因此所有读取派生值的调用点
+ * 都经过这里，而不是各自重算——v1 的问题是八层派生值各存一份到存档，
+ * 却没有一处维护它们与 facets 的一致性。
+ */
+export class PersonalityView {
+    constructor(private readonly isshex: ISShexPersonality) { }
+
+    /** 六个维度分数（z） */
+    get domains(): HexacoProfile {
+        return deriveDomains(this.isshex.facets);
+    }
+
+    /** 三个元因子 α/β/γ（z，已重标准化） */
+    get meta(): MetaTraits {
+        return deriveMetaTraits(this.isshex.facets);
+    }
+
+    /** 八分构型软隶属度，按隶属度降序 */
+    get octants(): OctantAffinity[] {
+        return deriveOctantAffinities(this.meta);
+    }
+
+    /** 隶属度最高的构型；β≈0 时相邻构型本就接近，故调用方应展示隶属度而非只取首位 */
+    get topOctant(): OctantAffinity {
+        return this.octants[0];
+    }
+
+    /** 子维度签名匹配，按匹配度降序 */
+    get signatures(): SignatureMatch[] {
+        return deriveSignatureMatches(this.isshex.facets);
+    }
+
+    /**
+     * 光明/黑暗代理指标（z）。
+     * 未通过验证门槛，仅可用于群体层面分析与创作设定，禁止据此对个体下判断（§3.4.3）。
+     */
+    get proxies(): Record<ProxyId, number> {
+        return deriveProxies(this.isshex.facets);
+    }
+
+    /** 行为驱动权重 */
+    get weights(): BehaviorWeights {
+        return deriveBehaviorWeights(this.isshex.facets);
+    }
+
+    /** 过程平面的可变状态 */
+    get dynamics(): PersonalityDynamics {
+        return this.isshex.dynamics;
+    }
+
+    /** 状态档位：由 D² 分档派生，不单独存储（§4.3.1） */
+    get state(): PersonalityState {
+        return stateFromDeviation(this.isshex.dynamics.deviationSquared);
+    }
+}
+
+/** 便捷构造：调用点写作 `personalityView(maiden).meta` */
+export function personalityView(maiden: Maiden): PersonalityView {
+    return new PersonalityView(maiden.isshex);
+}
+
 function generateFullName(): { fullName: string; origin: NameOrigin } {
     const dataset = ALL_NAME_DATASETS[Math.floor(Math.random() * ALL_NAME_DATASETS.length)];
     const { origin, data } = dataset;
@@ -2174,170 +2275,84 @@ function generateFullName(): { fullName: string; origin: NameOrigin } {
     return { fullName, origin };
 }
 
-function calculateBehaviorWeights(profile: HexacoProfile, facets: HexacoFacets) {
-    const { H, E, X, A, C, O } = profile;
-
-    return {
-        socialSeek: (facets.sociability + facets.dependence * 0.5) / 150,
-        solitudeSeek: ((100 - X) + (100 - facets.dependence) * 0.5) / 150,
-        riskTolerance: ((100 - facets.fearfulness) + facets.socialBoldness + (100 - facets.prudence)) / 300,
-        obedienceBase: Math.round((A * 0.4 + H * 0.3 + facets.prudence * 0.3) - 50),
-        stressResistance: ((100 - facets.anxiety) + C + facets.patience) / 200,
-        lustSensitivity: (facets.sentimentality + (100 - facets.prudence) + O) / 200,
-        devotionTendency: (H + A + (100 - facets.unconventionality)) / 300,
-        aggressiveness: ((100 - A) + (100 - H) + facets.socialBoldness) / 300,
-        empathy: (facets.sentimentality + facets.gentleness) / 200,
-        impulsivity: ((100 - facets.prudence) + facets.liveliness) / 200,
-    };
-}
-
-function generateHexacoScore(): number {
-    const u1 = Math.random();
+/**
+ * 抽取标准正态 z 分，截断在 ±3σ —— 超出即已不属于人群分布，属模型外。
+ */
+function sampleNormalZ(): number {
+    const u1 = Math.max(Number.EPSILON, Math.random());
     const u2 = Math.random();
     const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    const score = 50 + z * 10;
-    return Math.round(Math.max(0, Math.min(100, score)));
+    return Math.round(Math.max(-3, Math.min(3, z)) * 100) / 100;
 }
 
-function generateFacetScore(domainScore: number): number {
-    const variance = 15;
-    const offset = (Math.random() - 0.5) * variance * 2;
-    const score = domainScore + offset;
-    return Math.round(Math.max(0, Math.min(100, score)));
+/** 子维度分数：维度位置 θ 加上子维度特有偏差（同域子维度相关约 .3–.5，故偏差不宜过大） */
+function sampleFacetZ(domainZ: number): number {
+    return Math.round(Math.max(-3, Math.min(3, domainZ + sampleNormalZ() * 0.75)) * 100) / 100;
 }
 
-function generateHexacoProfile(): HexacoProfile {
+/**
+ * 生成一套自洽的子维度分数。
+ *
+ * 直接抽取 24 个子维度会得到彼此独立的噪声，而同一维度内的子维度本就相关；
+ * 因此先抽 6 个维度位置，再在域内加偏差。利他为间质子维度，独立抽取。
+ */
+function generateHexacoFacets(): HexacoFacets {
+    const H = sampleNormalZ(), E = sampleNormalZ(), X = sampleNormalZ();
+    const A = sampleNormalZ(), C = sampleNormalZ(), O = sampleNormalZ();
+
     return {
-        H: generateHexacoScore(),
-        E: generateHexacoScore(),
-        X: generateHexacoScore(),
-        A: generateHexacoScore(),
-        C: generateHexacoScore(),
-        O: generateHexacoScore(),
+        sincerity: sampleFacetZ(H),
+        fairness: sampleFacetZ(H),
+        greedAvoidance: sampleFacetZ(H),
+        modesty: sampleFacetZ(H),
+        fearfulness: sampleFacetZ(E),
+        anxiety: sampleFacetZ(E),
+        dependence: sampleFacetZ(E),
+        sentimentality: sampleFacetZ(E),
+        socialSelfEsteem: sampleFacetZ(X),
+        socialBoldness: sampleFacetZ(X),
+        sociability: sampleFacetZ(X),
+        liveliness: sampleFacetZ(X),
+        forgivingness: sampleFacetZ(A),
+        gentleness: sampleFacetZ(A),
+        flexibility: sampleFacetZ(A),
+        patience: sampleFacetZ(A),
+        organization: sampleFacetZ(C),
+        diligence: sampleFacetZ(C),
+        perfectionism: sampleFacetZ(C),
+        prudence: sampleFacetZ(C),
+        aestheticAppreciation: sampleFacetZ(O),
+        inquisitiveness: sampleFacetZ(O),
+        creativity: sampleFacetZ(O),
+        unconventionality: sampleFacetZ(O),
+        altruism: sampleNormalZ(),
     };
 }
 
-function generateHexacoFacets(profile: HexacoProfile): HexacoFacets {
+/**
+ * 把任意来源的 `isshex` 规范化为当前形状：只保留权威字段，派生值一律丢弃。
+ *
+ * 子维度的换算与补足交给 `normalizeFacets`（唯一的人格读档入口），这里只负责
+ * 过程平面：v1 的 `traitFatigue` 是 0–100 的"特质疲劳"，与背离负荷不是同一个量，
+ * 故不做换算而直接归零——量纲不同，强行映射只会产生一个没有依据的初值。
+ */
+function normalizeIsshex(raw: unknown): ISShexPersonality {
+    const source = (raw ?? {}) as { dynamics?: Partial<PersonalityDynamics> };
+    const rawDynamics = source.dynamics;
+
     return {
-        sincerity: generateFacetScore(profile.H),
-        fairness: generateFacetScore(profile.H),
-        greedAvoidance: generateFacetScore(profile.H),
-        modesty: generateFacetScore(profile.H),
-        fearfulness: generateFacetScore(profile.E),
-        anxiety: generateFacetScore(profile.E),
-        dependence: generateFacetScore(profile.E),
-        sentimentality: generateFacetScore(profile.E),
-        socialSelfEsteem: generateFacetScore(profile.X),
-        socialBoldness: generateFacetScore(profile.X),
-        sociability: generateFacetScore(profile.X),
-        liveliness: generateFacetScore(profile.X),
-        forgivingness: generateFacetScore(profile.A),
-        gentleness: generateFacetScore(profile.A),
-        flexibility: generateFacetScore(profile.A),
-        patience: generateFacetScore(profile.A),
-        organization: generateFacetScore(profile.C),
-        diligence: generateFacetScore(profile.C),
-        perfectionism: generateFacetScore(profile.C),
-        prudence: generateFacetScore(profile.C),
-        aestheticAppreciation: generateFacetScore(profile.O),
-        inquisitiveness: generateFacetScore(profile.O),
-        creativity: generateFacetScore(profile.O),
-        unconventionality: generateFacetScore(profile.O),
+        facets: normalizeFacets(raw),
+        dynamics: {
+            discrepancyLoad: rawDynamics?.discrepancyLoad ?? 0,
+            deviationSquared: rawDynamics?.deviationSquared ?? 0,
+            lastDriftTime: rawDynamics?.lastDriftTime ?? 0,
+        },
     };
 }
 
-function calculateMetaTraits(profile: HexacoProfile): MetaTraits {
-    const { H, E, X, A, C, O } = profile;
-
-    const alpha = 0.30 * C + 0.30 * A + 0.25 * H + 0.15 * (100 - E);
-    const beta = 0.60 * X + 0.40 * O;
-    const delta = 0.35 * (100 - H) + 0.30 * (100 - C) + 0.20 * (100 - A) + 0.15 * X;
-    const gamma = 0.40 * H + 0.35 * A + 0.25 * E;
-    const pabi = gamma / (delta + 5);
-
-    return {
-        alpha: Math.round(alpha),
-        beta: Math.round(beta),
-        delta: Math.round(delta),
-        gamma: Math.round(gamma),
-        pabi: Math.round(pabi * 100) / 100,
-    };
-}
-
-function calculateDarkTetrad(profile: HexacoProfile, facets: HexacoFacets): DarkTetrad {
-    const { H, A } = profile;
-
-    const machiavellianism = 0.40 * (100 - H) + 0.30 * facets.prudence +
-        0.20 * (100 - facets.gentleness) + 0.10 * (100 - facets.sentimentality);
-
-    const narcissism = 0.40 * facets.socialBoldness + 0.35 * (100 - facets.modesty) +
-        0.15 * (100 - A) + 0.10 * facets.creativity;
-
-    const psychopathy = 0.35 * (100 - facets.fearfulness) + 0.30 * (100 - facets.sincerity) +
-        0.25 * (100 - facets.prudence) + 0.10 * (100 - A);
-
-    const sadism = 0.50 * (100 - facets.gentleness) + 0.30 * (100 - facets.sentimentality) +
-        0.20 * facets.socialBoldness;
-
-    return {
-        machiavellianism: Math.round(machiavellianism),
-        narcissism: Math.round(narcissism),
-        psychopathy: Math.round(psychopathy),
-        sadism: Math.round(sadism),
-    };
-}
-
-function calculateLightTriad(profile: HexacoProfile, facets: HexacoFacets): LightTriad {
-    const kantianism = 0.50 * facets.fairness + 0.25 * facets.prudence +
-        0.15 * facets.patience + 0.10 * facets.sincerity;
-
-    const humanism = 0.40 * facets.gentleness + 0.30 * facets.modesty +
-        0.20 * facets.sentimentality + 0.10 * facets.inquisitiveness;
-
-    const faithInHumanity = 0.50 * facets.forgivingness + 0.30 * facets.sincerity +
-        0.20 * (100 - facets.anxiety);
-
-    return {
-        kantianism: Math.round(kantianism),
-        humanism: Math.round(humanism),
-        faithInHumanity: Math.round(faithInHumanity),
-    };
-}
-
-function identifyArchetype(
-    profile: HexacoProfile,
-    meta: MetaTraits,
-    dark: DarkTetrad,
-    light: LightTriad
-): PersonalityArchetype {
-    const dominated: PersonalityArchetype['dominated'] = [];
-
-    if (dark.machiavellianism > 65) dominated.push('machiavellian');
-    if (dark.narcissism > 65) dominated.push('narcissist');
-    if (dark.psychopathy > 65) dominated.push('psychopath');
-    if (dark.sadism > 65) dominated.push('sadist');
-
-    if (light.kantianism > 65) dominated.push('kantian');
-    if (light.humanism > 65) dominated.push('humanist');
-    if (light.faithInHumanity > 65) dominated.push('faithful');
-
-    if (dark.machiavellianism > 55 && meta.gamma > 55) dominated.push('benevolent_manipulator');
-    if (dark.narcissism > 55 && profile.E > 60 && profile.X < 40) dominated.push('vulnerable_narcissist');
-    if (profile.O > 75 && profile.X > 70 && profile.C < 30) dominated.push('chaotic_innovator');
-    if (profile.C > 70 && profile.E < 30 && profile.A < 40) dominated.push('cold_executive');
-    if (light.humanism > 60 && dark.narcissism > 50) dominated.push('savior_complex');
-    if (light.kantianism > 60 && dark.sadism > 50) dominated.push('righteous_punisher');
-
-    let primary: PersonalityArchetype['primary'] = 'balanced';
-
-    if (meta.pabi > 2.0) primary = 'prosocial';
-    else if (meta.pabi < 0.5) primary = 'antagonistic';
-    else if (meta.alpha > 65 && meta.beta > 55) primary = 'adaptive_leader';
-    else if (meta.alpha > 65 && meta.beta < 45) primary = 'reliable_guardian';
-    else if (meta.alpha < 40 && meta.beta > 55) primary = 'chaotic_explorer';
-    else if (meta.alpha < 40 && meta.beta < 45) primary = 'impaired';
-
-    return { primary, dominated };
+/** 读档时的人格规范化门面，供持久化层调用（唯一入口） */
+export function normalizePersonality(raw: unknown): ISShexPersonality {
+    return normalizeIsshex(raw);
 }
 
 /**
@@ -2377,7 +2392,7 @@ class MaidenGenerator {
         const { age, initialAgeMs, boardingAge } = this.generateAgeData(arrivalTimestamp, gameTimePassed);
         const birthTimestamp = gameTimePassed - initialAgeMs;
 
-        const isshex = this.generateISShexPersonality();
+        const isshex = this.generateISShexPersonality(gameTimePassed);
         const physical = this.generatePhysicalStats();
         const clothing = this.generateClothing();
         const initialClothing = deepCopy(clothing);
@@ -2643,47 +2658,40 @@ class MaidenGenerator {
         return parts.join(', ');
     }
 
-    generateISShexPersonality(): ISShexPersonality {
-        const hexaco = generateHexacoProfile();
-        const facets = generateHexacoFacets(hexaco);
-        const metaTraits = calculateMetaTraits(hexaco);
-        const darkTetrad = calculateDarkTetrad(hexaco, facets);
-        const lightTriad = calculateLightTriad(hexaco, facets);
-        const archetype = identifyArchetype(hexaco, metaTraits, darkTetrad, lightTriad);
-        const behaviorWeights = calculateBehaviorWeights(hexaco, facets);
-
-        let currentState: ISShexPersonality['currentState'] = 'adaptive';
-        if (metaTraits.alpha > 65) currentState = 'integrated';
-        else if (metaTraits.alpha < 40) currentState = 'stressed';
+    /**
+     * 生成人格。
+     *
+     * 只产出权威字段：25 个子维度与过程平面的可变状态。维度、元因子、构型、
+     * 代理与行为权重都是派生值，读取时由纯函数算出，不入库（见 `normalizeIsshex`）。
+     */
+    generateISShexPersonality(gameTimePassed: number): ISShexPersonality {
+        const facets = generateHexacoFacets();
 
         return {
-            hexaco,
             facets,
-            metaTraits,
-            darkTetrad,
-            lightTriad,
-            archetype,
-            currentState,
-            traitFatigue: 0,
-            shadowActivation: 0,
-            behaviorWeights,
+            dynamics: {
+                discrepancyLoad: 0,
+                deviationSquared: 0,
+                lastDriftTime: gameTimePassed,
+            },
         };
     }
 
     generateAttributes(isshex: ISShexPersonality): CharacterAttributes {
-        const { hexaco, facets, behaviorWeights } = isshex;
+        const view = new PersonalityView(isshex);
+        const { C, E } = view.domains;
 
         const sanityBase = 70 + Math.floor(Math.random() * 30);
-        const sanityMod = (hexaco.C - 50) * 0.2 - (hexaco.E - 50) * 0.1;
+        const sanityMod = C * 2 - E;
 
         const obedienceBase = 30 + Math.floor(Math.random() * 20);
-        const obedienceMod = behaviorWeights.obedienceBase;
+        const obedienceMod = view.weights.obedienceBase;
 
         const lustBase = 5 + Math.floor(Math.random() * 15);
-        const lustMod = (behaviorWeights.lustSensitivity - 0.5) * 20;
+        const lustMod = (view.weights.lustSensitivity - 0.5) * 20;
 
         const stressBase = 20 + Math.floor(Math.random() * 30);
-        const stressMod = (facets.anxiety - 50) * 0.3;
+        const stressMod = isshex.facets.anxiety * 3;
 
         return {
             sanity: Math.round(Math.max(0, Math.min(100, sanityBase + sanityMod))),
@@ -2793,8 +2801,7 @@ const MOOD_BEHAVIOR_MODIFIERS: Record<MoodState, {
 };
 
 /** 车厢类型到情境类型的映射 */
-const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {
-    // 圣所
+const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {    // 圣所
     'POOLS': 'intimate',
     'ATRIUM': 'opportunity',
     'VEIL': 'intimate',
@@ -2822,6 +2829,51 @@ const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {
 };
 
 /**
+ * 车厢类型到情境强度的映射 ς ∈ [0,1]（§4.1 参考值）。
+ *
+ * 强度高表示规范清晰、后果严重、被问责、行动受限——个体差异被压缩；
+ * 强度低则状态由特质主导。这与"车厢越危险越强"不是一回事：深渊车厢的规范
+ * 恰恰是最模糊的，真正的强情境是祭坛与被监督的公共空间。
+ */
+const SITUATION_STRENGTH: Record<CarriageType, number> = {
+    // 圣所：公共、有明确规约
+    'ALTAR': 0.65,
+    'CONFESSIONAL': 0.6,
+    'MUSE_THEATRE': 0.6,
+    'SCALES_CONSERVATORY': 0.55,
+    'NURSERY': 0.45,
+    'POOLS': 0.3,
+    'VEIL': 0.3,
+    'ATRIUM': 0.25,
+    'GARDEN': 0.2,
+    'ARCHIVE': 0.2,
+    // 深渊：规范失效，但后果严重——取中等强度
+    'CAULDRON': 0.7,
+    'ESCHER_STAIRS': 0.6,
+    'MIRROR_HALL': 0.6,
+    'TIME_INFIRMARY': 0.65,
+    'DISSOLUTION_CHAMBER': 0.7,
+    'FLESH_HIVE': 0.65,
+    'INVERTED_TREE': 0.6,
+    'SYMBIOTIC_GALLERY': 0.55,
+    'VOID_WINDOW': 0.75,
+    'ENTROPY_CLOCK': 0.7,
+    'SILENT_SALON': 0.4,
+    'ORACLE_WHISPER': 0.45,
+    'NEGATIVE_GALLERY': 0.35,
+};
+
+/** 各活动提供的恢复性生态位可及度 N ∈ [0,1]（§4.2），未列出的活动取低位 */
+const RESTORATIVE_ACCESS: Partial<Record<ActivityStatus, number>> = {
+    'sleeping': 1.0,
+    'bathing': 0.8,
+    'confessing': 0.7,
+    'eating': 0.4,
+    'chatting': 0.5,
+    'wandering': 0.3,
+};
+
+/**
  * 行为决策子系统：把需求、人格与情境折算为下一次活动或移动意图。
  * 移动中的实体不重新决策，否则会在抵达前反复改写路径。
  */
@@ -2833,15 +2885,19 @@ class MaidenBehavior {
         return this.currentGameTime;
     }
 
-    private getTraitActivationMultiplier(personality: ISShexPersonality, situation: SituationType): number {
-        const activation = SITUATION_TRAIT_ACTIVATION[situation];
-        const primaryTrait = personality.hexaco[activation.primary];
-        // 特质极端值（偏离50）在对应情境下反应更剧烈，修正系数在 0.85 - 1.25 之间
-        return 0.85 + Math.abs(primaryTrait - 50) * 0.008;
+    /**
+     * 情境的特质激活增益 g_jt（§4.1）：`g = 1 + κ·(r − 0.5)`。
+     *
+     * 增益取决于**线索相关度**（该情境是否与这个特质有关），而不是特质有多极端。
+     * v1 用的是 `0.85 + |trait − 50|·0.008`：与线索无关，任何极端特质在
+     * 任何情境下都被放大，这不是特质激活。
+     */
+    private getTraitActivationMultiplier(situation: SituationType): number {
+        return traitActivationGain(situation, SITUATION_TRAIT_ACTIVATION[situation].primary);
     }
 
-    private getWeights(personality: ISShexPersonality) {
-        return personality.behaviorWeights;
+    private getWeights(personality: ISShexPersonality): BehaviorWeights {
+        return deriveBehaviorWeights(personality.facets);
     }
 
     // 计算需求优先级（基于IS-SHEX人格与当前情境）
@@ -2850,19 +2906,21 @@ class MaidenBehavior {
         currentCarriage?: Carriage,
         gameTime?: number
     ): { need: string; urgency: number; activity: ActivityStatus; targetType: CarriageType }[] {
-        const { attributes: a, physiology, isshex } = maiden;
-        const weights = this.getWeights(isshex);
-        const { hexaco, facets } = isshex;
+        const { attributes: a, physiology } = maiden;
+        const view = personalityView(maiden);
+        const weights = view.weights;
+        const facets = maiden.isshex.facets;
+        const domains = view.domains;
         const needs: { need: string; urgency: number; activity: ActivityStatus; targetType: CarriageType }[] = [];
 
         const situation: SituationType = currentCarriage ? CARRIAGE_SITUATION_MAP[currentCarriage.type] : 'ambiguous';
-        const traitMod = this.getTraitActivationMultiplier(isshex, situation);
+        const traitMod = this.getTraitActivationMultiplier(situation);
 
         // 疲劳需求 - 睡眠
         if (a.fatigue > NEED_THRESHOLDS.LOW) {
             let urgency = a.fatigue;
             if (a.fatigue > NEED_THRESHOLDS.CRITICAL) urgency += 50;
-            urgency *= (1 + (hexaco.C - 50) * 0.01);
+            urgency *= (1 + domains.C * 0.1);
 
             if (situation === 'task') urgency *= (0.8 / traitMod);
             if (situation === 'threat') urgency *= (1.2 * traitMod);
@@ -2881,8 +2939,8 @@ class MaidenBehavior {
         if (a.hygiene < 100 - NEED_THRESHOLDS.LOW) {
             let urgency = 100 - a.hygiene;
             if (a.hygiene < 100 - NEED_THRESHOLDS.HIGH) urgency += 20;
-            urgency *= (1 + (facets.organization - 50) * 0.015);
-            urgency *= (1 + (facets.aestheticAppreciation - 50) * 0.01);
+            urgency *= (1 + facets.organization * 0.15);
+            urgency *= (1 + facets.aestheticAppreciation * 0.1);
 
             if (situation === 'intimate') urgency *= 1.3;
 
@@ -2898,7 +2956,7 @@ class MaidenBehavior {
 
             if (weights.devotionTendency > 0.5) {
                 needs.push({ need: 'pray', urgency: urgency * 1.5, activity: 'confessing', targetType: 'ALTAR' });
-            } else if (facets.fearfulness > 60 && hexaco.X < 40) {
+            } else if (facets.fearfulness > 1.0 && domains.X < -0.5) {
                 needs.push({ need: 'hide', urgency: urgency * 1.2, activity: 'wandering', targetType: 'GARDEN' });
             } else {
                 needs.push({ need: 'relax', urgency, activity: 'wandering', targetType: 'GARDEN' });
@@ -2909,11 +2967,11 @@ class MaidenBehavior {
         if (a.lust > NEED_THRESHOLDS.MODERATE * (1 / weights.lustSensitivity)) {
             let urgency = a.lust * weights.lustSensitivity;
 
-            if (hexaco.O > 60 && facets.prudence < 40) {
+            if (domains.O > 1.0 && facets.prudence < -1.0) {
                 needs.push({ need: 'indulge', urgency: urgency * 1.5, activity: 'wandering', targetType: 'VEIL' });
-            } else if (hexaco.H > 60) {
+            } else if (domains.H > 1.0) {
                 needs.push({ need: 'confess', urgency: urgency * 1.2, activity: 'confessing', targetType: 'CONFESSIONAL' });
-            } else if (hexaco.A < 40 && hexaco.H < 40) {
+            } else if (domains.A < -1.0 && domains.H < -1.0) {
                 needs.push({ need: 'submit', urgency, activity: 'wandering', targetType: 'VEIL' });
             }
         }
@@ -2987,9 +3045,9 @@ class MaidenBehavior {
         const carriageFunc = CARRIAGE_FUNCTIONS[currentCarriage.type];
         const situation = CARRIAGE_SITUATION_MAP[currentCarriage.type];
 
-        // 威胁应激与状态崩溃校验
+        // 威胁应激与状态崩溃校验：极端偏离个人基线时进入惊恐
         if (attrs.sanity < 20 ||
-            maiden.isshex.currentState === 'dissociated' ||
+            personalityView(maiden).state === 'extreme' ||
             (situation === 'threat' && attrs.sanity < 35 && Math.random() < 0.25)) {
             return this.createPanicBehavior(maiden, currentCarriage, allCarriages, behavior, gameTimePassed);
         }
@@ -3079,8 +3137,9 @@ class MaidenBehavior {
         if (!adjacentAbyssId) return null;
 
         const attrs = maiden.attributes;
-        const { hexaco, facets, darkTetrad } = maiden.isshex;
-        const weights = this.getWeights(maiden.isshex);
+        const view = personalityView(maiden);
+        const facets = maiden.isshex.facets;
+        const weights = view.weights;
 
         let peekChance = PERSONALITY_MODS.ABYSS_PEEK_BASE;
 
@@ -3090,10 +3149,11 @@ class MaidenBehavior {
         if (attrs.corruption > 70) peekChance += PERSONALITY_MODS.ABYSS_PEEK_VERY_HIGH_CORRUPTION;
         if (attrs.stress > 80) peekChance += PERSONALITY_MODS.ABYSS_PEEK_HIGH_STRESS;
 
-        peekChance *= (1 + (hexaco.O - 50) * PERSONALITY_MODS.ABYSS_PEEK_O_MOD);
-        peekChance *= (1 + (50 - facets.fearfulness) * PERSONALITY_MODS.ABYSS_PEEK_FEAR_MOD);
+        peekChance *= (1 + view.domains.O * PERSONALITY_MODS.ABYSS_PEEK_O_MOD * 10);
+        peekChance *= (1 - facets.fearfulness * PERSONALITY_MODS.ABYSS_PEEK_FEAR_MOD * 10);
         peekChance *= (1 + weights.riskTolerance * PERSONALITY_MODS.ABYSS_PEEK_RISK_MOD);
-        peekChance *= (1 + (darkTetrad.psychopathy - 50) * PERSONALITY_MODS.ABYSS_PEEK_PSYCHOPATHY_MOD);
+        // 冷酷冲动（低恐惧/低感伤/低审慎）者对深渊的吸引力更强；代理仅用于此处的倾向修正
+        peekChance *= (1 + view.proxies.psychopathy * PERSONALITY_MODS.ABYSS_PEEK_PSYCHOPATHY_MOD * 10);
 
         if (maiden.status.includes('voyeur')) peekChance += PERSONALITY_MODS.ABYSS_PEEK_VOYEUR_BONUS;
 
@@ -3114,17 +3174,18 @@ class MaidenBehavior {
         behavior: BehaviorState,
         gameTimePassed: number
     ): { behavior: BehaviorState; movement?: UnifiedMovementState } {
-        const { hexaco, facets } = maiden.isshex;
-        const weights = this.getWeights(maiden.isshex);
+        const view = personalityView(maiden);
+        const facets = maiden.isshex.facets;
+        const weights = view.weights;
 
-        if (facets.fearfulness > 60 && hexaco.X < 40) {
+        if (facets.fearfulness > 1.0 && view.domains.X < -0.5) {
             return { behavior: this.createActivityBehavior('wandering', 10, behavior, gameTimePassed) };
         }
         else if (weights.devotionTendency > 0.6) {
             const altar = findNearestCarriageByType(currentCarriage, allCarriages, 'ALTAR');
             if (altar) return this.executeMovement(maiden, altar, 'confessing', allCarriages, gameTimePassed);
         }
-        else if (hexaco.X > 50 && facets.fearfulness < 50) {
+        else if (view.domains.X > 0 && facets.fearfulness < 0) {
             const safeCarriages = Array.from(allCarriages.values())
                 .filter(c => c.category !== 'abyss' && c.isAccessible);
             if (safeCarriages.length > 0) {
@@ -3150,8 +3211,10 @@ class MaidenBehavior {
         gameTimePassed: number,
         moodMod: typeof MOOD_BEHAVIOR_MODIFIERS[MoodState]
     ): { behavior: BehaviorState; movement?: UnifiedMovementState } {
-        const { hexaco, facets } = maiden.isshex;
-        const weights = this.getWeights(maiden.isshex);
+        const view = personalityView(maiden);
+        const facets = maiden.isshex.facets;
+        const domains = view.domains;
+        const weights = view.weights;
         const rand = Math.random();
 
         if (weights.devotionTendency > 0.6 && rand < 0.4) {
@@ -3160,7 +3223,7 @@ class MaidenBehavior {
                 return this.executeMovement(maiden, altar, 'confessing', allCarriages, gameTimePassed);
             }
         }
-        else if (hexaco.O > 60 && facets.liveliness > 55 && rand < 0.4) {
+        else if (domains.O > 1.0 && facets.liveliness > 0.5 && rand < 0.4) {
             const targets: CarriageType[] = ['POOLS', 'VEIL', 'ATRIUM'];
             const targetType = targets[Math.floor(Math.random() * targets.length)];
             const carriage = findNearestCarriageByType(currentCarriage, allCarriages, targetType);
@@ -3168,19 +3231,19 @@ class MaidenBehavior {
                 return this.executeMovement(maiden, carriage, 'wandering', allCarriages, gameTimePassed);
             }
         }
-        else if (hexaco.X < 45 && facets.inquisitiveness > 55 && rand < 0.3) {
+        else if (domains.X < -0.5 && facets.inquisitiveness > 0.5 && rand < 0.3) {
             const archive = findNearestCarriageByType(currentCarriage, allCarriages, 'ARCHIVE');
             if (archive && archive !== currentCarriage.id) {
                 return this.executeMovement(maiden, archive, 'wandering', allCarriages, gameTimePassed);
             }
         }
-        else if (facets.dependence > 55 && facets.fearfulness > 50 && rand < 0.3) {
+        else if (facets.dependence > 0.5 && facets.fearfulness > 0 && rand < 0.3) {
             const crowdedSafe = this.findCrowdedSafeCarriage(allCarriages);
             if (crowdedSafe && crowdedSafe !== currentCarriage.id) {
                 return this.executeMovement(maiden, crowdedSafe, 'wandering', allCarriages, gameTimePassed);
             }
         }
-        else if (weights.riskTolerance > 0.5 && facets.fearfulness < 40 && rand < 0.15) {
+        else if (weights.riskTolerance > 0.5 && facets.fearfulness < -1.0 && rand < 0.15) {
             const abyssEdge = this.findSafeAbyssCarriage(allCarriages);
             if (abyssEdge && abyssEdge !== currentCarriage.id) {
                 return this.executeMovement(maiden, abyssEdge, 'wandering', allCarriages, gameTimePassed);
@@ -3495,15 +3558,17 @@ class MaidenMood {
      * 严格遵循 CharacterStatus 优先级覆写机制
      */
     calculateMood(maiden: Maiden): MoodState {
-        const { attributes: a, physiology: p, isshex, status } = maiden;
-        const { hexaco, facets, currentState } = isshex;
+        const { attributes: a, physiology: p, status } = maiden;
+        const view = personalityView(maiden);
+        const facets = maiden.isshex.facets;
+        const domains = view.domains;
 
         // 0. 最高优先级异常状态拦截
         if (status.includes('broken')) {
             return 'numb';
         }
 
-        if (currentState === 'dissociated' || status.includes('dissociated')) {
+        if (view.state === 'extreme' || status.includes('dissociated')) {
             return a.sanity < 30 ? 'fearful' : 'numb';
         }
 
@@ -3515,44 +3580,44 @@ class MaidenMood {
             return 'fearful';
         }
 
-        // 1. 麻木：长期高压力 + 低理智 + 高E（情绪性）
-        const numbThreshold = 85 - (hexaco.E - 50) * 0.2;
+        // 1. 麻木：长期高压力 + 低理智 + 高情绪性
+        const numbThreshold = 85 - domains.E * 2;
         if (a.stress > numbThreshold && a.sanity < 35) {
             return 'numb';
         }
 
-        // 2. 恐惧：极低理智或高E.恐惧
-        const fearSanityThreshold = 25 + (50 - facets.fearfulness) * 0.2;
+        // 2. 恐惧：极低理智，恐惧特质越高阈值越高
+        const fearSanityThreshold = 25 - facets.fearfulness * 2;
         if (a.sanity < fearSanityThreshold) {
             return 'fearful';
         }
 
-        // 3. 狂喜：高虔诚 + 低压力 + 高E.感伤
-        const euphoricDevotionThreshold = 80 - (facets.sentimentality - 50) * 0.3;
+        // 3. 狂喜：高虔诚 + 低压力 + 高感伤
+        const euphoricDevotionThreshold = 80 - facets.sentimentality * 3;
         if (a.devotion > euphoricDevotionThreshold && a.stress < 30) {
             return 'euphoric';
         }
 
-        // 4. 欲求：高欲望，受E.感伤和C.审慎影响
-        const lustThreshold = 70 - (50 - facets.prudence) * 0.2 - (facets.sentimentality - 50) * 0.1;
+        // 4. 欲求：高欲望，受感伤与审慎影响
+        const lustThreshold = 70 + facets.prudence * 2 - facets.sentimentality;
         if (a.lust > lustThreshold || (a.lust > 50 && p.isOvulating)) {
             return 'lustful';
         }
 
-        // 5. 焦虑：高压力，受E.焦虑影响
-        const anxiousThreshold = 70 - (facets.anxiety - 50) * 0.3;
+        // 5. 焦虑：高压力，焦虑特质越高阈值越低
+        const anxiousThreshold = 70 - facets.anxiety * 3;
         if (a.stress > anxiousThreshold) {
             return 'anxious';
         }
 
-        // 6. 易怒：饥饿或疲劳，受A.耐心影响
-        const irritableThreshold = 75 - (50 - facets.patience) * 0.3;
+        // 6. 易怒：饥饿或疲劳，受耐心影响（耐心越低阈值越低）
+        const irritableThreshold = 75 + facets.patience * 3;
         if (a.hunger > irritableThreshold || a.fatigue > 80) {
             return 'irritable';
         }
 
-        // 7. 忧郁：低理智，受E.感伤影响
-        const melancholyThreshold = 50 + (50 - facets.sentimentality) * 0.2;
+        // 7. 忧郁：低理智，感伤特质越高阈值越高
+        const melancholyThreshold = 50 + facets.sentimentality * 2;
         if (a.sanity < melancholyThreshold) {
             return 'melancholy';
         }
@@ -3578,7 +3643,7 @@ class MaidenMood {
             };
         }
 
-        const minDuration = this.MOOD_MIN_DURATION * (1 - (maiden.isshex.hexaco.E - 50) * 0.005);
+        const minDuration = this.MOOD_MIN_DURATION * (1 - maiden.isshex.facets.sentimentality * 0.05);
         if (maiden.moodDuration < minDuration) {
             return {
                 updatedMaiden: { ...maiden, moodDuration: newDuration },
@@ -3683,25 +3748,30 @@ class MaidenMood {
      * IS-SHEX人格对自发行为概率的修正
      */
     private getPersonalityActionModifier(isshex: ISShexPersonality, action: SpontaneousAction): number {
-        const { hexaco, facets } = isshex;
+        const view = new PersonalityView(isshex);
+        const facets = isshex.facets;
+        const domains = view.domains;
+        const weights = view.weights;
+        const meta = view.meta;
 
         const modifiers: Partial<Record<SpontaneousAction, () => number>> = {
-            'pace': () => 1 + (facets.anxiety - 50) * 0.02,
-            'fidget': () => 1 + (facets.anxiety - 50) * 0.02,
-            'cry_quietly': () => 1 + (facets.sentimentality - 50) * 0.025,
-            'sigh': () => 1 + (facets.sentimentality - 50) * 0.015,
-            'laugh_nervously': () => 1 + (50 - facets.prudence) * 0.02,
-            'mutter': () => 1 + (50 - facets.prudence) * 0.015,
-            'tremble': () => 1 + (facets.fearfulness - 50) * 0.025,
-            'hug_self': () => 1 + (facets.fearfulness - 50) * 0.02,
-            'avoid_eye_contact': () => 1 + (50 - hexaco.X) * 0.02,
-            'seek_attention': () => 1 + (hexaco.X - 50) * 0.02,
-            'touch_collar': () => 1 + isshex.behaviorWeights.devotionTendency * 0.5,
-            'kneel_briefly': () => 1 + isshex.behaviorWeights.devotionTendency * 0.8,
-            'whisper_prayer': () => 1 + isshex.behaviorWeights.devotionTendency * 0.6,
-            'daydream': () => 1 + (hexaco.O - 50) * 0.015,
-            'hum': () => 1 + (facets.liveliness - 50) * 0.02,
-            'rock_back_forth': () => 1 + (50 - isshex.metaTraits.alpha) * 0.02,
+            'pace': () => 1 + facets.anxiety * 0.2,
+            'fidget': () => 1 + facets.anxiety * 0.2,
+            'cry_quietly': () => 1 + facets.sentimentality * 0.25,
+            'sigh': () => 1 + facets.sentimentality * 0.15,
+            'laugh_nervously': () => 1 - facets.prudence * 0.2,
+            'mutter': () => 1 - facets.prudence * 0.15,
+            'tremble': () => 1 + facets.fearfulness * 0.25,
+            'hug_self': () => 1 + facets.fearfulness * 0.2,
+            'avoid_eye_contact': () => 1 - domains.X * 0.2,
+            'seek_attention': () => 1 + domains.X * 0.2,
+            'touch_collar': () => 1 + weights.devotionTendency * 0.5,
+            'kneel_briefly': () => 1 + weights.devotionTendency * 0.8,
+            'whisper_prayer': () => 1 + weights.devotionTendency * 0.6,
+            'daydream': () => 1 + domains.O * 0.15,
+            'hum': () => 1 + facets.liveliness * 0.2,
+            // 稳定性越低，越容易出现自我安抚式的重复动作
+            'rock_back_forth': () => 1 - meta.alpha * 0.2,
         };
 
         const modifier = modifiers[action];
@@ -3733,48 +3803,51 @@ class MaidenMood {
         newMood: MoodState,
         isshex: ISShexPersonality
     ): string {
-        const { hexaco, facets } = isshex;
+        const facets = isshex.facets;
+        const domains = deriveDomains(facets);
 
         const descriptions: Record<MoodState, string[]> = {
             'content': [
                 `${name} 的神情逐渐平静下来`,
                 `${name} 看起来放松了一些`,
-                facets.liveliness > 60 ? `${name} 的眼中重新有了光彩` : `${name} 的呼吸变得平稳`,
+                facets.liveliness > 1.0 ? `${name} 的眼中重新有了光彩` : `${name} 的呼吸变得平稳`,
             ],
             'anxious': [
                 `${name} 变得焦躁不安`,
                 `${name} 的眼神中透出焦虑`,
-                facets.anxiety > 60 ? `${name} 的手指开始不自觉地颤抖` : `${name} 的表情变得紧绷`,
+                facets.anxiety > 1.0 ? `${name} 的手指开始不自觉地颤抖` : `${name} 的表情变得紧绷`,
             ],
             'melancholy': [
                 `${name} 陷入了忧郁`,
                 `${name} 的眼中蒙上一层阴霾`,
-                facets.sentimentality > 60 ? `${name} 的眼眶微微泛红` : `${name} 变得沉默寡言`,
+                facets.sentimentality > 1.0 ? `${name} 的眼眶微微泛红` : `${name} 变得沉默寡言`,
             ],
             'irritable': [
                 `${name} 变得易怒起来`,
                 `${name} 的表情变得不耐烦`,
-                facets.patience < 40 ? `${name} 的眉头紧锁，似乎随时会爆发` : `${name} 的语气变得生硬`,
+                facets.patience < -1.0 ? `${name} 的眉头紧锁，似乎随时会爆发` : `${name} 的语气变得生硬`,
             ],
             'lustful': [
                 `${name} 的呼吸变得急促`,
                 `${name} 的眼神变得迷离`,
-                hexaco.X > 60 ? `${name} 的目光开始游移，寻找着什么` : `${name} 的脸颊泛起红晕`,
+                domains.X > 1.0
+                    ? `${name} 的目光开始游移，寻找着什么` : `${name} 的脸颊泛起红晕`,
             ],
             'fearful': [
                 `${name} 陷入了恐惧`,
                 `${name} 的身体开始发抖`,
-                facets.fearfulness > 60 ? `${name} 蜷缩起来，眼中满是惊恐` : `${name} 的瞳孔骤然收缩`,
+                facets.fearfulness > 1.0 ? `${name} 蜷缩起来，眼中满是惊恐` : `${name} 的瞳孔骤然收缩`,
             ],
             'euphoric': [
                 `${name} 的脸上浮现出狂喜`,
                 `${name} 沉浸在某种极乐之中`,
-                facets.sentimentality > 60 ? `${name} 的眼中闪烁着近乎疯狂的光芒` : `${name} 露出了恍惚的微笑`,
+                facets.sentimentality > 1.0 ? `${name} 的眼中闪烁着近乎疯狂的光芒` : `${name} 露出了恍惚的微笑`,
             ],
             'numb': [
                 `${name} 的表情变得麻木`,
                 `${name} 似乎对一切都失去了感觉`,
-                hexaco.E > 60 ? `${name} 的眼神变得空洞，仿佛灵魂已经离开` : `${name} 变得如同行尸走肉`,
+                // 情绪性高者麻木时反差更大，故用"空洞"而非"行尸走肉"
+                facets.sentimentality > 1.0 ? `${name} 的眼神变得空洞，仿佛灵魂已经离开` : `${name} 变得如同行尸走肉`,
             ],
         };
 
@@ -4510,14 +4583,6 @@ const CHARACTER_STATUS_NAMES: Record<CharacterStatus, string> = {
     'chatting': '交谈', 'observing': '观测',
 };
 
-/** 根据α值确定人格状态 */
-function determinePersonalityState(alpha: number): PersonalityState {
-    if (alpha > 65) return 'integrated';
-    if (alpha > 40) return 'adaptive';
-    if (alpha > 25) return 'stressed';
-    return 'dissociated';
-}
-
 /**
  * 少女系统协调器。
  *
@@ -4678,11 +4743,14 @@ class MaidenSystem {
             throw new Error(`Unknown carriage type: ${carriage.type}`);
         }
         const { RATES, THRESHOLDS } = GAME_CONFIG;
-        const { hexaco, facets, behaviorWeights } = maiden.isshex;
+        const view = personalityView(maiden);
+        const facets = maiden.isshex.facets;
+        const domains = view.domains;
+        const behaviorWeights = view.weights;
         const carriageFunc = CARRIAGE_FUNCTIONS[carriage.type];
 
         let attrs = { ...maiden.attributes };
-        const sanityMod = 1 - (hexaco.C - 50) * PERSONALITY_MODS.SANITY_C_MOD;
+        const sanityMod = 1 - domains.C * PERSONALITY_MODS.SANITY_C_MOD * 10;
         const stressMod = 1 / behaviorWeights.stressResistance;
         const lustMod = behaviorWeights.lustSensitivity;
 
@@ -4711,12 +4779,12 @@ class MaidenSystem {
         attrs.fatigue = clamp(attrs.fatigue + fatigueRate * deltaMinutes);
         attrs.hygiene = clamp(attrs.hygiene - RATES.HYGIENE_DECREASE * deltaMinutes);
 
-        attrs = this._applyActivityEffects(maiden, attrs, deltaMinutes, carriageFunc, hexaco, facets, RATES);
+        attrs = this._applyActivityEffects(maiden, attrs, deltaMinutes, carriageFunc, domains, facets, RATES);
 
         if (carriage.category === 'abyss') {
             attrs.sanity = clamp(attrs.sanity - deltaMinutes * RATES.SANITY_ABYSS_DRAIN * sanityMod);
             attrs.stress = clamp(attrs.stress + deltaMinutes * RATES.STRESS_ABYSS_GAIN * stressMod);
-            if (behaviorWeights.riskTolerance > 0.5 && hexaco.O > 55) {
+            if (behaviorWeights.riskTolerance > 0.5 && domains.O > 0.5) {
                 attrs.corruption = clamp(attrs.corruption + 0.15 * deltaMinutes, 0, 100);
             }
         }
@@ -4726,7 +4794,7 @@ class MaidenSystem {
 
         const statusSet = this._updateStatusTags(maiden, attrs, THRESHOLDS);
         const updatedPhysiology = this._updatePhysiology(syncedMaiden, deltaMinutes, gameTimePassed);
-        const isshex = this._updatePersonalityState(maiden, attrs, deltaMinutes);
+        const isshex = this._updatePersonalityState(maiden, attrs, deltaMinutes, carriage);
 
         return {
             ...maiden,
@@ -4743,7 +4811,7 @@ class MaidenSystem {
         attrs: Maiden['attributes'],
         deltaMinutes: number,
         carriageFunc: typeof CARRIAGE_FUNCTIONS[keyof typeof CARRIAGE_FUNCTIONS],
-        hexaco: Maiden['isshex']['hexaco'],
+        domains: HexacoProfile,
         facets: Maiden['isshex']['facets'],
         RATES: typeof GAME_CONFIG.RATES
     ): Maiden['attributes'] {
@@ -4751,7 +4819,7 @@ class MaidenSystem {
         switch (activity) {
             case 'sleeping': {
                 const sleepBonus = carriageFunc.canSleep ? 1.0 : 0.5;
-                const cBonus = 1 + (hexaco.C - 50) * 0.005;
+                const cBonus = 1 + domains.C * 0.05;
                 attrs.fatigue = clamp(attrs.fatigue - RATES.FATIGUE_SLEEP_REGEN * deltaMinutes * sleepBonus * cBonus, 0, 100);
                 attrs.sanity = clamp(attrs.sanity + RATES.SANITY_SLEEP_REGEN * deltaMinutes * sleepBonus, 0, 100);
                 attrs.stress = clamp(attrs.stress - 0.2 * deltaMinutes * sleepBonus, 0, 100);
@@ -4766,30 +4834,31 @@ class MaidenSystem {
                 const bathBonus = carriageFunc.canBathe ? 1.0 : 0.2;
                 attrs.hygiene = clamp(attrs.hygiene + RATES.HYGIENE_BATH_REGEN * deltaMinutes * bathBonus, 0, 100);
                 attrs.stress = clamp(attrs.stress - RATES.STRESS_BATH_REGEN * deltaMinutes * bathBonus, 0, 100);
-                if (facets.aestheticAppreciation > 60) attrs.stress = clamp(attrs.stress - 0.1 * deltaMinutes, 0, 100);
-                if (facets.sentimentality > 55 && facets.prudence < 45) attrs.lust = clamp(attrs.lust + 0.3 * deltaMinutes, 0, 100);
+                if (facets.aestheticAppreciation > 1.0) attrs.stress = clamp(attrs.stress - 0.1 * deltaMinutes, 0, 100);
+                if (facets.sentimentality > 0.5 && facets.prudence < -0.5) attrs.lust = clamp(attrs.lust + 0.3 * deltaMinutes, 0, 100);
                 break;
             }
             case 'confessing': {
                 const prayBonus = carriageFunc.canPray ? 1.0 : 0.5;
-                const devotionGain = 0.5 * (1 + maiden.isshex.behaviorWeights.devotionTendency);
+                const devotionTendency = deriveBehaviorWeights(facets).devotionTendency;
+                const devotionGain = 0.5 * (1 + devotionTendency);
                 attrs.devotion = clamp(attrs.devotion + devotionGain * deltaMinutes * prayBonus, 0, 100);
-                if (maiden.isshex.behaviorWeights.devotionTendency > 0.5) {
+                if (devotionTendency > 0.5) {
                     attrs.stress = clamp(attrs.stress - 0.3 * deltaMinutes, 0, 100);
                     attrs.sanity = clamp(attrs.sanity - 0.1 * deltaMinutes, 0, 100);
                 }
                 break;
             }
             case 'chatting': {
-                const socialBonus = 1 + (hexaco.X - 50) * PERSONALITY_MODS.FATIGUE_CHAT_LOW_X;
+                const socialBonus = 1 + domains.X * PERSONALITY_MODS.FATIGUE_CHAT_LOW_X * 10;
                 attrs.stress = clamp(attrs.stress - 0.2 * deltaMinutes * socialBonus, 0, 100);
-                if (hexaco.X > 55) attrs.sanity = clamp(attrs.sanity + 0.1 * deltaMinutes, 0, 100);
-                if (hexaco.X < 40) attrs.stress = clamp(attrs.stress + 0.1 * deltaMinutes, 0, 100);
+                if (domains.X > 0.5) attrs.sanity = clamp(attrs.sanity + 0.1 * deltaMinutes, 0, 100);
+                if (domains.X < -1.0) attrs.stress = clamp(attrs.stress + 0.1 * deltaMinutes, 0, 100);
                 break;
             }
             case 'observing': {
-                const sanityDrain = 1.5 * (1 + (hexaco.O - 50) * PERSONALITY_MODS.ABYSS_PEEK_O_MOD);
-                const stressGain = 1.0 * (1 + (facets.fearfulness - 50) * PERSONALITY_MODS.ABYSS_PEEK_FEAR_MOD);
+                const sanityDrain = 1.5 * (1 + domains.O * PERSONALITY_MODS.ABYSS_PEEK_O_MOD * 10);
+                const stressGain = 1.0 * (1 - facets.fearfulness * PERSONALITY_MODS.ABYSS_PEEK_FEAR_MOD * 10);
                 attrs.sanity = clamp(attrs.sanity - sanityDrain * deltaMinutes, 0, 100);
                 attrs.stress = clamp(attrs.stress + stressGain * deltaMinutes, 0, 100);
                 attrs.corruption = clamp(attrs.corruption + 0.2 * deltaMinutes, 0, 100);
@@ -4855,41 +4924,53 @@ class MaidenSystem {
         return 0.95 + (Math.sin((cycleDay - 4) * Math.PI / 21) * 0.15);
     }
 
-    private _updatePersonalityState(maiden: Maiden, newAttrs: Maiden['attributes'], deltaMinutes: number): Maiden['isshex'] {
-        const isshex = deepCopy(maiden.isshex);
-        const { hexaco, metaTraits } = isshex;
-        const activity = maiden.behavior.currentActivity;
+    /**
+     * 推进过程平面：背离负荷（P2）、状态偏离（P3）、长期漂移（P4）。
+     *
+     * 唯一的写入点：`dynamics` 只在这里被改写，其余读取派生值的调用点走
+     * `PersonalityView`。v1 在此同时改写 traitFatigue 与 shadowActivation，
+     * 又把 currentState 按 α 的绝对阈值迁移——α 是静态量，不可能"崩溃"，
+     * 于是状态与特质长期互相矛盾（§4.3.1）。
+     */
+    private _updatePersonalityState(
+        maiden: Maiden,
+        newAttrs: Maiden['attributes'],
+        deltaMinutes: number,
+        carriage: Carriage
+    ): Maiden['isshex'] {
+        const view = personalityView(maiden);
+        const situation = CARRIAGE_SITUATION_MAP[carriage.type];
+        const strength = SITUATION_STRENGTH[carriage.type];
 
-        let fatigueGain = 0;
-        if (activity === 'chatting' && hexaco.X < 40) fatigueGain += (50 - hexaco.X) * PERSONALITY_MODS.FATIGUE_CHAT_LOW_X * deltaMinutes;
-        // 孤独惩罚：当外向性高的角色长时间无社交互动时疲劳累积
-        const isIdle = !TRACKABLE_ACTIVITIES.includes(activity) && activity !== 'chatting';
-        if (isIdle && hexaco.X > 60 && maiden.behavior.lastInteractionTime > 0) fatigueGain += (hexaco.X - 50) * PERSONALITY_MODS.FATIGUE_LONELY_HIGH_X * deltaMinutes;
-        if (hexaco.C > 60 && maiden.status.includes('observing')) fatigueGain += (hexaco.C - 50) * PERSONALITY_MODS.FATIGUE_OBSERVE_HIGH_C * deltaMinutes;
+        // P1：本时点的状态表达与情境期待
+        const expressedDomains = expressDomains(maiden.isshex.facets, situation, strength, false);
+        const thetaDomains = view.domains;
 
-        isshex.traitFatigue = Math.min(100, isshex.traitFatigue + fatigueGain);
-        const fatigueRecovery = activity === 'sleeping' ? PERSONALITY_MODS.FATIGUE_RECOVERY_SLEEP : PERSONALITY_MODS.FATIGUE_RECOVERY_NORMAL;
-        isshex.traitFatigue = Math.max(0, isshex.traitFatigue - fatigueRecovery * deltaMinutes);
+        // P2：背离负荷。被监视的公开场合、且非自选时负荷最高
+        const load = computeDiscrepancyLoad(maiden.isshex.facets, situation, strength);
+        const restored = accumulateLoad(
+            view.dynamics.discrepancyLoad,
+            load * (deltaMinutes / MINUTES_PER_DAY),            RESTORATIVE_ACCESS[maiden.behavior.currentActivity] ?? 0.2
+        );
 
-        if (metaTraits.alpha < 40 && newAttrs.stress > 70) {
-            isshex.shadowActivation = Math.min(100, isshex.shadowActivation + PERSONALITY_MODS.SHADOW_ACTIVATION_LOW_ALPHA * deltaMinutes);
-        } else if (metaTraits.alpha > 50 && newAttrs.stress < 50) {
-            isshex.shadowActivation = Math.max(0, isshex.shadowActivation - PERSONALITY_MODS.SHADOW_RECOVERY_HIGH_ALPHA * deltaMinutes);
-        }
+        // P3：状态偏离相对个人基线分档；压力放大威胁评价（§4.3.2 的 η 项）
+        const threatBias = 1 + PERSONALITY_MODS.THREAT_APPRAISAL_ETA * maiden.isshex.facets.anxiety;
+        const deviationSquared = computeDeviationSquared(expressedDomains, thetaDomains) * Math.max(0, threatBias);
 
-        const effectiveAlpha = metaTraits.alpha - isshex.traitFatigue * 0.3 - isshex.shadowActivation * 0.2;
-        const newState = determinePersonalityState(effectiveAlpha);
-        if (newState !== isshex.currentState) {
-            const isWorsening = this._isWorseState(newState, isshex.currentState);
-            const transitionChance = isWorsening ? PERSONALITY_MODS.STATE_TRANSITION_WORSENING : PERSONALITY_MODS.STATE_TRANSITION_IMPROVING;
-            if (Math.random() < clamp(transitionChance * deltaMinutes, 0, 1)) isshex.currentState = newState;
-        }
-        return isshex;
-    }
+        // P4：长期漂移按经过的游戏时间计算，与调用频率无关
+        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / MS_PER_DAY;
+        const facets = elapsedDays > 0
+            ? applyTraitDrift(maiden.isshex.facets, elapsedDays)
+            : maiden.isshex.facets;
 
-    private _isWorseState(newState: PersonalityState, oldState: PersonalityState): boolean {
-        const order: PersonalityState[] = ['integrated', 'adaptive', 'stressed', 'dissociated'];
-        return order.indexOf(newState) > order.indexOf(oldState);
+        return {
+            facets,
+            dynamics: {
+                discrepancyLoad: restored,
+                deviationSquared,
+                lastDriftTime: elapsedDays > 0 ? maiden.lastUpdateTime : view.dynamics.lastDriftTime,
+            },
+        };
     }
 
     /**
@@ -5123,39 +5204,21 @@ class MaidenSystem {
     }
 
     /**
-     * 人格原型的中文标签，用于卡片展示。
-     * 优先取第一个主导原型；无主导原型时退化为稳定性等级描述。
+     * 人格构型的中文速记名，用于卡片展示。
+     *
+     * 优先取匹配度最高的子维度签名（比元因子更具体、更适合叙事），
+     * 否则退回八分构型的速记名。**只描述构型，不给诊断式标签**：
+     * v1 在此输出"操纵者/自恋者/冷血者"等词，属于 spec §7.2 明确禁止的用法。
      */
     getPersonalityDescription(maiden: Maiden): string {
-        const { archetype, metaTraits } = maiden.isshex;
+        const view = personalityView(maiden);
 
-        if (archetype.dominated.length > 0) {
-            const archetypeLabels: Record<string, string> = {
-                machiavellian: '操纵者',
-                narcissist: '自恋者',
-                psychopath: '冷血者',
-                sadist: '施虐者',
-                kantian: '原则者',
-                humanist: '人道者',
-                faithful: '信任者',
-                benevolent_manipulator: '仁慈操纵者',
-                vulnerable_narcissist: '脆弱自恋者',
-                chaotic_innovator: '混乱创新者',
-                cold_executive: '冷酷执行者',
-                savior_complex: '救世主',
-                righteous_punisher: '正义惩罚者',
-            };
-
-            const primary = archetype.dominated[0];
-            if (archetypeLabels[primary]) return archetypeLabels[primary];
+        const signature = view.signatures[0];
+        if (signature && signature.match >= 0.75) {
+            return SIGNATURE_STYLES[signature.signature]?.name ?? view.topOctant.octant;
         }
 
-        // 其次显示稳定性状态
-        if (metaTraits.alpha < 40) return '不稳定型';
-        if (metaTraits.alpha > 65) return '稳定型';
-
-        // 默认
-        return '平衡型';
+        return OCTANT_STYLES[view.topOctant.octant]?.name ?? '平衡型';
     }
 }
 

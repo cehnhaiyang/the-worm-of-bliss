@@ -6,7 +6,7 @@
 import React, { useMemo, memo } from 'react';
 import { Maiden, RelationType, getCurrentCarriageId } from '../../../../meta';
 
-import { maidenSystem } from '../../../../engines/systems';
+import { maidenSystem, personalityView } from '../../../../engines/systems';
 
 interface RelationshipProps {
   maiden: Maiden;
@@ -177,26 +177,26 @@ export const Relationship: React.FC<RelationshipProps> = ({ maiden, allMaidens, 
             </div>
           </div>
 
-          {/* 人格特征影响 */}
+          {/* 人格特征影响：权重为 0–1，展示时换算为 0–100 */}
           {maiden.isshex && (
             <div className="p-4 rounded bg-zinc-800/30 border border-zinc-700/50">
               <div className="text-[10px] text-zinc-500 uppercase mb-3">社交倾向</div>
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">社交寻求</span>
-                  <span className="text-cyan-400 font-mono">{Math.round(maiden.isshex.behaviorWeights.socialSeek)}</span>
+                  <span className="text-cyan-400 font-mono">{Math.round(personalityView(maiden).weights.socialSeek * 100)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">独处倾向</span>
-                  <span className="text-blue-400 font-mono">{Math.round(maiden.isshex.behaviorWeights.solitudeSeek)}</span>
+                  <span className="text-blue-400 font-mono">{Math.round(personalityView(maiden).weights.solitudeSeek * 100)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">共情能力</span>
-                  <span className="text-green-400 font-mono">{Math.round(maiden.isshex.behaviorWeights.empathy)}</span>
+                  <span className="text-green-400 font-mono">{Math.round(personalityView(maiden).weights.empathy * 100)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">攻击性</span>
-                  <span className="text-red-400 font-mono">{Math.round(maiden.isshex.behaviorWeights.aggressiveness)}</span>
+                  <span className="text-red-400 font-mono">{Math.round(personalityView(maiden).weights.aggressiveness * 100)}</span>
                 </div>
               </div>
             </div>

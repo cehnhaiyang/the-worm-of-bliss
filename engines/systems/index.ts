@@ -5,4 +5,4 @@
 // ============================================
 
 export { carriageSystem } from './CarriageSystem';
-export { maidenSystem } from './MaidenSystem';
+export { maidenSystem, personalityView, normalizePersonality, PersonalityView } from './MaidenSystem';

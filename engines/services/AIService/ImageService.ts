@@ -7,6 +7,7 @@
 
 import { Maiden, CarriageType, ISShexPersonality, PhysicalStats, NameOrigin, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot } from '../../../meta';
 import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, MIN_PORTRAIT_UPDATE_INTERVAL } from '../../../constants';
+import { PersonalityView, personalityView } from '../../systems';
 import { hashCode } from '../../../meta';
 
 // ============================================
@@ -141,7 +142,7 @@ export class ImageService {
       clothingState: maiden.clothing.state,
       pregnancyMilestone,
       isInAbyss: carriageType ? ABYSS_TYPES.includes(carriageType) : false,
-      personalityState: maiden.isshex.currentState,
+      personalityState: personalityView(maiden).state,
     };
   }
 
@@ -323,7 +324,7 @@ export class ImageService {
   }
 
   private getExtremeExpression(maiden: Maiden): string | null {
-    const { attributes: a, status, isshex } = maiden;
+    const { attributes: a, status } = maiden;
     if (status.includes('broken') || a.sanity < 20) {
       return 'broken expression with empty lifeless eyes, drooling, mental breakdown';
     }
@@ -333,7 +334,7 @@ export class ImageService {
     if (a.lust > 85) {
       return 'ahegao face, eyes rolling back, tongue sticking out, flushed face, drooling, expression of ecstasy';
     }
-    if (status.includes('dissociated') || isshex.currentState === 'dissociated') {
+    if (status.includes('dissociated') || personalityView(maiden).state === 'extreme') {
       return 'dissociated expression, vacant stare, hollow eyes, emotionless';
     }
     if (status.includes('euphoric') && a.devotion > 80) {
@@ -371,23 +372,29 @@ export class ImageService {
     return effects;
   }
 
+  /**
+   * 由人格得出立绘的表情修饰。
+   *
+   * 只使用维度与构型，不使用光明/黑暗代理：代理未经验证门槛，据此生成
+   * "傲慢的冷笑""残忍的微笑"这类表情等于对个体下判断（personality.md §7.2）。
+   */
   private getPersonalityExpression(isshex: ISShexPersonality): string {
-    const { hexaco, archetype, currentState } = isshex;
-    if (currentState === 'dissociated') return 'vacant stare, hollow eyes';
-    if (currentState === 'stressed') return 'strained expression, tense';
+    const view = new PersonalityView(isshex);
+    const state = view.state;
+    if (state === 'extreme') return 'vacant stare, hollow eyes';
+    if (state === 'atypical') return 'strained expression, tense';
 
+    const domains = view.domains;
     const parts: string[] = [];
-    if (archetype.primary === 'prosocial') parts.push('gentle eyes');
-    else if (archetype.primary === 'antagonistic') parts.push('cold gaze');
 
-    if (hexaco.E > 65) parts.push('sensitive expression');
-    else if (hexaco.E < 35) parts.push('stoic');
+    if (view.meta.gamma > 0.5) parts.push('gentle eyes');
+    else if (view.meta.gamma < -0.5) parts.push('cold gaze');
 
-    if (hexaco.X > 65) parts.push('confident');
-    else if (hexaco.X < 35) parts.push('shy, averted eyes');
+    if (domains.E > 1.0) parts.push('sensitive expression');
+    else if (domains.E < -1.0) parts.push('stoic');
 
-    if (archetype.dominated.includes('narcissist')) parts.push('arrogant smirk');
-    if (archetype.dominated.includes('sadist')) parts.push('cruel smile');
+    if (domains.X > 1.0) parts.push('confident');
+    else if (domains.X < -1.0) parts.push('shy, averted eyes');
 
     return parts.slice(0, 2).join(', ');
   }

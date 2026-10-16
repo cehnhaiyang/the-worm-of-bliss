@@ -4,8 +4,8 @@
 // ============================================
 
 import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData } from '../../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, WORLD_LORE } from '../../../constants';
-import { maidenSystem } from '../../systems';
+import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, WORLD_LORE, SIGNATURE_STYLES, PERSONALITY_STATE_LABELS } from '../../../constants';
+import { maidenSystem, personalityView } from '../../systems';
 
 // ============================================
 // Helper Functions
@@ -68,32 +68,52 @@ ${isAbyss ? '[警告] 深渊区域：现实法则扭曲，恐惧与依赖被放�
 `.trim();
 }
 
+/**
+ * 将人格序列化为 persona 规格（personality.md §6.5）。
+ *
+ * 三条约束来自该节的"使用规则"：
+ * 1. 用**子维度**决定具体怎么说话、怎么做事，而不是用维度分数；
+ * 2. 只列出显著偏离的子维度（|z| ≥ 0.8），其余视为 0，避免把 25 项全塞进提示词；
+ * 3. 不做临床诊断式叙述，也不输出风险等级（§7.2）。
+ */
 function serializePersonality(maiden: Maiden): string {
-  const { isshex } = maiden;
-  const h = isshex.hexaco;
+  const view = personalityView(maiden);
+  const meta = view.meta;
+  const domains = view.domains;
 
-  // 将 HEXACO 转化为可读的人格描述
-  const traits: string[] = [];
-  if (h.H < 40) traits.push('功利主义');
-  if (h.H > 60) traits.push('道德感强');
-  if (h.E > 60) traits.push('情绪敏感');
-  if (h.E < 40) traits.push('情绪稳定');
-  if (h.X > 60) traits.push('外向活跃');
-  if (h.X < 40) traits.push('内向安静');
-  if (h.A > 60) traits.push('温顺宽容');
-  if (h.A < 40) traits.push('固执对抗');
-  if (h.C > 60) traits.push('自律严谨');
-  if (h.C < 40) traits.push('随性散漫');
-  if (h.O > 60) traits.push('好奇开放');
-  if (h.O < 40) traits.push('保守传统');
+  const FACET_LABELS: Record<string, string> = {
+    sincerity: '真诚', fairness: '公平', greedAvoidance: '避贪', modesty: '谦虚',
+    fearfulness: '恐惧', anxiety: '焦虑', dependence: '依赖', sentimentality: '感伤',
+    socialSelfEsteem: '社交自尊', socialBoldness: '社交大胆', sociability: '社交性', liveliness: '活力',
+    forgivingness: '宽恕', gentleness: '温和', flexibility: '灵活', patience: '耐心',
+    organization: '组织', diligence: '勤奋', perfectionism: '完美', prudence: '审慎',
+    aestheticAppreciation: '审美', inquisitiveness: '好奇', creativity: '创造', unconventionality: '非传统',
+    altruism: '利他',
+  };
+
+  const salient = (Object.keys(FACET_LABELS) as (keyof typeof FACET_LABELS)[])
+    .map(key => ({ key, z: maiden.isshex.facets[key as keyof typeof maiden.isshex.facets] }))
+    .filter(f => Math.abs(f.z) >= 0.8)
+    .sort((a, b) => Math.abs(b.z) - Math.abs(a.z))
+    .map(f => `${FACET_LABELS[f.key]} ${f.z > 0 ? '+' : ''}${f.z.toFixed(1)}`);
+
+  const domainLine = (['H', 'E', 'X', 'A', 'C', 'O'] as const)
+    .map(k => `${k} ${domains[k] > 0 ? '+' : ''}${domains[k].toFixed(2)}`)
+    .join(' | ');
+
+  const signatures = view.signatures
+    .filter(s => s.match >= 0.75)
+    .map(s => SIGNATURE_STYLES[s.signature]?.name ?? s.signature);
 
   return `
 [人格档案 IS-SHEX]
-原型: ${isshex.archetype.primary}
-主导倾向: ${isshex.archetype.dominated.join(', ') || '无'}
-特质: ${traits.join(', ')}
-当前状态: ${isshex.currentState}
-稳定性(α): ${isshex.metaTraits.alpha} | 可塑性(β): ${isshex.metaTraits.beta}
+维度(z): ${domainLine}
+显著子维度(|z|≥0.8): ${salient.join('、') || '无'}
+元因子: α稳定 ${meta.alpha.toFixed(2)} | β可塑 ${meta.beta.toFixed(2)} | γ亲社会 ${meta.gamma.toFixed(2)}
+构型(软隶属): ${view.topOctant.octant} ${(view.topOctant.membership * 100).toFixed(0)}%
+子维度签名: ${signatures.join('、') || '无完全匹配'}
+状态: ${PERSONALITY_STATE_LABELS[view.state]} (D²=${view.dynamics.deviationSquared.toFixed(2)})
+背离负荷: ${view.dynamics.discrepancyLoad.toFixed(2)}
 `.trim();
 }
 

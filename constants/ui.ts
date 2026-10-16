@@ -322,35 +322,40 @@ export const RANK_ORDER: Record<string, number> = {
 };
 
 // ============================================
-// IS-SHEX 人格原型样式
-// 用于显示人格原型的颜色映射
+// IS-SHEX 人格构型样式
+// 构型是对多个分数组合的"速记描述"，不是类别、更不是诊断（personality.md §3.4）
 // ============================================
 
-export const ARCHETYPE_STYLES: Record<string, { color: string; name: string }> = {
-  // 黑暗四联征
-  machiavellian: { color: 'bg-purple-900/50 text-purple-400', name: '操纵者' },
-  narcissist: { color: 'bg-pink-900/50 text-pink-400', name: '自恋者' },
-  psychopath: { color: 'bg-red-900/50 text-red-400', name: '冷血者' },
-  sadist: { color: 'bg-red-950/50 text-red-500', name: '施虐者' },
-  // 光明三一
-  kantian: { color: 'bg-amber-900/50 text-amber-400', name: '原则者' },
-  humanist: { color: 'bg-emerald-900/50 text-emerald-400', name: '人道者' },
-  faithful: { color: 'bg-cyan-900/50 text-cyan-400', name: '信任者' },
-  // 矛盾原型
-  benevolent_manipulator: { color: 'bg-violet-900/50 text-violet-400', name: '仁慈的操纵者' },
-  vulnerable_narcissist: { color: 'bg-rose-900/50 text-rose-400', name: '脆弱的自恋者' },
+/** 八分构型样式与速记名（§3.4.1） */
+export const OCTANT_STYLES: Record<string, { color: string; name: string }> = {
+  PPP: { color: 'bg-emerald-900/50 text-emerald-400', name: '建设型引领者' },
+  PPN: { color: 'bg-amber-900/50 text-amber-400', name: '策略型竞争者' },
+  PNP: { color: 'bg-blue-900/50 text-blue-400', name: '守护型维系者' },
+  PNN: { color: 'bg-slate-900/50 text-slate-400', name: '审慎型独行者' },
+  NPP: { color: 'bg-cyan-900/50 text-cyan-400', name: '热忱型探索者' },
+  NPN: { color: 'bg-orange-900/50 text-orange-400', name: '冲动型挑战者' },
+  NNP: { color: 'bg-teal-900/50 text-teal-400', name: '敏感型照护者' },
+  NNN: { color: 'bg-violet-900/50 text-violet-400', name: '疏离型防御者' },
+};
+
+/** 子维度签名样式与名称（§3.4.2） */
+export const SIGNATURE_STYLES: Record<string, { color: string; name: string }> = {
+  benevolent_strategist: { color: 'bg-violet-900/50 text-violet-400', name: '仁慈的策略者' },
+  vulnerable_superiority: { color: 'bg-rose-900/50 text-rose-400', name: '易受伤的优越感' },
   chaotic_innovator: { color: 'bg-orange-900/50 text-orange-400', name: '混乱的创新者' },
-  cold_executive: { color: 'bg-slate-900/50 text-slate-400', name: '冷酷的执行者' },
-  savior_complex: { color: 'bg-teal-900/50 text-teal-400', name: '救世主情结' },
-  righteous_punisher: { color: 'bg-yellow-900/50 text-yellow-400', name: '正义惩罚者' },
+  calm_executor: { color: 'bg-slate-900/50 text-slate-400', name: '冷静的执行者' },
+  needed_helper: { color: 'bg-pink-900/50 text-pink-400', name: '需要被需要的助人者' },
+  rule_enforcer: { color: 'bg-yellow-900/50 text-yellow-400', name: '规则的执法者' },
+  steady_caregiver: { color: 'bg-emerald-900/50 text-emerald-400', name: '稳健的照护者' },
+  quiet_principled: { color: 'bg-cyan-900/50 text-cyan-400', name: '沉静的原则者' },
 };
 
 // 人格状态样式
 export const PERSONALITY_STATE_STYLES: Record<string, { color: string; name: string }> = {
-  integrated: { color: 'text-emerald-400', name: '整合' },
-  adaptive: { color: 'text-cyan-400', name: '适应' },
-  stressed: { color: 'text-orange-400', name: '应激' },
-  dissociated: { color: 'text-red-400', name: '解离' },
+  typical: { color: 'text-emerald-400', name: '常态范围' },
+  stretched: { color: 'text-cyan-400', name: '拉伸' },
+  atypical: { color: 'text-orange-400', name: '非典型' },
+  extreme: { color: 'text-red-400', name: '极端偏离' },
 };
 
 // ============================================

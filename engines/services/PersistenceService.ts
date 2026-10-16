@@ -17,7 +17,7 @@ import {
   NarcissusData,
   NarcissusState
 } from '../../meta';
-import { maidenSystem } from '../systems';
+import { maidenSystem, normalizePersonality } from '../systems';
 
 // ============================================
 // 存档配置
@@ -298,13 +298,25 @@ class PersistenceService {
     return SAVE_CONFIG.compatibleVersions.includes(version);
   }
 
+  /**
+   * 从存档还原实体表。
+   *
+   * 人格在这里统一规范化：`normalizePersonality` 负责把 v1 的 0–100 分量表
+   * 换算为现行模型的 z 分，并丢弃全部派生副本（见该函数的说明）。
+   */
   restoreMaps(saveData: SaveData): {
     carriages: Map<string, Carriage>;
     maidens: Map<string, Maiden>;
   } {
+    const maidens = new Map<string, Maiden>();
+
+    for (const [id, maiden] of saveData.maidens) {
+      maidens.set(id, { ...maiden, isshex: normalizePersonality(maiden.isshex) });
+    }
+
     return {
       carriages: new Map(saveData.carriages),
-      maidens: new Map(saveData.maidens),
+      maidens,
     };
   }
 

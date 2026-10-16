@@ -192,7 +192,10 @@ export interface PersonalityProfile {
 }
 
 /**
- * HEXACO 六维度基准（值域建议 0–100）
+ * HEXACO 六维度（z 分，参考人群 M=0, SD=1）。
+ *
+ * 派生值：由子维度分数按 personality.md §2.6 折算，读档后必然重算，
+ * 不作为权威存储。
  */
 export interface HexacoProfile {
   H: number; // Honesty-Humility  诚实-谦逊
@@ -204,7 +207,10 @@ export interface HexacoProfile {
 }
 
 /**
- * HEXACO 二十四子维度切面（值域同上）
+ * HEXACO 二十四子维度 + 间质子维度利他（z 分）。
+ *
+ * **唯一权威**：全部人格派生值（维度、元因子、构型、代理、行为权重）都由此算出。
+ * 特质水平若发生变化（personality.md §4.4 P4），只写回这里。
  */
 export interface HexacoFacets {
   // H 维度
@@ -237,52 +243,105 @@ export interface HexacoFacets {
   inquisitiveness: number;
   creativity: number;
   unconventionality: number;
+  // 间质：不计入任何维度分数，但参与 γ 元因子与构型判据（§3.2 约定）
+  altruism: number;
 }
 
 /**
- * 人格元特质（高阶聚合指标）
+ * 三个元因子（z 分，已按 §2.6 重标准化）。
+ *
+ * v1 的 δ（去抑制/对抗）已删除：它的"对抗"部分是 γ 的负极，"去抑制"部分是 α 的负极，
+ * 与 α 用同一组反向加权，作为独立因子没有依据（§3.3.1）。
  */
 export interface MetaTraits {
-  alpha: number;  // 稳定性：归拢 H, E(反转), A, C
-  beta: number;   // 可塑性：归拢 X, O
-  delta: number;  // 去抑制/对抗性：暗黑人格指标基础
-  gamma: number;  // 亲社会整合：光明人格指标基础
-  pabi: number;   // 亲社会-对抗平衡指数
+  alpha: number;  // α 稳定性：低退缩、低愤怒易激、行动的持续与条理、社交自信
+  beta: number;   // β 可塑性：行为层面的探索 + 认知层面的探索
+  gamma: number;  // γ 亲社会—对抗：互惠诚信、非报复态度、情感联结与关切
+}
+
+/** 八分构型标识：(α β γ) 的符号组合，z ≥ +0.5 记 +，z ≤ −0.5 记 − */
+export type OctantId =
+  | 'PPP' | 'PPN' | 'PNP' | 'PNN'
+  | 'NPP' | 'NPN' | 'NNP' | 'NNN';
+
+/** 子维度签名构型标识（§3.4.2） */
+export type SignatureId =
+  | 'benevolent_strategist'   // 仁慈的策略者
+  | 'vulnerable_superiority'  // 易受伤的优越感
+  | 'chaotic_innovator'       // 混乱的创新者
+  | 'calm_executor'           // 冷静的执行者
+  | 'needed_helper'           // 需要被需要的助人者
+  | 'rule_enforcer'           // 规则的执法者
+  | 'steady_caregiver'        // 稳健的照护者
+  | 'quiet_principled';       // 沉静的原则者
+
+/**
+ * 光明/黑暗构念的 HEXACO 近似代理（z 分，§3.4.3）。
+ *
+ * 仅用于研究假设、群体层面分析与创作设定。未通过验证门槛（与专用量表相关 r ≥ .50）
+ * 前，**不得**据此对个体下"精神病态/自恋"类判断，也不得输出风险等级。
+ */
+export type ProxyId =
+  | 'machiavellianism' | 'narcissism' | 'psychopathy' | 'sadism'
+  | 'kantianism' | 'humanism' | 'faithInHumanity';
+
+/** 构型判定的软隶属度（§3.4.1，避免硬分类） */
+export interface OctantAffinity {
+  octant: OctantId;
+  /** 归一化隶属度 0–1，同一实体上总和为 1 */
+  membership: number;
+}
+
+/** 子维度签名匹配结果（§3.4.2），match = 满足条件数 / 条件总数 */
+export interface SignatureMatch {
+  signature: SignatureId;
+  /** 0–1；1 为完全匹配，≥ 0.75 为较好匹配 */
+  match: number;
 }
 
 /**
- * 暗黑四分体指标
+ * 过程平面 P1 的一次情境表达取样（z 分）。
+ *
+ * 状态由特质、特质激活增益与情境规范共同决定；它刻意**不**持久化，
+ * 而是随调用重算——持久化会让"当前状态"多出一份需要同步的副本。
  */
-export interface DarkTetrad {
-  machiavellianism: number; // 马基雅维利主义（操纵）
-  narcissism: number;
-  psychopathy: number;      // 精神病态（冷酷）
-  sadism: number;
+export interface StateExpression {
+  /** 各子维度在该情境下的预期表达水平 */
+  facets: HexacoFacets;
+  /** 各子维度相对个人基线的偏离量 |x − θ| 之和，用于背离负荷 */
+  deviationSum: number;
+  /** 情境强度 ς ∈ [0,1] */
+  situationalStrength: number;
 }
 
 /**
- * 光明三分体指标
+ * 人格状态与过程平面的可变部分。
+ *
+ * 这是 `ISShexPersonality` 中**唯一需要持久化**的状态：特质水平 θ 存在 facets，
+ * 状态档位由 `deviationSquared` 分档派生，其余全部是读取时算出的派生值。
  */
-export interface LightTriad {
-  kantianism: number;      // 不以人为手段
-  humanism: number;        // 尊重人类尊严
-  faithInHumanity: number; // 相信人性本善
+export interface PersonalityDynamics {
+  /** 特质背离负荷 F（§4.2），非负；由 ρ·F + L − λ·N 递推 */
+  discrepancyLoad: number;
+  /** 最近一次状态偏离 D²（§4.3.1），与个人自己的分布比较；状态档位由它分档得出 */
+  deviationSquared: number;
+  /**
+   * 上次特质漂移对应的游戏时间（§4.4 P4）。
+   * 记录时间点而非累积次数，使漂移量按经过时间计算，与调用频率无关。
+   */
+  lastDriftTime: number;
 }
 
 /**
- * 复合人格原型定位
+ * IS-SHEX 完备人格架构。
+ *
+ * 八层派生值（维度、元因子、构型、签名、代理、行为权重）在 v1 中各存一份并写入存档，
+ * 却没有一处维护它们与 facets 的一致性。此处改为：**只有 facets 与 dynamics 是存储的**，
+ * 其余全部由 `constants/personality-dynamics.ts` 的纯函数在读取时算出。
  */
-export interface PersonalityArchetype {
-  primary:
-  | 'prosocial' | 'antagonistic' | 'adaptive_leader' | 'reliable_guardian'
-  | 'chaotic_explorer' | 'impaired' | 'balanced';
-  dominated: (
-    | 'machiavellian' | 'narcissist' | 'psychopath' | 'sadist'
-    | 'kantian' | 'humanist' | 'faithful'
-    | 'benevolent_manipulator' | 'vulnerable_narcissist'
-    | 'chaotic_innovator' | 'cold_executive'
-    | 'savior_complex' | 'righteous_punisher'
-  )[];
+export interface ISShexPersonality {
+  facets: HexacoFacets;
+  dynamics: PersonalityDynamics;
 }
 
 /**
@@ -299,22 +358,6 @@ export interface PersonalityWeight {
   aggressiveness: number;   // 攻击性阈值
   empathy: number;          // 共情共鸣修正
   impulsivity: number;      // 冲动阈值
-}
-
-/**
- * ISShex 完备人格架构体系
- */
-export interface ISShexPersonality {
-  hexaco: HexacoProfile;
-  facets: HexacoFacets;
-  metaTraits: MetaTraits;
-  darkTetrad: DarkTetrad;
-  lightTriad: LightTriad;
-  archetype: PersonalityArchetype;
-  currentState: PersonalityState;
-  traitFatigue: number;        // 特质疲劳度 0–100，长期违背本性的惩罚累积
-  shadowActivation: number;    // 阴暗面激活度 0–100，深渊影响指标
-  behaviorWeights: PersonalityWeight;
 }
 
 // ============================================================================
