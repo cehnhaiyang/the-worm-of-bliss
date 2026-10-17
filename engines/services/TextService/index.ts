@@ -1,2 +1,0 @@
-
-export { textService } from './TextService';

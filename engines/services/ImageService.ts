@@ -4,10 +4,10 @@
 // API 文档：https://enter.pollinations.ai/api/docs
 // ============================================
 
-import { Maiden, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../../meta';
-import { getCarriageTemplate, isAbyssTemplate, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../../constants';
-import { PersonalityView, personalityView } from '../../systems';
-import { hashCode } from '../../../const';
+import { Maiden, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../meta';
+import { getCarriageTemplate, isAbyssTemplate, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../constants';
+import { PersonalityView, personalityView } from '../systems';
+import { hashCode } from '../../const';
 
 // ============================================
 // 配置常量

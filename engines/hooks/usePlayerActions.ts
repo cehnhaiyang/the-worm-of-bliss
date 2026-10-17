@@ -17,8 +17,7 @@ import {
 import { clamp, getCurrentCarriageId, mergeMaiden } from '../../const';
 import { GAME_CONFIG, getCarriageTemplate, isAbyssTemplate, isTemplateAccessible } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
-import { audioService } from '../services/AudioService';
-import { textService } from '../services/TextService';
+import { audioService, textService } from '../services';
 
 interface UsePlayerActionsParams {
   stateRef: React.RefObject<{
