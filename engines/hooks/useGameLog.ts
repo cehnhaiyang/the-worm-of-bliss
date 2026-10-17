@@ -3,33 +3,20 @@
 // 管理游戏内的文本日志记录
 // ============================================
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { GameLog, LogType } from '../../meta';
 import { GAME_CONFIG } from '../../constants';
+import { generateId } from '../../const';
 
 export const useGameLog = () => {
   const [logs, setLogs] = useState<GameLog[]>([]);
-  const logsRef = useRef<GameLog[]>([]);
-
-  // 保持 logsRef 与 logs 同步
-  useEffect(() => {
-    logsRef.current = logs;
-  }, [logs]);
 
   const addLog = useCallback((type: LogType, content: string, speaker?: string, carriageId?: string) => {
-    setLogs(prev => {
-      const newLogs = [...prev, {
-        id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: Date.now(),
-        type,
-        content,
-        speaker,
-        carriageId,
-      }];
-      // 仅保留最近 GAME_CONFIG.MAX_LOGS 条日志以优化性能
-      return newLogs.slice(-GAME_CONFIG.MAX_LOGS);
-    });
+    setLogs(prev => [
+      ...prev,
+      { id: generateId(), timestamp: Date.now(), type, content, speaker, carriageId },
+    ].slice(-GAME_CONFIG.MAX_LOGS));
   }, []);
 
-  return { logs, logsRef, addLog, setLogs };
+  return { logs, addLog, setLogs };
 };

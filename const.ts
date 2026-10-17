@@ -5,7 +5,7 @@
  * 本文件是纯函数与派生表——它们需要读 `constants/` 的配置才能工作。
  */
 
-import { CarriageType, EventType, ActivityStatus, PersonalityState, RelationType, PregnancyStage } from './meta/type';
+import { CarriageType, EventType, ActivityStatus, PersonalityState, RelationType, PregnancyStage, GraceType } from './meta/type';
 import {
   Carriage,
   CarriageFunction,
@@ -29,7 +29,7 @@ import {
   PregnancyStats,
   RelationshipStats
 } from './meta/interface';
-import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from './constants';
+import { CARRIAGE_FUNCTIONS, TIME_CONFIG, GRACE_REWARDS, GAME_CONFIG } from './constants';
 
 // ============================================
 // 1. 基础数学与概率
@@ -675,6 +675,39 @@ export const mergeMaiden = (
   const next = new Map(maidens);
   next.set(maidenId, updater(current));
   return next;
+};
+
+/**
+ * 神恩结算的纯计算部分：抽一个奖励并算出受恩实体的新状态。
+ *
+ * 随机性被限制在这里，因此结果可以被单独断言；副作用（写池、记日志、播音效）
+ * 留在调用方。属性按**当前值**增减而非绝对值，与叙事归并遵循同一条原则。
+ */
+export const rollGrace = (
+  maiden: Maiden
+): { type: GraceType; reward: string; maiden: Maiden } => {
+  const types = Object.values(GraceType);
+  const type = types[Math.floor(Math.random() * types.length)];
+  const rewards = GRACE_REWARDS[type];
+  const reward = rewards[Math.floor(Math.random() * rewards.length)];
+  const effects = GAME_CONFIG.GRACE;
+
+  return {
+    type,
+    reward,
+    maiden: {
+      ...maiden,
+      graceReceived: maiden.graceReceived + 1,
+      attributes: {
+        ...maiden.attributes,
+        stress: Math.max(0, maiden.attributes.stress - effects.STRESS_REDUCTION),
+        devotion: Math.min(100, maiden.attributes.devotion + effects.DEVOTION_INCREASE),
+        sanity: Math.min(100, maiden.attributes.sanity + effects.SANITY_INCREASE),
+      },
+      // 神恩带来安慰：恐惧状态就此解除
+      status: maiden.status.filter(s => s !== 'panicked'),
+    },
+  };
 };
 
 /**

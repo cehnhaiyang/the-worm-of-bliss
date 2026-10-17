@@ -4,7 +4,7 @@
 // ============================================
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
-import { useGameEngine, usePersistence, audioService } from './engines';
+import { useGameEngine, audioService } from './engines';
 import { formatGameTimeDisplay, getCurrentCarriageId } from './const';
 
 import { Log, Control } from './components/TerminalPanel';
@@ -47,6 +47,10 @@ export default function App() {
         getPregnancyStats,
         getRelationshipsOf,
         getRelationshipStats,
+        // 存档
+        handleSave,
+        handleLoad,
+        handleReset,
         // 暴露设置状态的方法以便加载存档
         setCarriages,
         setMaidens,
@@ -74,12 +78,6 @@ export default function App() {
     const handleClearFocus = useCallback(() => {
         setMasterState((prev: any) => ({ ...prev, focusedMaidenId: undefined }));
     }, [setMasterState]);
-
-    // 存档管理
-    const { handleSave, handleLoad, handleReset } = usePersistence({
-        systemState, masterState, carriages, maidens, logs,
-        setCarriages, setMaidens, setSystemState, setMasterState, setLogs, addLog,
-    });
 
     // 当前车厢
     const currentCarriage = getCurrentCarriage();

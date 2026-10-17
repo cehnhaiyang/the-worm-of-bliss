@@ -8,18 +8,15 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import {
   Carriage,
   Maiden,
-  MaidenSummary,
   SystemState,
   MasterState,
-  GraceType,
   GraceEvent,
-  CharacterStatus,
-  MemoryNode,
 } from '../../meta';
-import { GRACE_REWARDS, GAME_CONFIG } from '../../constants';
+import { GAME_CONFIG } from '../../constants';
+import { mergeMaiden, rollGrace, clamp } from '../../const';
 
 // 系统层导入
-import { carriageSystem, maidenSystem } from '../systems';
+import { carriageSystem } from '../systems';
 
 // 服务层导入
 import { audioService, persistenceService } from '../services';
@@ -27,6 +24,7 @@ import { audioService, persistenceService } from '../services';
 // Hook 导入
 import { useGameLog } from './useGameLog';
 import { useMaiden } from './useMaiden';
+import { usePersistence } from './usePersistence';
 import { useTimeLoop } from './useTimeLoop';
 import { usePlayerActions } from './usePlayerActions';
 
@@ -68,12 +66,25 @@ export const useGameEngine = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [graceHistory, setGraceHistory] = useState<GraceEvent[]>([]);
 
+  /**
+   * 请求互斥的权威。
+   *
+   * 同时维护 state 与 ref：state 供 UI 渲染（按钮禁用态），ref 供异步路径判重。
+   * 两者只能由 `setProcessing` 写，避免出现"按钮已禁用但闸门仍放行"的分裂。
+   */
+  const processingRef = useRef(false);
+  const setProcessing = useCallback<React.Dispatch<React.SetStateAction<boolean>>>((value) => {
+    const next = typeof value === 'function' ? value(processingRef.current) : value;
+    processingRef.current = next;
+    setIsProcessing(next);
+  }, []);
+
   // --------------------------------------------
   // 子模块 (Sub-Hooks)
   // --------------------------------------------
 
   // 日志系统
-  const { logs, logsRef, addLog, setLogs } = useGameLog();
+  const { logs, addLog, setLogs } = useGameLog();
 
   // 少女子系统：实体表由它持有，本 hook 只把控制器转出
   const maiden = useMaiden();
@@ -88,15 +99,16 @@ export const useGameEngine = () => {
     systemState,
     carriages,
     maidens,
-    masterState
+    masterState,
+    logs,
   });
 
   useEffect(() => {
-    stateRef.current = { systemState, carriages, maidens, masterState };
-  }, [systemState, carriages, maidens, masterState]);
+    stateRef.current = { systemState, carriages, maidens, masterState, logs };
+  }, [systemState, carriages, maidens, masterState, logs]);
 
   // --------------------------------------------
-  // 共享逻辑: 神恩系统 (定义在此处因为被多个模块使用)
+  // 共享逻辑: 神恩系统 (被时间循环与玩家动作共同使用)
   // --------------------------------------------
 
   const executeGrace = useCallback((targetId: string, manual: boolean = false) => {
@@ -110,51 +122,19 @@ export const useGameEngine = () => {
     const maiden = currMaidens.get(targetId);
     if (!maiden) return;
 
-    // 随机选择奖励
-    const graceTypes = Object.values(GraceType);
-    const selectedType = graceTypes[Math.floor(Math.random() * graceTypes.length)];
-    const rewards = GRACE_REWARDS[selectedType];
-    const selectedReward = rewards[Math.floor(Math.random() * rewards.length)];
+    // 抽奖与属性结算都是纯计算，随机性只发生在 rollGrace 内部
+    const { type, reward, maiden: blessed } = rollGrace(maiden);
 
-    // 记录事件
-    const graceEvent: GraceEvent = {
-      type: selectedType,
-      description: selectedReward,
+    setGraceHistory(prev => [...prev, {
+      type,
+      description: reward,
       targetId,
       timestamp: Date.now(),
-    };
+    }]);
+    setSystemState(prev => ({ ...prev, gracePoolSize: Math.max(0, prev.gracePoolSize - 1) }));
+    setMaidens(prev => mergeMaiden(prev, targetId, () => blessed));
 
-    setGraceHistory(prev => [...prev, graceEvent]);
-    setSystemState(prev => ({
-      ...prev,
-      gracePoolSize: Math.max(0, prev.gracePoolSize - 1)
-    }));
-
-    // 更新少女状态 (Update maiden state with grace effects)
-    setMaidens(prev => {
-      const newMap = new Map(prev);
-      const m = newMap.get(targetId);
-      if (m) {
-        // 使用配置的神恩效果值
-        const graceEffects = GAME_CONFIG.GRACE;
-
-        newMap.set(targetId, {
-          ...m,
-          graceReceived: m.graceReceived + 1,
-          attributes: {
-            ...m.attributes,
-            stress: Math.max(0, m.attributes.stress - graceEffects.STRESS_REDUCTION),
-            devotion: Math.min(100, m.attributes.devotion + graceEffects.DEVOTION_INCREASE),
-            sanity: Math.min(100, m.attributes.sanity + graceEffects.SANITY_INCREASE),
-          },
-          // 移除恐惧状态，神恩带来安慰
-          status: m.status.filter(s => s !== 'panicked')
-        });
-      }
-      return newMap;
-    });
-
-    addLog('grace', `【神恩降临】${maiden.name} 获得: ${selectedReward}`, manual ? 'ME' : 'SYSTEM');
+    addLog('grace', `【神恩降临】${maiden.name} 获得: ${reward}`, manual ? 'ME' : 'SYSTEM');
     audioService.playEvent('grace');
   }, [addLog]);
 
@@ -196,10 +176,21 @@ export const useGameEngine = () => {
     setSystemState,
     setCarriages,
     setMaidens,
-    setIsProcessing,
+    setIsProcessing: setProcessing,
     addLog,
     executeGrace,
-    isProcessing,
+    processingRef,
+  });
+
+  // 存档管理 (Persistence)
+  const { handleSave, handleLoad, handleReset } = usePersistence({
+    stateRef,
+    setCarriages,
+    setMaidens,
+    setSystemState,
+    setMasterState,
+    setLogs,
+    addLog,
   });
 
   // --------------------------------------------
@@ -210,15 +201,13 @@ export const useGameEngine = () => {
     if (initialized.current) return;
     initialized.current = true;
 
-    // 1. 生成少女数据
+    // 1. 生成少女数据（关系网络在其中一并初始化）
     maiden.generate(carriages);
 
-    // 2. 初始化关系网络（已在 maidenSystem.generateMaidens 中完成）
-
-    // 3. 初始化音频系统
+    // 2. 初始化音频系统
     audioService.init().catch((err: unknown) => console.warn("Audio init warning:", err));
 
-    // 4. 初始日志 - 使用 stateRef 获取最新值
+    // 3. 初始日志 - 使用 stateRef 获取最新值
     const { systemState: initSys } = stateRef.current;
     addLog('system', '神躯神经中枢已连接...', 'SYSTEM');
     addLog('system', `欢迎回来。`, 'SYSTEM');
@@ -229,10 +218,10 @@ export const useGameEngine = () => {
       `250个少女分散在各个车厢中，等待着我的指令。`
     );
 
-    // 5. 设置自动存档定时器 - 使用 stateRef 和 logsRef 获取最新值
+    // 4. 设置自动存档定时器 - 从 stateRef 读最新值，不依赖闭包
     const autoSaveInterval = setInterval(() => {
-      const { systemState: sys, masterState: ms, carriages: cars, maidens: mds } = stateRef.current;
-      void persistenceService.autoSave(sys, ms, cars, mds, logsRef.current);
+      const { systemState: sys, masterState: ms, carriages: cars, maidens: mds, logs: currentLogs } = stateRef.current;
+      void persistenceService.autoSave(sys, ms, cars, mds, currentLogs);
     }, GAME_CONFIG.AUTOSAVE_INTERVAL_MS);
 
     return () => clearInterval(autoSaveInterval);
@@ -241,18 +230,20 @@ export const useGameEngine = () => {
 
   // --------------------------------------------
   // 系统控制接口
+  //
+  // 副作用一律写在 updater 之外：updater 必须是纯函数，StrictMode 会双调用它，
+  // 把 addLog / playEvent 放进去会让每条日志与音效都翻倍。
   // --------------------------------------------
 
   const updateResonance = useCallback((delta: number) => {
-    setSystemState(prev => {
-      const newFreq = Math.max(0, Math.min(50, prev.resonanceFrequency + delta));
-      addLog('system', `共振圣歌频率调整为: ${newFreq} Hz`, 'SYSTEM');
-      if (newFreq < 10) {
-        addLog('system', `警告：极低频共振。所有单位进入高度敏感/催眠状态。`, 'SYSTEM');
-      }
-      audioService.playEvent('resonance');
-      return { ...prev, resonanceFrequency: newFreq };
-    });
+    const newFreq = clamp(stateRef.current.systemState.resonanceFrequency + delta, GAME_CONFIG.MIN_RESONANCE, GAME_CONFIG.MAX_RESONANCE);
+
+    setSystemState(prev => ({ ...prev, resonanceFrequency: newFreq }));
+    addLog('system', `共振圣歌频率调整为: ${newFreq} Hz`, 'SYSTEM');
+    if (newFreq < 10) {
+      addLog('system', `警告：极低频共振。所有单位进入高度敏感/催眠状态。`, 'SYSTEM');
+    }
+    audioService.playEvent('resonance');
   }, [addLog]);
 
   const setTimeScale = useCallback((scale: number) => {
@@ -262,12 +253,11 @@ export const useGameEngine = () => {
   }, [addLog]);
 
   const togglePause = useCallback(() => {
-    setSystemState(prev => {
-      const newPaused = !prev.isPaused;
-      addLog('system', newPaused ? '>>> 时间流逝暂停 <<<' : '>>> 时间流逝恢复 <<<', 'SYSTEM');
-      audioService.playUI('click');
-      return { ...prev, isPaused: newPaused };
-    });
+    const newPaused = !stateRef.current.systemState.isPaused;
+
+    setSystemState(prev => ({ ...prev, isPaused: newPaused }));
+    addLog('system', newPaused ? '>>> 时间流逝暂停 <<<' : '>>> 时间流逝恢复 <<<', 'SYSTEM');
+    audioService.playUI('click');
   }, [addLog]);
 
   // --------------------------------------------
@@ -315,6 +305,11 @@ export const useGameEngine = () => {
     setTimeScale,
     togglePause,
 
+    // 存档
+    handleSave,
+    handleLoad,
+    handleReset,
+
     // 少女：派生视图
     getMaidenView: maiden.viewOf,
     allMaidenSummaries: maiden.summaries,
@@ -350,6 +345,3 @@ export const useGameEngine = () => {
     addLog,
   };
 };
-
-export * from './useGameLog';
-export * from './usePersistence';

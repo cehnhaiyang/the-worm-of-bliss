@@ -282,7 +282,13 @@ interface UsePlayerActionsParams {
   setIsProcessing: React.Dispatch<React.SetStateAction<boolean>>;
   addLog: (type: LogType, content: string, speaker?: string, carriageId?: string) => void;
   executeGrace: (targetId: string, manual: boolean) => void;
-  isProcessing: boolean;
+  /**
+   * 进行中的请求句柄。
+   *
+   * 互斥判定必须读 ref 而不是渲染期的值：`handleAction` 是异步的，两次快速提交之间
+   * 不会发生重渲染，闭包里捕获的 `isProcessing` 仍是 false，两道闸门会同时放行。
+   */
+  processingRef: React.RefObject<boolean>;
 }
 
 interface UsePlayerActionsReturn {
@@ -300,7 +306,7 @@ export const usePlayerActions = ({
   setIsProcessing,
   addLog,
   executeGrace,
-  isProcessing,
+  processingRef,
 }: UsePlayerActionsParams): UsePlayerActionsReturn => {
 
   // --------------------------------------------
@@ -373,7 +379,7 @@ export const usePlayerActions = ({
   // 处理玩家动作 (Handle Action / AI API)
   // --------------------------------------------
   const handleAction = useCallback(async (input: string) => {
-    if (!input.trim() || isProcessing) return;
+    if (!input.trim() || processingRef.current) return;
 
     const {
       maidens: currMaidens,
@@ -497,7 +503,7 @@ export const usePlayerActions = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [isProcessing, addLog, executeGrace, stateRef, setMaidens, setSystemState, setCarriages, setIsProcessing]);
+  }, [addLog, executeGrace, stateRef, setMaidens, setSystemState, setCarriages, setIsProcessing, processingRef]);
 
   return {
     moveMaster,
