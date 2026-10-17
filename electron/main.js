@@ -49,7 +49,7 @@ function registerIpcHandlers() {
       ensureDir(dirPath);
 
       // 提取核心数据
-      const { systemState, masterState, carriages, maidens, logs, subsystems, ...metadata } = saveData;
+      const { systemState, masterState, carriages, maidens, logs, ...metadata } = saveData;
 
       fs.writeFileSync(path.join(dirPath, 'metadata.json'), JSON.stringify(metadata, null, 2), 'utf-8');
       fs.writeFileSync(path.join(dirPath, 'system.json'), JSON.stringify(systemState, null, 2), 'utf-8');
@@ -57,7 +57,6 @@ function registerIpcHandlers() {
       fs.writeFileSync(path.join(dirPath, 'carriages.json'), JSON.stringify(carriages, null, 2), 'utf-8');
       fs.writeFileSync(path.join(dirPath, 'maidens.json'), JSON.stringify(maidens, null, 2), 'utf-8');
       fs.writeFileSync(path.join(dirPath, 'logs.json'), JSON.stringify(logs, null, 2), 'utf-8');
-      fs.writeFileSync(path.join(dirPath, 'subsystems.json'), JSON.stringify(subsystems, null, 2), 'utf-8');
 
       return { success: true };
     } catch (err) {
@@ -81,15 +80,21 @@ function registerIpcHandlers() {
         return fs.existsSync(filePath) ? JSON.parse(fs.readFileSync(filePath, 'utf-8')) : undefined;
       };
 
+      // 分片缺失即判定存档损坏：缺一份就静默给空表，等于把损失拖到玩法里才发作
+      const requiredShards = ['metadata.json', 'system.json', 'master.json', 'carriages.json', 'maidens.json', 'logs.json'];
+      const missing = requiredShards.find(filename => !fs.existsSync(path.join(dirPath, filename)));
+      if (missing) {
+        return { success: false, error: `存档不完整，缺少 ${missing}` };
+      }
+
       const metadata = readFile('metadata.json');
       const saveData = {
         ...metadata,
         systemState: readFile('system.json'),
         masterState: readFile('master.json'),
-        carriages: readFile('carriages.json') || [],
-        maidens: readFile('maidens.json') || [],
-        logs: readFile('logs.json') || [],
-        subsystems: readFile('subsystems.json') || {}
+        carriages: readFile('carriages.json'),
+        maidens: readFile('maidens.json'),
+        logs: readFile('logs.json')
       };
 
       return { success: true, data: saveData };

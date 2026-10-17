@@ -15,7 +15,6 @@ import {
     ClothingState,
     CUP_SIZES,
     EventEffectContext,
-    EventTimestampData,
     EventType,
     GameEvent,
     HexacoFacets,
@@ -1675,33 +1674,6 @@ class MaidenNarcissus {
         return state !== undefined && state.stage !== 'none';
     }
 
-    serialize(maidens: Map<string, Maiden>): [string, NarcissusState][] {
-        if (!maidens || !(maidens instanceof Map)) return [];
-
-        const result: [string, NarcissusState][] = [];
-
-        for (const [id, maiden] of maidens) {
-            if (maiden && maiden.narcissusState) {
-                result.push([id, maiden.narcissusState]);
-            }
-        }
-
-        return result;
-    }
-
-    deserialize(data: [string, NarcissusState][], maidens: Map<string, Maiden>): void {
-        if (!Array.isArray(data) || !maidens || !(maidens instanceof Map)) return;
-
-        for (const [id, state] of data) {
-            if (!id || !state) continue;
-
-            const maiden = maidens.get(id);
-            if (maiden) {
-                maiden.narcissusState = state;
-            }
-        }
-    }
-
     /**
      * 单帧推进：已在协议中则推进褪色，否则按稀有概率尝试触发。
      * 返回的 `maidenUpdate` 必须由调用方合并进实体——本方法不直接改写入参。
@@ -1765,18 +1737,19 @@ const EVENT_CONFIG = {
 
 /**
  * 随机事件子系统：按概率与冷却轮询触发梦魇、崩溃、觉醒等事件，并结算其属性/状态/记忆效果。
- * 冷却记录在 `globalEventTimestamps`，可随存档序列化，避免读档后事件连发。
+ * 冷却表由调用方传入并原样返回（归属 `SystemState`），本子系统不持有可持久化状态。
  */
 class MaidenRandomEvent {
-    private globalEventTimestamps: Map<EventType, number> = new Map();
-
     public checkForEvents(
         maidens: Map<string, Maiden>,
         carriages: Map<string, Carriage>,
         gameTimePassed: number,
+        eventCooldowns: Partial<Record<EventType, number>>,
         targetIds?: string[]
-    ): GameEvent[] {
+    ): { events: GameEvent[]; eventCooldowns: Partial<Record<EventType, number>> } {
         const events: GameEvent[] = [];
+        // 本帧的冷却副本：写入只发生在 canTriggerGlobal，调用方的表不被就地改写
+        const cooldowns: Partial<Record<EventType, number>> = { ...eventCooldowns };
         const now = gameTimePassed;
 
         // 系统级宏观事件（枢纽异常、共振激增）不在这里产生：
@@ -1810,14 +1783,14 @@ class MaidenRandomEvent {
                 maiden.behavior.currentActivity === 'sleeping' &&
                 maiden.attributes.sanity < 50 &&
                 probabilityCheck(EVENT_CONFIG.PROBABILITY.nightmare) &&
-                this.canTriggerGlobal('nightmare', now)
+                this.canTriggerGlobal(cooldowns, 'nightmare', now)
             ) {
                 events.push(this.createNightmareEvent(maiden, carriage));
             }
 
             if (
                 this.shouldTriggerBreakdown(maiden.attributes.sanity, maiden.status.includes('broken')) &&
-                this.canTriggerGlobal('breakdown', now)
+                this.canTriggerGlobal(cooldowns, 'breakdown', now)
             ) {
                 events.push(this.createBreakdownEvent(maiden, carriage));
             }
@@ -1827,7 +1800,7 @@ class MaidenRandomEvent {
                 maiden.attributes.lust > 70 &&
                 !maiden.status.includes('complicit') &&
                 probabilityCheck(EVENT_CONFIG.PROBABILITY.awakening) &&
-                this.canTriggerGlobal('awakening', now)
+                this.canTriggerGlobal(cooldowns, 'awakening', now)
             ) {
                 events.push(this.createAwakeningEvent(maiden, carriage));
             }
@@ -1836,7 +1809,7 @@ class MaidenRandomEvent {
                 isAbyssTemplate(carriage.templateId) &&
                 maiden.attributes.sanity < 60 &&
                 probabilityCheck(EVENT_CONFIG.PROBABILITY.abyss_vision) &&
-                this.canTriggerGlobal('abyss_vision', now)
+                this.canTriggerGlobal(cooldowns, 'abyss_vision', now)
             ) {
                 events.push(this.createAbyssVisionEvent(maiden, carriage));
             }
@@ -1848,7 +1821,7 @@ class MaidenRandomEvent {
                 pregnancyInfo &&
                 pregnancyInfo.weekNumber >= GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK &&
                 !maiden.status.includes('pregnant') &&
-                this.canTriggerGlobal('pregnancy', now)
+                this.canTriggerGlobal(cooldowns, 'pregnancy', now)
             ) {
                 events.push(this.createPregnancyEvent(maiden, carriage));
             }
@@ -1860,21 +1833,21 @@ class MaidenRandomEvent {
                     if (
                         maiden.attributes.stress > 60 && randomPeer.attributes.stress < 40 &&
                         probabilityCheck(EVENT_CONFIG.PROBABILITY.comfort) &&
-                        this.canTriggerGlobal('comfort', now)
+                        this.canTriggerGlobal(cooldowns, 'comfort', now)
                     ) {
                         events.push(this.createComfortEvent(maiden, randomPeer, carriage));
                     }
                     else if (
                         maiden.attributes.stress > 70 && randomPeer.attributes.stress > 70 &&
                         probabilityCheck(EVENT_CONFIG.PROBABILITY.conflict) &&
-                        this.canTriggerGlobal('conflict', now)
+                        this.canTriggerGlobal(cooldowns, 'conflict', now)
                     ) {
                         events.push(this.createConflictEvent(maiden, randomPeer, carriage));
                     }
                     else if (
                         maiden.attributes.sanity > 40 && randomPeer.attributes.sanity > 40 &&
                         probabilityCheck(EVENT_CONFIG.PROBABILITY.friendship) &&
-                        this.canTriggerGlobal('friendship', now)
+                        this.canTriggerGlobal(cooldowns, 'friendship', now)
                     ) {
                         events.push(this.createFriendshipEvent(maiden, randomPeer, carriage));
                     }
@@ -1882,7 +1855,7 @@ class MaidenRandomEvent {
             }
         }
 
-        return events;
+        return { events, eventCooldowns: cooldowns };
     }
 
     public applyEventEffects(
@@ -2237,24 +2210,19 @@ class MaidenRandomEvent {
         return false;
     }
 
-    private canTriggerGlobal(type: EventType, now: number): boolean {
-        const lastTime = this.globalEventTimestamps.get(type) || 0;
+    /** 冷却表的唯一写入点：放行即记下本次时刻，未放行时表不变 */
+    private canTriggerGlobal(
+        cooldowns: Partial<Record<EventType, number>>,
+        type: EventType,
+        now: number
+    ): boolean {
+        const lastTime = cooldowns[type] || 0;
         const cooldown = EVENT_CONFIG.COOLDOWNS[type] || 30000;
 
         if (now - lastTime < cooldown) return false;
 
-        this.globalEventTimestamps.set(type, now);
+        cooldowns[type] = now;
         return true;
-    }
-
-    /** 冷却时序的存档形状；读取方是持久化层，故直接产出它要的类型 */
-    public serialize(): EventTimestampData[] {
-        return Array.from(this.globalEventTimestamps.entries())
-            .map(([eventType, timestamp]) => ({ eventType, timestamp }));
-    }
-
-    public deserialize(data: EventTimestampData[]): void {
-        this.globalEventTimestamps = new Map(data.map(d => [d.eventType, d.timestamp]));
     }
 }
 

@@ -85,9 +85,6 @@ export const usePersistence = ({
             }
 
             const { carriages: savedCarriages, maidens: savedMaidens } = persistenceService.restoreMaps(result.data);
-            if (result.data.subsystems) {
-                persistenceService.restoreSubsystems(result.data.subsystems, savedMaidens);
-            }
 
             setCarriages(savedCarriages);
             setMaidens(savedMaidens);

@@ -381,9 +381,11 @@ export const useTimeLoop = ({
       }
 
       if (updatedMaidenIds.length > 0) {
-        const events = maidenSystem.event.checkForEvents(
-          nextMaidens, nextCarriages, newGameTime, updatedMaidenIds
+        const { events, eventCooldowns } = maidenSystem.event.checkForEvents(
+          nextMaidens, nextCarriages, newGameTime, sys.eventCooldowns, updatedMaidenIds
         );
+        // 冷却表不属于任何实体，随系统状态一起持久化
+        setSystemState(prev => ({ ...prev, eventCooldowns }));
         for (const event of events) {
           addLog(event.logType, event.description, undefined, event.carriageId);
           const changedMaidens = maidenSystem.event.applyEventEffects(event, {

@@ -574,34 +574,7 @@ export interface NarcissusEligibility {
 }
 
 // ============================================================================
-// 8. 子系统存档模型 (Subsystems Data)
-// ============================================================================
-
-/** 水仙协议状态存档节点 */
-export interface NarcissusData {
-  maidenId: string;
-  narcissusState: NarcissusState;
-}
-
-/** 事件时间戳存档节点 */
-export interface EventTimestampData {
-  eventType: EventType;
-  timestamp: number;
-}
-
-/**
- * 子系统数据聚合（存档序列化用）。
- *
- * 只放**不内嵌于 Maiden** 的状态：关系与妊娠都在实体上、随实体表全量往返，
- * 在此再存一份只会得到永不读取的副本。
- */
-export interface SubsystemsData {
-  narcissus: NarcissusData[];
-  events: EventTimestampData[];
-}
-
-// ============================================================================
-// 9. 核心实体模型 (Core Entities)
+// 8. 核心实体模型 (Core Entities)
 // ============================================================================
 
 /**
@@ -717,7 +690,7 @@ export interface RelationshipStats {
 }
 
 // ============================================================================
-// 10. 世界观与设施配置 (World & Facilities)
+// 9. 世界观与设施配置 (World & Facilities)
 // ============================================================================
 
 /** 车厢矩阵坐标 */
@@ -789,7 +762,7 @@ export interface CarriageTemplate {
 }
 
 // ============================================================================
-// 11. 系统管理与存档 (System, Master & Save)
+// 10. 系统管理与存档 (System, Master & Save)
 // ============================================================================
 
 /**
@@ -808,6 +781,14 @@ export interface SystemState {
   lastTickTime: number;
   timeScale: number;
   isPaused: boolean;
+
+  /**
+   * 事件冷却表：事件类型 → 上次触发时刻（游戏毫秒）。
+   *
+   * 归属全局系统状态：它是"全局发生过什么"的事实，放进子系统就要靠读写档手工搬运，
+   * 于是同一事实有了第二份存储，而两份的形状无人保证一致。
+   */
+  eventCooldowns: Partial<Record<EventType, number>>;
 }
 
 /**
@@ -867,7 +848,7 @@ export interface SaveData {
   maidens: [string, Maiden][];
   logs: GameLog[];
   stats: GameStats;
-  subsystems?: SubsystemsData;
+  maidenCount: number;
   checksum?: string;
 }
 
@@ -898,7 +879,7 @@ export interface WorldState {
 }
 
 // ============================================================================
-// 12. 事件、日志与音视频反馈 (Events, Logs & AV Feedback)
+// 11. 事件、日志与音视频反馈 (Events, Logs & AV Feedback)
 // ============================================================================
 
 /**

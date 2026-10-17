@@ -45,6 +45,7 @@ const createInitialSystemState = (): SystemState => ({
   lastTickTime: Date.now(),
   timeScale: 1,
   isPaused: false,
+  eventCooldowns: {},
 });
 
 const createInitialMasterState = (startCarriageId: string): MasterState => ({

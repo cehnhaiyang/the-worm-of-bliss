@@ -12,12 +12,9 @@ import {
   GameLog,
   SaveData,
   GameStats,
-  SaveSlotInfo,
-  SubsystemsData,
-  NarcissusData,
-  NarcissusState
+  SaveSlotInfo
 } from '../../meta';
-import { maidenSystem, normalizePersonality } from '../systems';
+import { normalizePersonality } from '../systems';
 
 // ============================================
 // 存档配置
@@ -27,8 +24,8 @@ const SAVE_CONFIG = {
   maxSlots: 5,
   maxLogEntries: 100,
   maxMemoriesPerMaiden: 5,
-  currentVersion: '0.2.1',
-  compatibleVersions: ['0.2.0', '0.2.1'],
+  currentVersion: '0.3.0',
+  compatibleVersions: ['0.3.0'],
 };
 
 // ============================================
@@ -38,7 +35,7 @@ const SAVE_CONFIG = {
 declare global {
   interface Window {
     electronAPI?: {
-      saveGame: (slot: number | 'auto', saveData: any) => Promise<{ success: boolean; error?: string }>;
+      saveGame: (slot: number | 'auto', saveData: SaveData) => Promise<{ success: boolean; error?: string }>;
       loadGame: (slot: number | 'auto') => Promise<{ success: boolean; data?: SaveData; error?: string }>;
       deleteSave: (slot: number | 'auto') => Promise<{ success: boolean; error?: string }>;
       getSaveSlots: () => Promise<{ success: boolean; slots?: SaveSlotInfo[]; error?: string }>;
@@ -105,7 +102,7 @@ class PersistenceService {
       }
 
       // 组装传给主进程的完整数据结构
-      const saveData = {
+      const saveData: SaveData = {
         version: SAVE_CONFIG.currentVersion,
         timestamp: Date.now(),
         playTime: Date.now() - this.playStartTime,
@@ -118,11 +115,6 @@ class PersistenceService {
         carriages: Array.from(carriages.entries()),
         maidens: Array.from(maidens.entries()),
         logs: logs.slice(-SAVE_CONFIG.maxLogEntries),
-        subsystems: {
-          // 关系与妊娠状态内嵌于 Maiden，随 maidens 字段全量往返，故不再二次归档
-          narcissus: maidenSystem.narcissus.serialize(maidens),
-          events: maidenSystem.event.serialize(),
-        }
       };
 
       const result = await window.electronAPI!.saveGame(slot, saveData);
@@ -167,16 +159,18 @@ class PersistenceService {
         };
       }
 
-      const migratedData = this.migrateData(saveData);
+      if (!this.isWellFormed(saveData)) {
+        return { data: null, error: '存档结构不符合当前格式（关键分片缺失或类型不符）' };
+      }
 
-      this.stats = { ...this.createDefaultStats(), ...migratedData.stats };
-      this.playStartTime = Date.now() - migratedData.playTime;
+      const normalizedData = this.normalizeSaveData(saveData);
+
+      this.stats = { ...this.createDefaultStats(), ...normalizedData.stats };
+      this.playStartTime = Date.now() - normalizedData.playTime;
       this.sessionStartTime = Date.now();
 
-      // 子系统反序列化将在 restoreSubsystems 方法中处理
-
       console.log(`[PersistenceService] 从主进程加载成功 (槽位 ${slot})`);
-      return { data: migratedData };
+      return { data: normalizedData };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : '未知错误';
       console.error('[PersistenceService] 加载失败:', error);
@@ -185,25 +179,29 @@ class PersistenceService {
   }
 
   // ============================================
-  // 数据版本迁移
+  // 读档规范化
   // ============================================
 
-  private migrateData(saveData: SaveData): SaveData {
-    const migrated = { ...saveData };
-
-    migrated.stats = {
-      ...this.createDefaultStats(),
-      ...(saveData.stats || {}),
+  /** 只补 `stats` 的缺省字段：版本门已挡住其他形状，这里不做迁移 */
+  private normalizeSaveData(saveData: SaveData): SaveData {
+    return {
+      ...saveData,
+      stats: { ...this.createDefaultStats(), ...(saveData.stats || {}) },
     };
+  }
 
-    if (saveData.version !== SAVE_CONFIG.currentVersion) {
-      migrated.version = SAVE_CONFIG.currentVersion;
-      if (!migrated.systemState.gameTimePassed) {
-        migrated.systemState.gameTimePassed = 0;
-      }
-    }
-
-    return migrated;
+  /**
+   * 读档的结构门：关键分片必须是数组/对象。
+   *
+   * 形状不符就当场拒绝，不放它进实体表：否则错误会退化成某处的 `undefined`，
+   * 一路静默到很久以后才以玩法异常的形式浮出来。
+   */
+  private isWellFormed(saveData: SaveData): boolean {
+    return Array.isArray(saveData.maidens)
+      && Array.isArray(saveData.carriages)
+      && Array.isArray(saveData.logs)
+      && !!saveData.systemState
+      && !!saveData.masterState;
   }
 
   // ============================================
@@ -307,7 +305,12 @@ class PersistenceService {
   } {
     const maidens = new Map<string, Maiden>();
 
-    for (const [id, maiden] of saveData.maidens) {
+    for (let index = 0; index < saveData.maidens.length; index++) {
+      const entry = saveData.maidens[index] as unknown as [string, Maiden] | undefined;
+      const [id, maiden] = Array.isArray(entry) ? entry : [];
+      if (typeof id !== 'string' || !maiden) {
+        throw new Error(`存档中的少女记录形状非法（第 ${index} 条）`);
+      }
       // 传入实体自己的游戏时钟：老存档没有 dynamics，lastDriftTime 需由它播种，
       // 否则会被当成"从时间原点起就没漂移过"
       maidens.set(id, { ...maiden, isshex: normalizePersonality(maiden.isshex, maiden.lastUpdateTime) });
@@ -317,22 +320,6 @@ class PersistenceService {
       carriages: new Map(saveData.carriages),
       maidens,
     };
-  }
-
-  // ============================================
-  // 恢复子系统数据
-  // ============================================
-
-  restoreSubsystems(subsystems: SubsystemsData, maidens: Map<string, Maiden>): void {
-    if (!subsystems) return;
-
-    // 将 NarcissusData[] 转换为 [string, NarcissusState][]
-    const narcissusData: [string, NarcissusState][] = subsystems.narcissus.map(
-      (item: NarcissusData) => [item.maidenId, item.narcissusState]
-    );
-    maidenSystem.narcissus.deserialize(narcissusData, maidens);
-    
-    maidenSystem.event.deserialize(subsystems.events);
   }
 
   static formatPlayTime(ms: number): string {
