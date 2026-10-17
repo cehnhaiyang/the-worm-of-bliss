@@ -16,9 +16,6 @@ export * from './carriages';
 // 世界观设定
 export * from './lore';
 
-// 资源映射
-export * from './assets';
-
 // 事件常量
 export * from './events';
 

@@ -17,71 +17,71 @@ export type CupSize = (typeof CUP_SIZES)[number];
  * 衣物破损与污浊状态
  */
 export type AttireState =
-  | 'intact'       // 完好
-  | 'torn'         // 破损
-  | 'disheveled'   // 凌乱
-  | 'wet'          // 湿透
-  | 'dirty'        // 污浊
-  | 'bloody'       // 血迹
-  | 'transparent'; // 透明（如被水浸透）
+    | 'intact'       // 完好
+    | 'torn'         // 破损
+    | 'disheveled'   // 凌乱
+    | 'wet'          // 湿透
+    | 'dirty'        // 污浊
+    | 'bloody'       // 血迹
+    | 'transparent'; // 透明（如被水浸透）
 
 /**
  * 角色着装层级
  */
 export type DressLevel =
-  | 'fully_dressed'     // 着装完整
-  | 'partially_dressed' // 衣衫不整
-  | 'underwear_only'    // 仅着内衣
-  | 'naked';            // 全裸
+    | 'fully_dressed'     // 着装完整
+    | 'partially_dressed' // 衣衫不整
+    | 'underwear_only'    // 仅着内衣
+    | 'naked';            // 全裸
 
 /**
  * 角色阶级系统（按等级升序排列）
  */
 export type CharacterRank =
-  | 'unranked'  // 无等级
-  | 'copper'    // 铜环
-  | 'silver'    // 银环
-  | 'gold'      // 金环
-  | 'obsidian'; // 黑曜石（最高阶）
+    | 'unranked'  // 无等级
+    | 'copper'    // 铜环
+    | 'silver'    // 银环
+    | 'gold'      // 金环
+    | 'obsidian'; // 黑曜石（最高阶）
 
 // 阶级排序常量，供比较运算使用
 export const RANK_ORDER: Record<CharacterRank, number> = {
-  unranked: 0,
-  copper: 1,
-  silver: 2,
-  gold: 3,
-  obsidian: 4,
+    unranked: 0,
+    copper: 1,
+    silver: 2,
+    gold: 3,
+    obsidian: 4,
 } as const;
 
 /**
  * 角色自发行为类型（按语义分组）
  */
 export type SpontaneousAction =
-  // 日常行为
-  | 'daydream'          // 发呆/白日梦
-  | 'stretch'           // 伸懒腰
-  | 'sigh'              // 叹气
-  | 'hum'               // 哼歌
-  | 'pace'              // 踱步
-  | 'fidget'            // 坐立不安
-  // 情绪表达
-  | 'cry_quietly'       // 默默流泪
-  | 'laugh_nervously'   // 神经质地笑
-  | 'tremble'           // 颤抖
-  | 'stare_blankly'     // 发呆凝视
-  | 'mutter'            // 喃喃自语
-  // 社交相关
-  | 'observe_others'    // 观察他人
-  | 'avoid_eye_contact' // 回避目光
-  | 'seek_attention'    // 寻求关注
-  // 宗教/仪式
-  | 'touch_collar'      // 触摸项圈
-  | 'kneel_briefly'     // 短暂跪下
-  | 'whisper_prayer'    // 低声祈祷
-  // 自我安慰
-  | 'hug_self'          // 抱紧自己
-  | 'rock_back_forth'   // 前后摇晃
-  | 'bite_lip';         // 咬嘴唇
+    // 日常行为
+    | 'daydream'          // 发呆/白日梦
+    | 'stretch'           // 伸懒腰
+    | 'sigh'              // 叹气
+    | 'hum'               // 哼歌
+    | 'pace'              // 踱步
+    | 'fidget'            // 坐立不安
+    // 情绪表达
+    | 'cry_quietly'       // 默默流泪
+    | 'laugh_nervously'   // 神经质地笑
+    | 'tremble'           // 颤抖
+    | 'stare_blankly'     // 发呆凝视
+    | 'mutter'            // 喃喃自语
+    // 社交相关
+    | 'observe_others'    // 观察他人
+    | 'avoid_eye_contact' // 回避目光
+    | 'seek_attention'    // 寻求关注
+    // 宗教/仪式
+    | 'touch_collar'      // 触摸项圈
+    | 'kneel_briefly'     // 短暂跪下
+    | 'whisper_prayer'    // 低声祈祷
+    // 自我安慰
+    | 'hug_self'          // 抱紧自己
+    | 'rock_back_forth'   // 前后摇晃
+    | 'bite_lip';         // 咬嘴唇
 
 // ============================================================================
 // 状态机类型 (State Machine Types)
@@ -91,28 +91,28 @@ export type SpontaneousAction =
  * 角色复合状态机
  */
 export const CharacterStatus = {
-  NORMAL: 'normal',
-  PANICKED: 'panicked',
-  INJURED: 'injured',
-  BROKEN: 'broken',
-  DISSOCIATED: 'dissociated',
-  AROUSED: 'aroused',
-  PREGNANT: 'pregnant',
-  GESTATING: 'gestating',
-  EUPHORIC: 'euphoric',
-  DEVOTED: 'devoted',
-  COMPLICIT: 'complicit',
-  VOYEUR: 'voyeur',
-  DEACONESS: 'deaconess',
-  PERFORMING: 'performing',
-  CONFESSING: 'confessing',
-  ANCHORING: 'anchoring',
-  SLEEPING: 'sleeping',
-  EATING: 'eating',
-  BATHING: 'bathing',
-  WANDERING: 'wandering',
-  CHATTING: 'chatting',
-  OBSERVING: 'observing',
+    NORMAL: 'normal',
+    PANICKED: 'panicked',
+    INJURED: 'injured',
+    BROKEN: 'broken',
+    DISSOCIATED: 'dissociated',
+    AROUSED: 'aroused',
+    PREGNANT: 'pregnant',
+    GESTATING: 'gestating',
+    EUPHORIC: 'euphoric',
+    DEVOTED: 'devoted',
+    COMPLICIT: 'complicit',
+    VOYEUR: 'voyeur',
+    DEACONESS: 'deaconess',
+    PERFORMING: 'performing',
+    CONFESSING: 'confessing',
+    ANCHORING: 'anchoring',
+    SLEEPING: 'sleeping',
+    EATING: 'eating',
+    BATHING: 'bathing',
+    WANDERING: 'wandering',
+    CHATTING: 'chatting',
+    OBSERVING: 'observing',
 } as const;
 
 export type CharacterStatus = (typeof CharacterStatus)[keyof typeof CharacterStatus];
@@ -121,23 +121,23 @@ export type CharacterStatus = (typeof CharacterStatus)[keyof typeof CharacterSta
  * 活动类状态子集，用于窄化 CharacterStatus 的活动语义
  */
 export type ActivityStatus = Extract<CharacterStatus,
-  | 'performing' | 'confessing' | 'anchoring'
-  | 'sleeping' | 'eating' | 'bathing'
-  | 'wandering' | 'chatting' | 'observing'
+    | 'performing' | 'confessing' | 'anchoring'
+    | 'sleeping' | 'eating' | 'bathing'
+    | 'wandering' | 'chatting' | 'observing'
 >;
 
 /**
  * 角色核心心境状态
  */
 export const MoodState = {
-  CONTENT: 'content',
-  ANXIOUS: 'anxious',
-  MELANCHOLY: 'melancholy',
-  IRRITABLE: 'irritable',
-  LUSTFUL: 'lustful',
-  FEARFUL: 'fearful',
-  EUPHORIC: 'euphoric',
-  NUMB: 'numb',
+    CONTENT: 'content',
+    ANXIOUS: 'anxious',
+    MELANCHOLY: 'melancholy',
+    IRRITABLE: 'irritable',
+    LUSTFUL: 'lustful',
+    FEARFUL: 'fearful',
+    EUPHORIC: 'euphoric',
+    NUMB: 'numb',
 } as const;
 
 export type MoodState = (typeof MoodState)[keyof typeof MoodState];
@@ -149,10 +149,10 @@ export type MoodState = (typeof MoodState)[keyof typeof MoodState];
  * 不随压力"崩溃"，因此档位只能由状态偏离给出，不能由 θ 的绝对阈值给出。
  */
 export type PersonalityState =
-  | 'typical'    // 常态范围：D² 在第 80 分位内
-  | 'stretched'  // 拉伸：80–95 分位，通常可由情境解释
-  | 'atypical'   // 非典型：95–99 分位，明显偏离个人常态
-  | 'extreme';   // 极端偏离：> 99 分位，少见，应关注情境与恢复
+    | 'typical'    // 常态范围：D² 在第 80 分位内
+    | 'stretched'  // 拉伸：80–95 分位，通常可由情境解释
+    | 'atypical'   // 非典型：95–99 分位，明显偏离个人常态
+    | 'extreme';   // 极端偏离：> 99 分位，少见，应关注情境与恢复
 
 // ============================================================================
 // 世界空间类型 (World Space Types)
@@ -172,17 +172,17 @@ export type PersonalityState =
  *   与 `comfortLevel` 决定，与是否带 `rest` 标签无关。
  */
 export type CarriageFunction =
-  // 行为许可
-  | 'sleep'      // 睡眠
-  | 'eat'        // 进食
-  | 'bathe'      // 沐浴
-  | 'pray'       // 祈祷/忏悔
-  | 'socialize'  // 社交
-  // 语义角色
-  | 'rest'       // 疗愈休憩：能恢复理智、消解压力
-  | 'leisure'    // 消遣享受：感官刺激丰富，适合高开放度者
-  | 'memory'     // 记忆与过去：重塑或否定个人历史
-  | 'ritual';    // 仪式献祭：神恩与献祭的发生地
+    // 行为许可
+    | 'sleep'      // 睡眠
+    | 'eat'        // 进食
+    | 'bathe'      // 沐浴
+    | 'pray'       // 祈祷/忏悔
+    | 'socialize'  // 社交
+    // 语义角色
+    | 'rest'       // 疗愈休憩：能恢复理智、消解压力
+    | 'leisure'    // 消遣享受：感官刺激丰富，适合高开放度者
+    | 'memory'     // 记忆与过去：重塑或否定个人历史
+    | 'ritual';    // 仪式献祭：神恩与献祭的发生地
 
 /**
  * 需求词表。
@@ -192,28 +192,28 @@ export type CarriageFunction =
  * 编译错误——此前两处映射（能不能就地满足 / 去哪种车厢）各写一份，已经漂移过。
  */
 export type NeedKind =
-  | 'sleep'      // 疲劳
-  | 'eat'        // 饥饿
-  | 'bathe'      // 清洁
-  | 'pray'       // 压力（虔诚者）
-  | 'hide'       // 压力（怯懦者）
-  | 'relax'      // 压力（其余）
-  | 'indulge'    // 欲望（放纵者）
-  | 'confess'    // 欲望（高诚实者）
-  | 'submit'     // 欲望（顺从者）
-  | 'socialize'  // 社交
-  | 'solitude'   // 独处
-  | 'worship'    // 虔诚
-  | 'rest';      // 孕期疲劳
+    | 'sleep'      // 疲劳
+    | 'eat'        // 饥饿
+    | 'bathe'      // 清洁
+    | 'pray'       // 压力（虔诚者）
+    | 'hide'       // 压力（怯懦者）
+    | 'relax'      // 压力（其余）
+    | 'indulge'    // 欲望（放纵者）
+    | 'confess'    // 欲望（高诚实者）
+    | 'submit'     // 欲望（顺从者）
+    | 'socialize'  // 社交
+    | 'solitude'   // 独处
+    | 'worship'    // 虔诚
+    | 'rest';      // 孕期疲劳
 
 /**
  * 全局透视观测模式
  */
 export type ViewMode =
-  | 'all'       // 全知视角
-  | 'sanctuary' // 仅圣所视角
-  | 'abyss'     // 仅深渊视角
-  | 'occupied'; // 占用/焦点视角
+    | 'all'       // 全知视角
+    | 'sanctuary' // 仅圣所视角
+    | 'abyss'     // 仅深渊视角
+    | 'occupied'; // 占用/焦点视角
 
 /**
  * 一日之内的时段。
@@ -222,12 +222,12 @@ export type ViewMode =
  * 就是同一事实的第二个存放点，没有任何机制保证两者一致。
  */
 export type TimePeriod =
-  | 'dawn'      // 黎明
-  | 'morning'   // 早晨
-  | 'noon'      // 正午
-  | 'afternoon' // 下午
-  | 'evening'   // 傍晚
-  | 'night';    // 夜晚
+    | 'dawn'      // 黎明
+    | 'morning'   // 早晨
+    | 'noon'      // 正午
+    | 'afternoon' // 下午
+    | 'evening'   // 傍晚
+    | 'night';    // 夜晚
 
 // ============================================================================
 // 叙事与记忆类型 (Narrative & Memory Types)
@@ -237,39 +237,39 @@ export type TimePeriod =
  * 记忆溯源分类
  */
 export type MemoryCategory =
-  | 'childhood'  // 童年回忆
-  | 'family'     // 家庭记忆
-  | 'friendship' // 友谊过往
-  | 'romance'    // 浪漫关系
-  | 'trauma'     // 创伤体验
-  | 'train'      // 列车生活
-  | 'master'     // 关于主人的记忆
-  | 'abyss';     // 深渊映射
+    | 'childhood'  // 童年回忆
+    | 'family'     // 家庭记忆
+    | 'friendship' // 友谊过往
+    | 'romance'    // 浪漫关系
+    | 'trauma'     // 创伤体验
+    | 'train'      // 列车生活
+    | 'master'     // 关于主人的记忆
+    | 'abyss';     // 深渊映射
 
 /**
  * 妊娠阶段
  */
 export type PregnancyStage =
-  | 'none'        // 未孕
-  | 'conception'  // 受孕期
-  | 'early'       // 孕早期
-  | 'middle'      // 孕中期
-  | 'late'        // 孕晚期
-  | 'labor';      // 临产/分娩期
+    | 'none'        // 未孕
+    | 'conception'  // 受孕期
+    | 'early'       // 孕早期
+    | 'middle'      // 孕中期
+    | 'late'        // 孕晚期
+    | 'labor';      // 临产/分娩期
 
 /**
  * 人际关系映射图谱
  */
 export const RelationType = {
-  STRANGER: 'stranger',
-  ACQUAINTANCE: 'acquaintance',
-  FRIEND: 'friend',
-  CLOSE_FRIEND: 'close_friend',
-  RIVAL: 'rival',
-  ENEMY: 'enemy',
-  PROTECTOR: 'protector',
-  DEPENDENT: 'dependent',
-  ACCOMPLICE: 'accomplice',
+    STRANGER: 'stranger',
+    ACQUAINTANCE: 'acquaintance',
+    FRIEND: 'friend',
+    CLOSE_FRIEND: 'close_friend',
+    RIVAL: 'rival',
+    ENEMY: 'enemy',
+    PROTECTOR: 'protector',
+    DEPENDENT: 'dependent',
+    ACCOMPLICE: 'accomplice',
 } as const;
 
 export type RelationType = (typeof RelationType)[keyof typeof RelationType];
@@ -278,13 +278,13 @@ export type RelationType = (typeof RelationType)[keyof typeof RelationType];
  * 水仙协议执行阶段
  */
 export type NarcissusStage =
-  | 'none'      // 尚未触发
-  | 'choice'    // 面临抉择
-  | 'departed'  // 已离去
-  | 'fading'    // 意识消散中
-  | 'invitation'// 收到邀请
-  | 'rejected'  // 拒绝邀请
-  | 'returned'; // 协议回归
+    | 'none'      // 尚未触发
+    | 'choice'    // 面临抉择
+    | 'departed'  // 已离去
+    | 'fading'    // 意识消散中
+    | 'invitation'// 收到邀请
+    | 'rejected'  // 拒绝邀请
+    | 'returned'; // 协议回归
 
 // ============================================================================
 // 事件与系统类型 (Event & System Types)
@@ -294,33 +294,33 @@ export type NarcissusStage =
  * 全局事件触发类型
  */
 export type EventType =
-  | 'nightmare'        // 触发噩梦
-  | 'breakdown'        // 精神崩溃
-  | 'awakening'        // 意识觉醒
-  | 'confession'       // 发起告解
-  | 'friendship'       // 建立羁绊
-  | 'betrayal'         // 关系背叛
-  | 'comfort'          // 互相慰藉
-  | 'conflict'         // 物理/心理冲突
-  | 'abyss_vision'     // 凝视深渊视界
-  | 'grace_miracle'    // 神恩降临
-  | 'rank_ceremony'    // 阶级晋升仪式
-  | 'pregnancy'        // 宣布受孕
-  | 'birth'            // 新生降临
-  | 'hub_anomaly'      // 枢纽发生异常
-  | 'resonance'        // 灵能共鸣涌动
-  | 'watcher_alert';   // 守望者警告
+    | 'nightmare'        // 触发噩梦
+    | 'breakdown'        // 精神崩溃
+    | 'awakening'        // 意识觉醒
+    | 'confession'       // 发起告解
+    | 'friendship'       // 建立羁绊
+    | 'betrayal'         // 关系背叛
+    | 'comfort'          // 互相慰藉
+    | 'conflict'         // 物理/心理冲突
+    | 'abyss_vision'     // 凝视深渊视界
+    | 'grace_miracle'    // 神恩降临
+    | 'rank_ceremony'    // 阶级晋升仪式
+    | 'pregnancy'        // 宣布受孕
+    | 'birth'            // 新生降临
+    | 'hub_anomaly'      // 枢纽发生异常
+    | 'resonance'        // 灵能共鸣涌动
+    | 'watcher_alert';   // 守望者警告
 
 /**
  * 神恩赐福类型
  */
 export const GraceType = {
-  FOOD: 'food',             // 赐予食物
-  SOLITUDE: 'solitude',     // 独处庇护
-  GENTLE_TOUCH: 'gentle',   // 温柔触碰
-  MEMORY_GLIMPSE: 'memory', // 记忆碎片闪回
-  RANK_BOOST: 'rank',       // 阶级跃升
-  REST: 'rest',             // 强制安息恢复
+    FOOD: 'food',             // 赐予食物
+    SOLITUDE: 'solitude',     // 独处庇护
+    GENTLE_TOUCH: 'gentle',   // 温柔触碰
+    MEMORY_GLIMPSE: 'memory', // 记忆碎片闪回
+    RANK_BOOST: 'rank',       // 阶级跃升
+    REST: 'rest',             // 强制安息恢复
 } as const;
 
 export type GraceType = (typeof GraceType)[keyof typeof GraceType];
@@ -330,43 +330,43 @@ export type GraceType = (typeof GraceType)[keyof typeof GraceType];
  * @remarks 分为：属性临界 | 活动生命周期 | 社交生命周期 | 位置/周期变化
  */
 export type ChangeType =
-  // 属性临界
-  | 'sanity_critical'   // 理智临界
-  | 'sanity_recovered'  // 理智恢复
-  | 'stress_high'       // 压力高企
-  | 'stress_relieved'   // 压力释放
-  | 'lust_high'         // 欲求高涨
-  | 'lust_normal'       // 欲求平复
-  | 'hunger_urgent'     // 极度饥饿
-  | 'fatigue_exhausted' // 极度疲劳
-  | 'hygiene_dirty'     // 严重污垢
-  // 状态标签
-  | 'status_added'      // 新增状态附加
-  | 'status_removed'    // 状态移除
-  // 活动生命周期
-  | 'activity_started'  // 行为开始
-  | 'activity_ended'    // 行为结束
-  // 社交生命周期
-  | 'social_started'    // 社交发起
-  | 'social_ended'      // 社交中止
-  // 位置/周期
-  | 'location_changed'  // 区域位移
-  | 'ovulation_start'   // 排卵期开始
-  | 'ovulation_end';    // 排卵期结束
+    // 属性临界
+    | 'sanity_critical'   // 理智临界
+    | 'sanity_recovered'  // 理智恢复
+    | 'stress_high'       // 压力高企
+    | 'stress_relieved'   // 压力释放
+    | 'lust_high'         // 欲求高涨
+    | 'lust_normal'       // 欲求平复
+    | 'hunger_urgent'     // 极度饥饿
+    | 'fatigue_exhausted' // 极度疲劳
+    | 'hygiene_dirty'     // 严重污垢
+    // 状态标签
+    | 'status_added'      // 新增状态附加
+    | 'status_removed'    // 状态移除
+    // 活动生命周期
+    | 'activity_started'  // 行为开始
+    | 'activity_ended'    // 行为结束
+    // 社交生命周期
+    | 'social_started'    // 社交发起
+    | 'social_ended'      // 社交中止
+    // 位置/周期
+    | 'location_changed'  // 区域位移
+    | 'ovulation_start'   // 排卵期开始
+    | 'ovulation_end';    // 排卵期结束
 
 /**
  * 系统日志层级拓扑
  */
 export type LogType =
-  | 'player'    // 玩家指令
-  | 'system'    // 系统通知
-  | 'narrative' // AI 生成的叙事
-  | 'thought'   // 角色心声
-  | 'abyss'     // 深渊现象
-  | 'grace'     // 神恩事件
-  | 'ritual'    // 仪式相关
-  | 'movement'  // 移动记录
-  | 'social';   // 社交记录
+    | 'player'    // 玩家指令
+    | 'system'    // 系统通知
+    | 'narrative' // AI 生成的叙事
+    | 'thought'   // 角色心声
+    | 'abyss'     // 深渊现象
+    | 'grace'     // 神恩事件
+    | 'ritual'    // 仪式相关
+    | 'movement'  // 移动记录
+    | 'social';   // 社交记录
 
 // ============================================
 // 社交与互动类型 (Social & Interaction Types)
@@ -376,16 +376,16 @@ export type LogType =
  * 社交行为向量类型
  */
 export type SocialInteractionType =
-  | 'chat'    // 闲谈
-  | 'comfort' // 安抚
-  | 'gossip'  // 秘闻/八卦
-  | 'argue'   // 争执
-  | 'bully'   // 霸凌
-  | 'seduce'  // 魅惑
-  | 'confide' // 吐露心声
-  | 'pray'    // 共祈
-  | 'huddle'  // 依偎
-  | 'avoid';  // 规避
+    | 'chat'    // 闲谈
+    | 'comfort' // 安抚
+    | 'gossip'  // 秘闻/八卦
+    | 'argue'   // 争执
+    | 'bully'   // 霸凌
+    | 'seduce'  // 魅惑
+    | 'confide' // 吐露心声
+    | 'pray'    // 共祈
+    | 'huddle'  // 依偎
+    | 'avoid';  // 规避
 
 // ============================================
 // 媒体与音频类型 (Media & Audio Types)
@@ -395,11 +395,11 @@ export type SocialInteractionType =
  * 音频轨道分类
  */
 export const SoundCategory = {
-  AMBIENT: 'ambient', // 环境底噪
-  UI: 'ui',           // 界面交互音效
-  EVENT: 'event',     // 事件触发音效
-  VOICE: 'voice',     // 角色语音
-  MUSIC: 'music',     // 背景音乐
+    AMBIENT: 'ambient', // 环境底噪
+    UI: 'ui',           // 界面交互音效
+    EVENT: 'event',     // 事件触发音效
+    VOICE: 'voice',     // 角色语音
+    MUSIC: 'music',     // 背景音乐
 } as const;
 
 export type SoundCategory = (typeof SoundCategory)[keyof typeof SoundCategory];
@@ -408,12 +408,12 @@ export type SoundCategory = (typeof SoundCategory)[keyof typeof SoundCategory];
  * 抽象音频生成器工厂契约
  */
 export type SoundGeneratorFn = (
-  ctx: AudioContext,
-  dest: AudioNode,
-  reverbDest?: AudioNode,
+    ctx: AudioContext,
+    dest: AudioNode,
+    reverbDest?: AudioNode,
 ) => {
-  stop: () => void;
-  nodes: AudioNode[];
+    stop: () => void;
+    nodes: AudioNode[];
 };
 
 // ============================================================================
@@ -424,32 +424,32 @@ export type SoundGeneratorFn = (
  * 命名语源系分类
  */
 export type NameOrigin =
-  // 东亚语系
-  | 'chinese' | 'japanese' | 'korean' | 'vietnamese'
-  // 英语文化圈
-  | 'english' | 'american' | 'irish' | 'scottish'
-  // 罗曼语族
-  | 'french' | 'spanish' | 'italian' | 'portuguese' | 'romanian'
-  // 日耳曼/北欧语族
-  | 'german' | 'dutch' | 'swedish' | 'norwegian' | 'danish' | 'finnish' | 'icelandic'
-  // 斯拉夫/东欧语族
-  | 'russian' | 'ukrainian' | 'polish' | 'czech' | 'hungarian' | 'serbian' | 'croatian' | 'bulgarian'
-  // 中东/地中海语族
-  | 'greek' | 'turkish' | 'arabic' | 'persian' | 'hebrew'
-  // 南亚/东南亚语族
-  | 'indian' | 'thai' | 'indonesian' | 'filipino'
-  // 拉美语族
-  | 'brazilian' | 'mexican' | 'argentinian'
-  // 非洲语族
-  | 'nigerian' | 'ethiopian' | 'egyptian' | 'southafrican'
-  // 神话语源
-  | 'mythical';
+    // 东亚语系
+    | 'chinese' | 'japanese' | 'korean' | 'vietnamese'
+    // 英语文化圈
+    | 'english' | 'american' | 'irish' | 'scottish'
+    // 罗曼语族
+    | 'french' | 'spanish' | 'italian' | 'portuguese' | 'romanian'
+    // 日耳曼/北欧语族
+    | 'german' | 'dutch' | 'swedish' | 'norwegian' | 'danish' | 'finnish' | 'icelandic'
+    // 斯拉夫/东欧语族
+    | 'russian' | 'ukrainian' | 'polish' | 'czech' | 'hungarian' | 'serbian' | 'croatian' | 'bulgarian'
+    // 中东/地中海语族
+    | 'greek' | 'turkish' | 'arabic' | 'persian' | 'hebrew'
+    // 南亚/东南亚语族
+    | 'indian' | 'thai' | 'indonesian' | 'filipino'
+    // 拉美语族
+    | 'brazilian' | 'mexican' | 'argentinian'
+    // 非洲语族
+    | 'nigerian' | 'ethiopian' | 'egyptian' | 'southafrican'
+    // 神话语源
+    | 'mythical';
 
 /** 情境类型 */
 export type SituationType =
-  | 'threat'      // 威胁情境：人身安全受威胁、社会排斥
-  | 'opportunity' // 机会/奖赏情境：晋升机会、新项目、社交场合
-  | 'task'        // 任务/规则情境：工作任务、考试、合同签订
-  | 'intimate'    // 亲密情境：亲密关系、家庭互动
-  | 'competition' // 竞争情境：资源争夺、地位竞争
-  | 'ambiguous';  // 模糊情境：不确定性高的新环境
+    | 'threat'      // 威胁情境：人身安全受威胁、社会排斥
+    | 'opportunity' // 机会/奖赏情境：晋升机会、新项目、社交场合
+    | 'task'        // 任务/规则情境：工作任务、考试、合同签订
+    | 'intimate'    // 亲密情境：亲密关系、家庭互动
+    | 'competition' // 竞争情境：资源争夺、地位竞争
+    | 'ambiguous';  // 模糊情境：不确定性高的新环境
