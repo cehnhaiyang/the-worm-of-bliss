@@ -140,7 +140,6 @@ import {
     PANTY_COLORS,
     PANTY_MATERIALS,
     PANTY_TYPES,
-    PERSONALITY_MODS,
     POSITIVE_TRAITS,
     SHOE_COLORS,
     SHOE_MATERIALS,
@@ -557,8 +556,7 @@ class MaidenRelationship {
      * 计算单向初始关系参数（深度计算人格耦合）。
      *
      * 全部阈值以 z 为单位：v1 里的 20/30/65/35/70 是 0–100 量表上的刻度，
-     * 换算后即 2σ/3σ/±1.5σ/±2σ。相似度与互补性取自 PERSONALITY_MODS，
-     * 不再就地写数字。
+     * 换算后即 2σ/3σ/±1.5σ/±2σ。
      */
     private createInitialRelationship(maiden: Maiden, target: Maiden, gameTimePassed: number): Relationship {
         let baseAffinity = Math.floor(Math.random() * 40) - 10;
@@ -579,26 +577,26 @@ class MaidenRelationship {
 
         // 相似度按平均域间距离（z）分档
         if (domainDistance < 1.0) {
-            baseAffinity += PERSONALITY_MODS.RELATIONSHIP_SIMILARITY_HIGH_BONUS;
+            baseAffinity += 15;
         } else if (domainDistance < 2.0) {
-            baseAffinity += PERSONALITY_MODS.RELATIONSHIP_SIMILARITY_MEDIUM_BONUS;
+            baseAffinity += 8;
         }
 
         // 情绪性互补：一方高一方低时相互补足
         if ((mDomain.E > 1.5 && tDomain.E < -1.5) || (mDomain.E < -1.5 && tDomain.E > 1.5)) {
-            baseAffinity += PERSONALITY_MODS.RELATIONSHIP_COMPLEMENTARY_E_BONUS;
+            baseAffinity += 12;
         }
 
         if ((mDomain.X > 2 && tDomain.X < -2) || (mDomain.X < -2 && tDomain.X > 2)) {
-            baseAffinity -= PERSONALITY_MODS.RELATIONSHIP_CONFLICT_X_PENALTY;
+            baseAffinity -= 5;
         }
         if (mDomain.A < -1.5 && tDomain.A > 1.5) {
-            baseAffinity -= PERSONALITY_MODS.RELATIONSHIP_CONFLICT_A_PENALTY;
+            baseAffinity -= 10;
         }
 
         // 共情差异：权重为 0–1（0.5 即人群均值），换算为对好感度的修正
         const avgEmpathy = (m.weights.empathy + t.weights.empathy) / 2;
-        baseAffinity += Math.round((avgEmpathy - 0.5) * PERSONALITY_MODS.RELATIONSHIP_EMPATHY_MOD);
+        baseAffinity += Math.round((avgEmpathy - 0.5) * 20);
 
         // 诚信极低者与被剥削倾向者之间更易形成依附型关系
         const mHonesty = (maiden.isshex.facets.sincerity + maiden.isshex.facets.fairness
@@ -3560,21 +3558,21 @@ class MaidenBehavior {
         const facets = maiden.isshex.facets;
         const weights = view.weights;
 
-        let peekChance = PERSONALITY_MODS.ABYSS_PEEK_BASE;
+        let peekChance = 0.05;
 
-        if (attrs.sanity < 50) peekChance += PERSONALITY_MODS.ABYSS_PEEK_LOW_SANITY;
-        if (attrs.sanity < 30) peekChance += PERSONALITY_MODS.ABYSS_PEEK_VERY_LOW_SANITY;
-        if (attrs.corruption > 40) peekChance += PERSONALITY_MODS.ABYSS_PEEK_HIGH_CORRUPTION;
-        if (attrs.corruption > 70) peekChance += PERSONALITY_MODS.ABYSS_PEEK_VERY_HIGH_CORRUPTION;
-        if (attrs.stress > 80) peekChance += PERSONALITY_MODS.ABYSS_PEEK_HIGH_STRESS;
+        if (attrs.sanity < 50) peekChance += 0.1;
+        if (attrs.sanity < 30) peekChance += 0.2;
+        if (attrs.corruption > 40) peekChance += 0.1;
+        if (attrs.corruption > 70) peekChance += 0.15;
+        if (attrs.stress > 80) peekChance += 0.1;
 
-        peekChance *= (1 + view.domains.O * PERSONALITY_MODS.ABYSS_PEEK_O_MOD * 10);
-        peekChance *= (1 - facets.fearfulness * PERSONALITY_MODS.ABYSS_PEEK_FEAR_MOD * 10);
-        peekChance *= (1 + weights.riskTolerance * PERSONALITY_MODS.ABYSS_PEEK_RISK_MOD);
+        peekChance *= (1 + view.domains.O * 0.01 * 10);
+        peekChance *= (1 - facets.fearfulness * 0.008 * 10);
+        peekChance *= (1 + weights.riskTolerance * 0.5);
         // 冷酷冲动（低恐惧/低感伤/低审慎）者对深渊的吸引力更强；代理仅用于此处的倾向修正
-        peekChance *= (1 + view.proxies.psychopathy * PERSONALITY_MODS.ABYSS_PEEK_PSYCHOPATHY_MOD * 10);
+        peekChance *= (1 + view.proxies.psychopathy * 0.005 * 10);
 
-        if (maiden.status.includes('voyeur')) peekChance += PERSONALITY_MODS.ABYSS_PEEK_VOYEUR_BONUS;
+        if (maiden.status.includes('voyeur')) peekChance += 0.2;
 
         const clampedPeekChance = Math.min(1, Math.max(0, peekChance));
         if (Math.random() < clampedPeekChance) {
@@ -5165,7 +5163,8 @@ class MaidenSystem {
         const carriageFunc = CARRIAGE_FUNCTIONS[carriage.type];
 
         let attrs = { ...maiden.attributes };
-        const sanityMod = 1 - domains.C * PERSONALITY_MODS.SANITY_C_MOD * 10;
+        // 高尽责者理智流失更慢（C 每 1σ 折减 0.08 倍率）
+        const sanityMod = 1 - domains.C * 0.008 * 10;
         const stressMod = 1 / behaviorWeights.stressResistance;
         const lustMod = behaviorWeights.lustSensitivity;
 
@@ -5267,15 +5266,15 @@ class MaidenSystem {
                 break;
             }
             case 'chatting': {
-                const socialBonus = 1 + domains.X * PERSONALITY_MODS.FATIGUE_CHAT_LOW_X * 10;
+                const socialBonus = 1 + domains.X * 0.01 * 10;
                 attrs.stress = clamp(attrs.stress - 0.2 * deltaMinutes * socialBonus, 0, 100);
                 if (domains.X > 0.5) attrs.sanity = clamp(attrs.sanity + 0.1 * deltaMinutes, 0, 100);
                 if (domains.X < -1.0) attrs.stress = clamp(attrs.stress + 0.1 * deltaMinutes, 0, 100);
                 break;
             }
             case 'observing': {
-                const sanityDrain = 1.5 * (1 + domains.O * PERSONALITY_MODS.ABYSS_PEEK_O_MOD * 10);
-                const stressGain = 1.0 * (1 - facets.fearfulness * PERSONALITY_MODS.ABYSS_PEEK_FEAR_MOD * 10);
+                const sanityDrain = 1.5 * (1 + domains.O * 0.01 * 10);
+                const stressGain = 1.0 * (1 - facets.fearfulness * 0.008 * 10);
                 attrs.sanity = clamp(attrs.sanity - sanityDrain * deltaMinutes, 0, 100);
                 attrs.stress = clamp(attrs.stress + stressGain * deltaMinutes, 0, 100);
                 attrs.corruption = clamp(attrs.corruption + 0.2 * deltaMinutes, 0, 100);
@@ -5332,7 +5331,8 @@ class MaidenSystem {
     private _calcSensitivity(cycleDay: number): number {
         if (cycleDay >= 12 && cycleDay <= 16) {
             const distance = Math.abs(cycleDay - 14);
-            return PERSONALITY_MODS.OVULATION_PEAK_SENSITIVITY - (distance * 0.1);
+            // 排卵峰值 1.5，向两侧每天递减 0.1
+            return 1.5 - (distance * 0.1);
         } else if (cycleDay >= 1 && cycleDay <= 4) {
             return 0.8 + (cycleDay * 0.025);
         } else if (cycleDay >= 25 && cycleDay <= 28) {
@@ -5505,8 +5505,8 @@ class MaidenSystem {
             elapsedDays
         );
 
-        // P3：状态偏离相对个人基线分档；压力放大威胁评价（§4.3.2 的 η 项）
-        const threatBias = 1 + PERSONALITY_MODS.THREAT_APPRAISAL_ETA * maiden.isshex.facets.anxiety;
+        // P3：状态偏离相对个人基线分档；压力放大威胁评价（§4.3.2 的 η 项，取 0.25）
+        const threatBias = 1 + 0.25 * maiden.isshex.facets.anxiety;
         const deviationSquared = this._computeDeviationSquared(expressedDomains, thetaDomains) * Math.max(0, threatBias);
 
         // P4：长期漂移
