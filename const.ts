@@ -214,12 +214,16 @@ export const formatGameTime = (gameTimeMs: number): string => {
 };
 
 /**
- * 格式化实体精确年龄标识
+ * 格式化实体精确年龄标识。
+ *
+ * 六个字段是同一段时长的定位切分：年恒为 365 天（与 `maiden.age` 同源），月取年的 1/12。
+ * 月不能独立取 30 天——12×30=360≠365 时"1 年"与"12 个月"会互斥地描述同一段时长，
+ * 真实存档里确实出现过 `16.12.1.17.49.46` 这种登车年龄。
  */
 export const formatPreciseAge = (ageInMs: number): string => {
   // 单位只在本函数内使用，且每个都用两次，因此就地命名
   const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
-  const MS_PER_MONTH = 30 * 24 * 60 * 60 * 1000;
+  const MS_PER_MONTH = MS_PER_YEAR / 12;
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const MS_PER_HOUR = 60 * 60 * 1000;
   const MS_PER_MINUTE = 60 * 1000;
