@@ -437,6 +437,8 @@ export interface RankDefinition {
     tamper: RankTamperPermission;
     /** 晋升仪式旁白；unranked 无仪式 */
     ceremonyText: string[];
+    /** 晋升到本档时自动广播的系统消息；unranked 不是晋升目标，故不声明 */
+    promotionBroadcast?: string;
 }
 
 // ============================================================================

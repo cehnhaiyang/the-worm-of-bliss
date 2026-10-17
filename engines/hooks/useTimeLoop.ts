@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange, TimePeriod } from '../../meta';
-import { GAME_CONFIG, isTemplateAccessible } from '../../constants';
+import { GAME_CONFIG, isTemplateAccessible, rankPromotionBroadcast } from '../../constants';
 import { maidenSystem, carriageSystem } from '../systems';
 import { audioService } from '../services';
 import { getCurrentCarriageId, stepMovement, completeMovement, cancelMovement, formatGameTime, getTimePeriod } from '../../const';
@@ -292,6 +292,11 @@ export const useTimeLoop = ({
         addLog('system', narcissusResult.log, 'SYSTEM', getCurrentCarriageId(updatedMaiden));
       }
       if (narcissusResult.maidenUpdate && Object.keys(narcissusResult.maidenUpdate).length > 0) {
+        // 原等级必须在合并前读出：广播词按"升到哪一档"取，判据需要起点
+        const broadcast = narcissusResult.maidenUpdate.rank
+          ? rankPromotionBroadcast(updatedMaiden.rank, narcissusResult.maidenUpdate.rank)
+          : null;
+        if (broadcast) addLog('system', broadcast, 'SYSTEM', getCurrentCarriageId(updatedMaiden));
         updatedMaiden = { ...updatedMaiden, ...narcissusResult.maidenUpdate };
       }
 
