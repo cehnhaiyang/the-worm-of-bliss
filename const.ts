@@ -249,6 +249,20 @@ export const formatPreciseAge = (ageInMs: number): string => {
   return `${years}.${months}.${days}.${hours}.${minutes}.${seconds}`;
 };
 
+/**
+ * 登车时的精确年龄。
+ *
+ * `arrivalTimestamp` 是相对开局的游戏时刻，而登车发生在开局之前，所以它恒为负
+ * （唯一调用点 `generateMaidens` 传的是 gameTimePassed = 0），登车年龄即 `initialAgeMs`
+ * 加上这个偏移。曾经落盘的 `boardingAge` 字段就是这个值的快照——格式一改便永久过期，
+ * 没有任何代码会重算它，故改为现算。
+ *
+ * 非正值一概不接受：那说明该戳属于另一套时钟（旧存档里存的是墙上时钟 epoch），
+ * 当偏移用会算出七十多岁的登车年龄。这类数据没有可用的游戏时刻，只能按"开局即登车"处理。
+ */
+export const formatBoardingAge = (maiden: Maiden): string =>
+  formatPreciseAge(maiden.initialAgeMs + Math.min(0, maiden.arrivalTimestamp));
+
 export const msToMinutes = (ms: number): number => ms / (60 * 1000);
 
 export const minutesToMs = (minutes: number): number => minutes * (60 * 1000);

@@ -609,7 +609,6 @@ export interface Maiden {
   nameOrigin: NameOrigin;
   age: number;
   initialAgeMs: number;       // 初始化年龄时间戳偏移
-  boardingAge: string;        // 登车时表现年龄段
   birthTimestamp: number;
   description: string;
 

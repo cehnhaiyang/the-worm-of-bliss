@@ -76,7 +76,6 @@ import {
     deriveDomains,
     DOMAIN_FACETS,
     findNearestCarriageByFunction,
-    formatPreciseAge,
     generateId,
     getAllRelationships,
     getCurrentCarriageId,
@@ -2860,7 +2859,7 @@ class MaidenGenerator {
 
         const arrivalDays = Math.floor(Math.random() * 100);
         const arrivalTimestamp = gameTimePassed - arrivalDays * 24 * 60 * 60 * 1000;
-        const { age, initialAgeMs, boardingAge } = this.generateAgeData(arrivalTimestamp, gameTimePassed);
+        const { age, initialAgeMs } = this.generateAgeData();
         const birthTimestamp = gameTimePassed - initialAgeMs;
 
         const isshex = this.generateISShexPersonality(gameTimePassed);
@@ -2880,7 +2879,6 @@ class MaidenGenerator {
             nameOrigin,
             age,
             initialAgeMs,
-            boardingAge,
             birthTimestamp,
             description,
             physical,
@@ -3219,19 +3217,14 @@ class MaidenGenerator {
         };
     }
 
-    generateAgeData(arrivalTimestamp: number, gameTimePassed: number): { age: number; initialAgeMs: number; boardingAge: string } {
+    generateAgeData(): { age: number; initialAgeMs: number } {
         const ageYears = randomInt(GAME_CONFIG.MAIDEN_AGE.MIN, GAME_CONFIG.MAIDEN_AGE.MAX);
-        const now = gameTimePassed;
         const msPerYear = 365 * 24 * 60 * 60 * 1000;
         const initialAgeMs = (ageYears * msPerYear) + randomInt(0, msPerYear);
-        const timeOnTrain = Math.max(0, now - arrivalTimestamp);
-        const boardingAgeMs = Math.max(0, initialAgeMs - timeOnTrain);
-        const boardingAge = formatPreciseAge(boardingAgeMs);
 
         return {
             age: ageYears,
-            initialAgeMs,
-            boardingAge
+            initialAgeMs
         };
     }
 }

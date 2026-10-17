@@ -22,7 +22,7 @@ import {
     RawMemoryNode,
     SystemState,
 } from '../../meta';
-import { PERSONALITY_STATE_LABELS, SIGNATURE_LABELS } from '../../const';
+import { PERSONALITY_STATE_LABELS, SIGNATURE_LABELS, formatBoardingAge } from '../../const';
 import {
     ATTIRE_STATE_LABELS,
     getCarriageTemplate,
@@ -536,7 +536,7 @@ ${personality}
 当前年龄: ${maiden.age}
 
 [登车档案 (Boarding Profile)]
-登车时点: 距今约 ${daysOnTrain} 天前 (当时年龄: ${maiden.boardingAge})
+登车时点: 距今约 ${daysOnTrain} 天前 (当时年龄: ${formatBoardingAge(maiden)})
 初始外貌: ${appearance}
 初始着装 (登车时): ${initialAttire}
 (注意: 最后一个记忆节点必须反映她登车时的状态，包括上述着装。)
