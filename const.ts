@@ -21,7 +21,7 @@ import {
   PregnancyStats,
   RelationshipStats
 } from './meta';
-import { getCarriageTemplate, TIME_CONFIG, GRACE_REWARDS, GAME_CONFIG } from './constants';
+import { getCarriageTemplate, isTemplateAccessible, TIME_CONFIG, GRACE_REWARDS, GAME_CONFIG } from './constants';
 
 // ============================================
 // 1. 基础数学与概率
@@ -278,6 +278,10 @@ const seededRandom = (seed: number): number => {
  *
  * 行为决策挑选目的地的唯一入口。车厢种类是开放集合，因此这里只匹配功能、不匹配
  * 具体车厢——新增车厢只要声明了功能就被自动纳入候选。
+ *
+ * **可能返回 `current` 本身**：距离为 0 也算最近。要"换一节车厢"的调用方必须自己
+ * 判 `!== current.id`；只想"确保她待在能做这件事的地方"的调用方不必判——拿着当前
+ * 车厢去移动会被就地开始活动处理。
  */
 export const findNearestCarriageByFunction = (
   current: Carriage,
@@ -290,7 +294,7 @@ export const findNearestCarriageByFunction = (
   let minDistance = Infinity;
 
   for (const [id, carriage] of allCarriages) {
-    if (!carriage.isAccessible) continue;
+    if (!isTemplateAccessible(carriage.templateId)) continue;
     if (!getCarriageTemplate(carriage.templateId)?.function.includes(fn)) continue;
 
     const distance = manhattanDistance(current.position, carriage.position);
@@ -433,12 +437,10 @@ export const setCurrentCarriageId = (maiden: Maiden, carriageId: string): Maiden
  * 构建初始化运动流转聚合状态机
  */
 export const createUnifiedMovementState = (
-  currentCarriageId: string,
-  intent?: MovementIntent
+  currentCarriageId: string
 ): UnifiedMovementState => ({
   currentCarriageId,
-  intent,
-  isMoving: intent?.movementState === 'moving' || intent?.movementState === 'planning',
+  isMoving: false,
 });
 
 /**
@@ -468,7 +470,6 @@ export const startMovement = (
   const intent: MovementIntent = {
     targetCarriageId,
     intendedActivity,
-    movementState: movementPath.length > 0 ? 'moving' : 'arriving',
     movementPath,
   };
 

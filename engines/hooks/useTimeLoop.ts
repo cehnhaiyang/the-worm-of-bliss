@@ -1,6 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange } from '../../meta';
-import { GAME_CONFIG, TIME_CONFIG, formatGameTime, getTimePeriod, TimePeriod } from '../../constants';
+import { GAME_CONFIG, TIME_CONFIG, formatGameTime, getTimePeriod, isTemplateAccessible, TimePeriod } from '../../constants';
 import { maidenSystem, carriageSystem } from '../systems';
 import { audioService } from '../services';
 import { getCurrentCarriageId, stepMovement, completeMovement, cancelMovement } from '../../const';
@@ -200,7 +200,7 @@ export const useTimeLoop = ({
           const fromCarriage = nextCarriages.get(fromId);
           const targetCarriage = nextCarriages.get(nextId);
 
-          if (fromCarriage && targetCarriage && targetCarriage.isAccessible) {
+          if (fromCarriage && targetCarriage && isTemplateAccessible(targetCarriage.templateId)) {
             nextCarriages.set(fromId, {
               ...fromCarriage,
               occupants: fromCarriage.occupants.filter(oid => oid !== id),
@@ -395,6 +395,13 @@ export const useTimeLoop = ({
           }
         }
         maidenSystem.relationship.decayRelationships(nextMaidens, gameDeltaMs);
+      }
+
+      // 群体行为是**按车厢**成立的，因此不在上面那趟逐人循环里。
+      // 配置只声明叙述，所以这里只播报，不改写参与者状态。
+      for (const carriage of nextCarriages.values()) {
+        const groupLog = maidenSystem.checkGroupBehavior(carriage, nextMaidens, now);
+        if (groupLog) addLog('social', groupLog, undefined, carriage.id);
       }
 
       pendingChanges.current.push(...allChanges);

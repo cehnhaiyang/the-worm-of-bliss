@@ -61,9 +61,9 @@ export const Detail: React.FC<DetailProps> = memo(({ carriage, occupantCount }) 
     if (!carriage) return <EmptyState />;
 
     const info = getCarriageTemplate(carriage.templateId);
-    const isAbyss = carriage.category === 'abyss';
-
     if (!info) return <EmptyState />;
+
+    const isAbyss = info.category === 'abyss';
 
     return (
         <div className={`panel ${isAbyss ? 'panel-abyss' : ''}`}>

@@ -6,7 +6,7 @@
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Carriage, ViewMode } from '../../meta';
-import { GAME_CONFIG, getCarriageTemplate } from '../../constants';
+import { GAME_CONFIG, getCarriageTemplate, isAbyssTemplate, isTemplateAccessible } from '../../constants';
 
 /**
  * 车厢底色，按 `subcategory` 分组而非逐个车厢指定。
@@ -75,8 +75,9 @@ const CarriageCell = memo<CarriageCellProps>(({
 }) => {
     if (!carriage) return <div className="aspect-square rounded bg-zinc-950/50" />;
 
-    const isAbyss = carriage.category === 'abyss';
     const occupantCount = carriage.occupants.length;
+    const isAbyss = isAbyssTemplate(carriage.templateId);
+    const isAccessible = isTemplateAccessible(carriage.templateId);
     const typeInfo = getCarriageTemplate(carriage.templateId);
     const bgColor = (typeInfo && SUBCATEGORY_COLORS[typeInfo.subcategory]) || 'bg-zinc-800';
     const icon = typeInfo?.icon;
@@ -94,10 +95,10 @@ const CarriageCell = memo<CarriageCellProps>(({
         ${isFocusedMaidenHere && !isMasterHere ? 'ring-1 ring-pink-500 z-10 shadow-[0_0_10px_rgba(236,72,153,0.3)]' : ''}
         ${!isHighlighted ? 'opacity-15' : 'opacity-100'}
         hover:brightness-130 hover:scale-105 hover:z-20 hover:border-zinc-600
-        ${!carriage.isAccessible ? 'opacity-10 cursor-not-allowed' : 'cursor-pointer'}
+        ${!isAccessible ? 'opacity-10 cursor-not-allowed' : 'cursor-pointer'}
       `}
             title={`${typeInfo?.nameCN || carriage.templateId} [${carriage.id}]\n占用: ${occupantCount}人`}
-            disabled={!carriage.isAccessible}
+            disabled={!isAccessible}
         >
             {/* 观测者标记 */}
             {isMasterHere && (
@@ -151,8 +152,9 @@ const Minimap = memo<MinimapProps>(({ grid, masterCol, viewportStart, onJump }) 
     <div className="p-2 bg-zinc-800/30 rounded-lg border border-zinc-700/50">
         <div className="flex gap-[1px]">
             {Array.from({ length: GAME_CONFIG.GRID_COLS }).map((_, col) => {
-                const hasOccupants = grid.some(row => row[col]?.occupants.length);
-                const hasAbyss = grid.some(row => row[col]?.category === 'abyss');
+                const column = grid.map(row => row[col]);
+                const hasOccupants = column.some(c => c !== null && c.occupants.length > 0);
+                const hasAbyss = column.some(c => c !== null && isAbyssTemplate(c.templateId));
                 const isMasterCol = masterCol === col;
                 const isInViewport = col >= viewportStart && col < viewportStart + GAME_CONFIG.VIEWPORT_SIZE;
 
@@ -184,8 +186,8 @@ interface HoverCardProps {
 }
 
 const HoverCard = memo<HoverCardProps>(({ carriage }) => {
-    const isAbyss = carriage.category === 'abyss';
     const typeInfo = getCarriageTemplate(carriage.templateId);
+    const isAbyss = isAbyssTemplate(carriage.templateId);
 
     return (
         <div className={`p-2.5 rounded-lg border text-xs ${isAbyss
@@ -245,7 +247,7 @@ export const Map: React.FC<MapProps> = memo(({
         let totalOccupants = 0, abyssCount = 0, sanctuaryCount = 0;
         carriages.forEach(c => {
             totalOccupants += c.occupants.length;
-            if (c.category === 'abyss') abyssCount++;
+            if (isAbyssTemplate(c.templateId)) abyssCount++;
             else sanctuaryCount++;
         });
         return { totalOccupants, abyssCount, sanctuaryCount };
@@ -271,10 +273,11 @@ export const Map: React.FC<MapProps> = memo(({
             return sliced.map(carriage => {
                 if (!carriage) return { carriage: null, isHighlighted: true };
 
+                const isAbyss = isAbyssTemplate(carriage.templateId);
                 let isHighlighted = true;
                 switch (viewMode) {
-                    case 'sanctuary': isHighlighted = carriage.category !== 'abyss'; break;
-                    case 'abyss': isHighlighted = carriage.category === 'abyss'; break;
+                    case 'sanctuary': isHighlighted = !isAbyss; break;
+                    case 'abyss': isHighlighted = isAbyss; break;
                     case 'occupied': isHighlighted = carriage.occupants.length > 0; break;
                 }
 

@@ -119,6 +119,7 @@ import {
     FACIAL_FEATURES,
     FETISHES,
     GAME_CONFIG,
+    GROUP_BEHAVIOR_CONFIG,
     getCarriageTemplate,
     GLOVE_COLORS,
     GLOVE_MATERIALS,
@@ -155,8 +156,10 @@ import {
     UNDERSHIRT_MATERIALS,
     UNDERSHIRT_TYPES,
     calculateDressLevel,
+    isAbyssTemplate,
     isBondageAccessory,
     isCarryableItem,
+    isTemplateAccessible,
 } from '../../constants';
 
 const MEMORY_CATEGORIES: readonly MemoryCategory[] = [
@@ -1058,6 +1061,56 @@ const CRITICAL_ACTIVITIES: readonly CharacterStatus[] = [
  */
 class MaidenSocialization {
     /**
+     * 车厢 → 上次群体行为检查的墙钟时间。
+     * 只是"下次什么时候再掷骰子"的运行期参数，不属于存档数据，重进后从零开始也没有副作用。
+     */
+    private lastGroupCheck = new Map<string, number>();
+
+    /**
+     * 群体行为检查（按车厢，不是按人）。
+     *
+     * 依次过闸：人数（MIN_GROUP_SIZE 与行为自身 minSize）、车厢功能、参与者均值，
+     * 然后按配置顺序掷概率，取第一个命中的行为——一次检查最多产生一条叙述，
+     * 否则同一刻可能叠出两三条互相矛盾的日志。
+     */
+    public checkGroupBehavior(
+        carriage: Carriage,
+        allMaidens: Map<string, Maiden>,
+        now: number
+    ): string | null {
+        if (carriage.occupants.length < GROUP_BEHAVIOR_CONFIG.MIN_GROUP_SIZE) return null;
+
+        const lastCheck = this.lastGroupCheck.get(carriage.id) ?? 0;
+        if (now - lastCheck < GROUP_BEHAVIOR_CONFIG.CHECK_INTERVAL_MS) return null;
+        this.lastGroupCheck.set(carriage.id, now);
+
+        // occupants 里可能残留已不在实体表中的 id，人数要以能取到的人为准
+        const participants = carriage.occupants
+            .map(id => allMaidens.get(id))
+            .filter((m): m is Maiden => m !== undefined);
+        if (participants.length < GROUP_BEHAVIOR_CONFIG.MIN_GROUP_SIZE) return null;
+
+        const functions = templateFunctions(carriage);
+
+        for (const behavior of GROUP_BEHAVIOR_CONFIG.BEHAVIORS) {
+            if (participants.length < behavior.minSize) continue;
+            if (behavior.requiredFunction && !functions.includes(behavior.requiredFunction)) continue;
+
+            if (behavior.condition) {
+                const { stat, direction, threshold } = behavior.condition;
+                const average = participants.reduce((sum, m) => sum + m.attributes[stat], 0) / participants.length;
+                if (direction === 'above' ? average <= threshold : average >= threshold) continue;
+            }
+
+            if (Math.random() < behavior.probability) {
+                return `${behavior.description}（${summarizeNames(participants)}）`;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * 单帧社交尝试。
      *
      * 依次过闸：同车厢人数、自身状态（睡眠/崩溃/移动中）、概率门、目标选取、目标状态。
@@ -1797,7 +1850,7 @@ class MaidenRandomEvent {
 
             // 5. 深渊幻视 (深渊空间负面效应)
             if (
-                carriage.category === 'abyss' &&
+                isAbyssTemplate(carriage.templateId) &&
                 maiden.attributes.sanity < 60 &&
                 probabilityCheck(EVENT_CONFIG.PROBABILITY.abyss_vision) &&
                 this.canTriggerGlobal('abyss_vision', now)
@@ -3239,6 +3292,15 @@ const MOOD_BEHAVIOR_MODIFIERS: Record<MoodState, {
 };
 
 /**
+ * 把一群人压成"甲、乙、丙 等5人"这样一小段。
+ * 日志行只有一行宽，长名单会把叙述本身挤掉。
+ */
+const summarizeNames = (participants: Maiden[]): string => {
+    const names = participants.slice(0, 3).map(m => m.name).join('、');
+    return participants.length > 3 ? `${names} 等${participants.length}人` : names;
+};
+
+/**
  * 车厢 id → 该车厢具备的功能。
  *
  * 情境类型与情境强度都随模板声明（见 `CARRIAGE_TEMPLATES`），引擎不再维护
@@ -3469,7 +3531,7 @@ class MaidenBehavior {
         }
 
         // 深渊观测强引力校验
-        if (currentCarriage.category !== 'abyss' && !isNight) {
+        if (!isAbyssTemplate(currentCarriage.templateId) && !isNight) {
             const observeAction = this.checkForAbyssObservation(maiden, currentCarriage, allCarriages, behavior, gameTimePassed);
             if (observeAction) {
                 return observeAction;
@@ -3544,7 +3606,7 @@ class MaidenBehavior {
             const neighborId = makeCarriageId(nr, nc);
             const neighbor = allCarriages.get(neighborId);
 
-            if (neighbor && neighbor.category === 'abyss') {
+            if (neighbor && isAbyssTemplate(neighbor.templateId)) {
                 adjacentAbyssId = neighborId;
                 break;
             }
@@ -3603,7 +3665,7 @@ class MaidenBehavior {
         }
         else if (view.domains.X > 0 && facets.fearfulness < 0) {
             const safeCarriages = Array.from(allCarriages.values())
-                .filter(c => c.category !== 'abyss' && c.isAccessible);
+                .filter(c => !isAbyssTemplate(c.templateId) && isTemplateAccessible(c.templateId));
             if (safeCarriages.length > 0) {
                 const target = safeCarriages[Math.floor(Math.random() * safeCarriages.length)];
                 return this.executeMovement(maiden, target.id, 'wandering', allCarriages, gameTimePassed);
@@ -3794,7 +3856,7 @@ class MaidenBehavior {
                 if (visited.has(neighborId)) continue;
 
                 const neighbor = allCarriages.get(neighborId);
-                if (neighbor && neighbor.isAccessible) {
+                if (neighbor && isTemplateAccessible(neighbor.templateId)) {
                     visited.add(neighborId);
                     queue.push({
                         id: neighborId,
@@ -3822,7 +3884,7 @@ class MaidenBehavior {
         let maxOccupants = 2;
 
         for (const [id, c] of allCarriages) {
-            if (c.category === 'abyss' || !c.isAccessible) continue;
+            if (isAbyssTemplate(c.templateId) || !isTemplateAccessible(c.templateId)) continue;
             if (c.occupants.length > maxOccupants) {
                 maxOccupants = c.occupants.length;
                 best = id;
@@ -3833,7 +3895,7 @@ class MaidenBehavior {
 
     private findSafeAbyssCarriage(allCarriages: Map<string, Carriage>): string | null {
         for (const [id, c] of allCarriages) {
-            if (c.isAccessible && TIER1_ABYSS_IDS.includes(c.templateId)) {
+            if (isTemplateAccessible(c.templateId) && TIER1_ABYSS_IDS.includes(c.templateId)) {
                 return id;
             }
         }
@@ -5100,7 +5162,7 @@ class MaidenSystem {
         const maidens = new Map<string, Maiden>();
         const carriageIds = Array.from(carriages.keys()).filter(id => {
             const c = carriages.get(id)!;
-            return c.isAccessible && c.category !== 'abyss';
+            return isTemplateAccessible(c.templateId) && !isAbyssTemplate(c.templateId);
         });
 
         const usedNames = new Set<string>();
@@ -5205,7 +5267,7 @@ class MaidenSystem {
 
         attrs = this._applyActivityEffects(maiden, attrs, deltaMinutes, carriageFunctions, domains, facets, RATES);
 
-        if (carriage.category === 'abyss') {
+        if (isAbyssTemplate(carriage.templateId)) {
             attrs.sanity = clamp(attrs.sanity - deltaMinutes * RATES.SANITY_ABYSS_DRAIN * sanityMod);
             attrs.stress = clamp(attrs.stress + deltaMinutes * RATES.STRESS_ABYSS_GAIN * stressMod);
             if (behaviorWeights.riskTolerance > 0.5 && domains.O > 0.5) {
@@ -5725,6 +5787,18 @@ class MaidenSystem {
         return this.socialization.processSocialInteractions(
             maiden, othersInCarriage, allMaidens, carriage, gameTimePassed
         );
+    }
+
+    /**
+     * 群体行为检查（按车厢）。返回值是待写入日志的叙述，没有触发时为 null；
+     * 节流状态由社交子系统自己持有，调用方每帧对每节车厢调用即可。
+     */
+    checkGroupBehavior(
+        carriage: Carriage,
+        allMaidens: Map<string, Maiden>,
+        now: number
+    ): string | null {
+        return this.socialization.checkGroupBehavior(carriage, allMaidens, now);
     }
 
     /**

@@ -6,6 +6,7 @@
 
 import React, { memo } from 'react';
 import { SystemState, Carriage } from '../../meta';
+import { isAbyssTemplate } from '../../constants';
 
 interface StatusProps {
     systemState: SystemState;
@@ -97,7 +98,7 @@ export const Status: React.FC<StatusProps> = memo(({
                     </div>
                     <div className="flex justify-between">
                         <span className="text-zinc-600">ABYSS</span>
-                        <span className="text-purple-400 font-mono">{Array.from(carriages.values()).filter(c => c.category === 'abyss').length}</span>
+                        <span className="text-purple-400 font-mono">{Array.from(carriages.values()).filter(c => isAbyssTemplate(c.templateId)).length}</span>
                     </div>
                     <div className="flex justify-between">
                         <span className="text-zinc-600">GRAVID</span>

@@ -3,7 +3,7 @@ import {
   MoodState, CarriageFunction, MemoryCategory, PregnancyStage, RelationType,
   NarcissusStage, EventType, SoundCategory, GraceType, ChangeType, LogType,
   NameOrigin, SocialInteractionType, PersonalityState, SpontaneousAction,
-  MovementState, CupSize, SituationType,
+  CupSize, SituationType,
 } from './type';
 
 // ============================================================================
@@ -414,7 +414,6 @@ export interface BehaviorState {
 export interface MovementIntent {
   targetCarriageId: string;
   intendedActivity: ActivityStatus;
-  movementState: MovementState;
   /** 剩余跳数，不含起点：首元素即下一跳，空数组表示已抵达 */
   movementPath: string[];
 }
@@ -731,19 +730,20 @@ export interface CarriagePosition {
 export type CarriageCategory = 'sanctuary' | 'abyss';
 
 /**
- * 列车车厢实例
+ * 列车车厢实例。
+ *
+ * 只存"这一格自己的事实"：模板派生的一切（归属、可达性、功能、环境）都在读取时
+ * 由 `templateId` 现查模板，不在此复制。副本需要有人在每次改写时同步，而枢纽重组
+ * 正是靠改写 `templateId` 来搬移属性的——多一个派生字段就多一处静默漏同步。
  */
 export interface Carriage {
   id: string;
   position: CarriagePosition;
   /** 指向 `CARRIAGE_TEMPLATES` 的模板 id；车厢种类是开放集合，不设封闭联合类型 */
   templateId: string;
+  /** 展示名，含生成期编号（如"中庭 #3"），随 `templateId` 一起被枢纽重组搬移 */
   name: string;
-  category: CarriageCategory;  // 替代原 isAbyss boolean，语义更明确
   occupants: string[];
-  isAccessible: boolean;
-  lastHubShuffle: number;
-  ambientSoundId?: string;
 }
 
 /**
@@ -778,7 +778,6 @@ export interface CarriageTemplate {
   /** 进入时强制覆写的着装状态；未声明则沿用当前污损状态 */
   clothingState?: AttireState;
   visualTheme: string;
-  ambientSound: string;
   /** 每周期属性影响偏移量 */
   periodicEffects: {
     sanity: number;

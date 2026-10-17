@@ -150,6 +150,16 @@ class CarriageSystem {
         // 预计算基准圣所总数水位线
         let currentSanctuaryCount = rows * cols;
 
+        // 每种车厢还剩几节。深渊可以蚕食圣所，但不能把**某一种车厢从地图上抹掉**：
+        // 行为引擎按功能挑选目的地，抹掉最后一种承载者，等于让对应分支永远无路可走
+        // （熔炉只有 1 节且配置写明"唯一，永远关闭"，祭坛是 `ritual` 唯一的承载者）。
+        const remaining = new Map<string, number>();
+        for (const row of grid) {
+            for (const templateId of row) {
+                remaining.set(templateId, (remaining.get(templateId) ?? 0) + 1);
+            }
+        }
+
         for (const tier of ABYSS_TIERS) {
             const totalCount = randomInt(tier.totalCount.min, tier.totalCount.max);
             const types = shuffleArray([...tier.templateIds]);
@@ -162,10 +172,12 @@ class CarriageSystem {
                 const abyssType = types[typeIndex % types.length];
                 const r = randomInt(0, rows - 1);
                 const c = randomInt(0, cols - 1);
+                const victim = grid[r][c];
 
-                if (isSanctuaryCell(grid[r][c])) {
+                if (isSanctuaryCell(victim) && (remaining.get(victim) ?? 0) > 1) {
                     if (this.canPlaceAbyss(grid, r, c, rows, cols, currentSanctuaryCount - 1)) {
                         grid[r][c] = abyssType;
+                        remaining.set(victim, remaining.get(victim)! - 1);
                         currentSanctuaryCount--;
                         placedTotal++;
                         typeIndex++;
@@ -295,11 +307,7 @@ class CarriageSystem {
                     position: { row, col },
                     templateId,
                     name: `${template.nameCN} #${currentCount}`,
-                    category: template.category,
                     occupants: [],
-                    isAccessible: isTemplateAccessible(templateId),
-                    lastHubShuffle: Date.now(),
-                    ambientSoundId: template.ambientSound,
                 });
             }
         }
@@ -316,8 +324,8 @@ class CarriageSystem {
         const keys = Array.from(carriages.keys());
         const shuffleCount = 10 + Math.floor(Math.random() * 20);
 
-        const sanctuaryKeys = keys.filter(k => carriages.get(k)!.category === 'sanctuary');
-        const abyssKeys = keys.filter(k => carriages.get(k)!.category === 'abyss');
+        const abyssKeys = keys.filter(k => isAbyssTemplate(carriages.get(k)!.templateId));
+        const sanctuaryKeys = keys.filter(k => !isAbyssTemplate(carriages.get(k)!.templateId));
 
         const swapInGroup = (groupKeys: string[]) => {
             if (groupKeys.length < 2) return;
@@ -339,35 +347,17 @@ class CarriageSystem {
         }
     }
 
+    /**
+     * 交换两节车厢的"身份"：模板与展示名跟着走，坐标与占用者留在原地。
+     * 车厢实例与模板相关的数据只有这两项，归属/可达性/功能都是读取时现查模板，
+     * 因此不存在"模板多一个字段、这里漏搬一个"的可能。
+     */
     private swapCarriageAttributes(carriages: Map<string, Carriage>, key1: string, key2: string): void {
         const c1 = carriages.get(key1)!;
         const c2 = carriages.get(key2)!;
 
-        const updatedC1 = { ...c1, occupants: [...c1.occupants], position: { ...c1.position } };
-        const updatedC2 = { ...c2, occupants: [...c2.occupants], position: { ...c2.position } };
-
-        const tempType = updatedC1.templateId;
-        const tempName = updatedC1.name;
-        const tempCategory = updatedC1.category;
-        const tempAmbient = updatedC1.ambientSoundId;
-        const tempIsAccessible = updatedC1.isAccessible;
-
-        updatedC1.templateId = updatedC2.templateId;
-        updatedC1.name = updatedC2.name;
-        updatedC1.category = updatedC2.category;
-        updatedC1.ambientSoundId = updatedC2.ambientSoundId;
-        updatedC1.isAccessible = updatedC2.isAccessible;
-        updatedC1.lastHubShuffle = Date.now();
-
-        updatedC2.templateId = tempType;
-        updatedC2.name = tempName;
-        updatedC2.category = tempCategory;
-        updatedC2.ambientSoundId = tempAmbient;
-        updatedC2.isAccessible = tempIsAccessible;
-        updatedC2.lastHubShuffle = Date.now();
-
-        carriages.set(key1, updatedC1);
-        carriages.set(key2, updatedC2);
+        carriages.set(key1, { ...c1, templateId: c2.templateId, name: c2.name });
+        carriages.set(key2, { ...c2, templateId: c1.templateId, name: c1.name });
     }
 
     // ============================================
@@ -389,7 +379,7 @@ class CarriageSystem {
         const targetCarriage = carriages.get(targetId)!;
         const startCarriage = carriages.get(startId)!;
 
-        const forceAllowAbyss = !avoidAbyss || targetCarriage.category === 'abyss' || startCarriage.category === 'abyss';
+        const forceAllowAbyss = !avoidAbyss || isAbyssTemplate(targetCarriage.templateId) || isAbyssTemplate(startCarriage.templateId);
 
         const queue: { id: string; path: string[] }[] = [{ id: startId, path: [startId] }];
         const visited = new Set<string>([startId]);
@@ -411,9 +401,9 @@ class CarriageSystem {
                 if (!visited.has(nextId) && carriages.has(nextId)) {
                     const nextCarriage = carriages.get(nextId)!;
 
-                    if (nextCarriage.isAccessible) {
+                    if (isTemplateAccessible(nextCarriage.templateId)) {
                         // 深渊阻断验证
-                        if (!forceAllowAbyss && nextCarriage.category === 'abyss' && nextId !== targetId) {
+                        if (!forceAllowAbyss && isAbyssTemplate(nextCarriage.templateId) && nextId !== targetId) {
                             continue;
                         }
 

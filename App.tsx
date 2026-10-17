@@ -81,8 +81,8 @@ export default function App() {
 
     // 当前车厢
     const currentCarriage = getCurrentCarriage();
-    const isInAbyss = currentCarriage?.category === 'abyss';
     const carriageInfo = currentCarriage ? getCarriageTemplate(currentCarriage.templateId) : null;
+    const isInAbyss = carriageInfo?.category === 'abyss';
 
     // 聚焦的少女
     const focusedMaiden = getFocusedMaiden();

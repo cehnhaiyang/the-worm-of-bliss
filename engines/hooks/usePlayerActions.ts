@@ -15,7 +15,7 @@ import {
   LogType,
 } from '../../meta';
 import { clamp, getCurrentCarriageId, mergeMaiden } from '../../const';
-import { GAME_CONFIG, getCarriageTemplate } from '../../constants';
+import { GAME_CONFIG, getCarriageTemplate, isAbyssTemplate, isTemplateAccessible } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
 import { audioService, aiService } from '../services';
 
@@ -266,7 +266,7 @@ export const usePlayerActions = ({
     const { carriages: currCarriages, maidens: currMaidens } = stateRef.current!;
     const targetCarriage = currCarriages.get(targetCarriageId);
 
-    if (!targetCarriage || !targetCarriage.isAccessible) {
+    if (!targetCarriage || !isTemplateAccessible(targetCarriage.templateId)) {
       addLog('system', '无法进入该车厢：区域已封锁或不存在。');
       audioService.playUI('cancel');
       return;
@@ -287,7 +287,7 @@ export const usePlayerActions = ({
     });
 
     const template = getCarriageTemplate(targetCarriage.templateId);
-    const isAbyss = targetCarriage.category === 'abyss';
+    const isAbyss = isAbyssTemplate(targetCarriage.templateId);
 
     addLog('movement',
       `>>> 传送至 ${template?.nameCN ?? targetCarriage.templateId} [${targetCarriage.id}] ${isAbyss ? '【深渊区域】' : ''}`,

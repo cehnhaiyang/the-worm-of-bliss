@@ -28,48 +28,82 @@ export const NEED_THRESHOLDS = {
 // 当多个少女在同一车厢时可能触发的群体行为
 // ============================================
 
-export const GROUP_BEHAVIOR_CONFIG = {
-    // 最小人数要求
-    MIN_GROUP_SIZE: 3,
+/** 群体行为的人数、功能与均值判据 */
+export type GroupBehavior = {
+    /** 触发所需的车厢功能；null 表示任何车厢都可以 */
+    requiredFunction: CarriageFunction | null;
+    /** 该项行为自身的人数下限，还会被 MIN_GROUP_SIZE 兜住 */
+    minSize: number;
+    /** 参与者均值判据；null 表示不看属性 */
+    condition: {
+        stat: 'devotion' | 'sanity' | 'stress' | 'hunger';
+        direction: 'above' | 'below';
+        threshold: number;
+    } | null;
+    probability: number;
+    description: string;
+};
 
-    // 群体行为类型
-    BEHAVIORS: {
-        COLLECTIVE_PRAYER: {
+/**
+ * 群体行为配置。
+ *
+ * 描述的是"同一车厢里的一群人"：人数与全体均值过闸后，按配置顺序取第一个命中的行为，
+ * 一次检查最多产生一条叙述。这里只声明叙述、不声明属性效果——要加效果就在此补字段，
+ * 别把阈值写进引擎。
+ */
+export const GROUP_BEHAVIOR_CONFIG: {
+    /** 构成"一群人"的人数下限 */
+    MIN_GROUP_SIZE: number;
+    /**
+     * 同一车厢两次检查之间的间隔（毫秒）。
+     *
+     * 概率是按"一次检查"定义的：少了这道闸门，每帧都会替每节车厢掷一次骰子，
+     * 0.03 就不再是"偶尔发生"，而是刷屏。
+     */
+    CHECK_INTERVAL_MS: number;
+    BEHAVIORS: GroupBehavior[];
+} = {
+    MIN_GROUP_SIZE: 3,
+    CHECK_INTERVAL_MS: 10 * 60 * 1000,
+
+    BEHAVIORS: [
+        {
             minSize: 3,
-            requiredFunction: 'pray' as CarriageFunction,
-            avgDevotionThreshold: 50,
+            requiredFunction: 'pray',
+            condition: { stat: 'devotion', direction: 'above', threshold: 50 },
             probability: 0.02,
             description: '几个少女自发地聚在一起，开始共同祈祷',
         },
-        WHISPERED_GOSSIP: {
+        {
             minSize: 2,
-            requiredFunction: null, // 任何车厢
-            avgStressThreshold: 40,
+            requiredFunction: null,
+            condition: { stat: 'stress', direction: 'above', threshold: 40 },
             probability: 0.03,
             description: '几个少女凑在一起，窃窃私语',
         },
-        COMFORT_CIRCLE: {
+        {
             minSize: 3,
-            requiredFunction: 'rest' as CarriageFunction,
-            avgSanityThreshold: 50, // 低于此值触发
+            requiredFunction: 'rest',
+            condition: { stat: 'sanity', direction: 'below', threshold: 50 },
             probability: 0.02,
             description: '几个少女围坐在一起，互相安慰',
         },
-        SHARED_MEAL: {
+        {
             minSize: 2,
-            requiredFunction: 'eat' as CarriageFunction,
-            avgHungerThreshold: 50,
+            requiredFunction: 'eat',
+            condition: { stat: 'hunger', direction: 'above', threshold: 50 },
             probability: 0.04,
             description: '几个少女一起用餐',
         },
-        COLLECTIVE_BATHING: {
+        {
             minSize: 2,
-            requiredFunction: 'bathe' as CarriageFunction,
+            requiredFunction: 'bathe',
+            condition: null,
             probability: 0.05,
             description: '几个少女一同在浴池中沐浴',
         },
-    },
-} as const;
+    ],
+};
 
 // ============================================
 // 角色状态名称映射
