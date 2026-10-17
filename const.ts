@@ -1,15 +1,9 @@
 import {
-  CarriageFunction, EventType, ActivityStatus, PersonalityState, RelationType, PregnancyStage, GraceType,
+  CarriageFunction, ActivityStatus, PersonalityState, RelationType, PregnancyStage, GraceType,
   Carriage,
   UnifiedMovementState,
   MovementIntent,
   Relationship,
-  PregnancyState,
-  NarcissusState,
-  RelationshipNetworkData,
-  PregnancyData,
-  NarcissusData,
-  EventTimestampData,
   Maiden,
   CharacterAttributes,
   MemoryNode,
@@ -577,44 +571,7 @@ export const cancelMovement = (movement: UnifiedMovementState): UnifiedMovementS
   });
 
 // ============================================
-// 9. 时光逆流转换器（存档向后兼容层）
-// ============================================
-
-export const convertRelationshipsFromLegacy = (legacy: [string, [string, Relationship][]][]): RelationshipNetworkData[] =>
-  legacy.map(([maidenId, relationships]) => ({
-    maidenId,
-    relationships: relationships.map(([targetId, relationship]) => ({
-      targetId,
-      relationship
-    }))
-  }));
-
-export const convertRelationshipsToLegacy = (data: RelationshipNetworkData[]): [string, [string, Relationship][]][] =>
-  data.map(({ maidenId, relationships }) => [
-    maidenId,
-    relationships.map(({ targetId, relationship }) => [targetId, relationship])
-  ]);
-
-export const convertPregnancyFromLegacy = (legacy: [string, PregnancyState][]): PregnancyData[] =>
-  legacy.map(([maidenId, pregnancyState]) => ({ maidenId, pregnancyState }));
-
-export const convertPregnancyToLegacy = (data: PregnancyData[]): [string, PregnancyState][] =>
-  data.map(({ maidenId, pregnancyState }) => [maidenId, pregnancyState]);
-
-export const convertNarcissusFromLegacy = (legacy: [string, NarcissusState][]): NarcissusData[] =>
-  legacy.map(([maidenId, narcissusState]) => ({ maidenId, narcissusState }));
-
-export const convertNarcissusToLegacy = (data: NarcissusData[]): [string, NarcissusState][] =>
-  data.map(({ maidenId, narcissusState }) => [maidenId, narcissusState]);
-
-export const convertEventsFromLegacy = (legacy: [EventType, number][]): EventTimestampData[] =>
-  legacy.map(([eventType, timestamp]) => ({ eventType, timestamp }));
-
-export const convertEventsToLegacy = (data: EventTimestampData[]): [EventType, number][] =>
-  data.map(({ eventType, timestamp }) => [eventType, timestamp]);
-
-// ============================================
-// 10. 命运交织：关系系统边界操作
+// 9. 命运交织：关系系统边界操作
 // ============================================
 
 /**
@@ -745,7 +702,7 @@ export const getPregnancyStats = (maidens: Map<string, Maiden>): PregnancyStats 
 };
 
 // ============================================
-// 11. 人格派生（权威为 HexacoFacets）
+// 10. 人格派生（权威为 HexacoFacets）
 // ============================================
 
 /**

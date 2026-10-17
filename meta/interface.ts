@@ -577,18 +577,6 @@ export interface NarcissusEligibility {
 // 8. 子系统存档模型 (Subsystems Data)
 // ============================================================================
 
-/** 关系网络存档节点 */
-export interface RelationshipNetworkData {
-  maidenId: string;
-  relationships: Array<{ targetId: string; relationship: Relationship }>;
-}
-
-/** 妊娠状态存档节点 */
-export interface PregnancyData {
-  maidenId: string;
-  pregnancyState: PregnancyState;
-}
-
 /** 水仙协议状态存档节点 */
 export interface NarcissusData {
   maidenId: string;
