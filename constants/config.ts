@@ -248,10 +248,13 @@ export const CHANGE_THRESHOLDS = {
     corruptionCleared: 35,
 } as const;
 
-/** 立绘更新属性阈值 - 跨越时触发立绘更新 */
+/**
+ * 立绘表情阈值 - 跨越时提示词改变，进而触发立绘重画。
+ * 六个数组一律升序；只有 sanity 反向判定（越低越严重）。
+ */
 export const PORTRAIT_THRESHOLDS = {
     lust: [25, 50, 75],
-    sanity: [75, 50, 25],
+    sanity: [25, 50, 75],
     obedience: [25, 50, 75],
     stress: [25, 50, 75],
     corruption: [25, 50, 75],

@@ -25,8 +25,6 @@ const CONFIG = {
     pollinationsUrl: 'https://gen.pollinations.ai/image',
     defaultModel: 'flux' as string,
     portrait: { width: 768, height: 1024 },
-    thumbnail: { size: 128 },
-    scene: { width: 1024, height: 576 },
 };
 
 // 等级视觉 - 项圈 + 光效
@@ -180,34 +178,6 @@ export class ImageService {
         return this.buildUrl(parts, CONFIG.portrait, this.generateSeed(maiden));
     }
 
-    getThumbnailUrl(maiden: Maiden): string {
-        const ethnicity = ETHNICITY_MAP[maiden.nameOrigin] || '';
-        const face = maiden.appearance
-            ? `${maiden.appearance.hair.color.id} ${maiden.appearance.hair.length.id} hair, ${maiden.appearance.eyes.color.id} eyes`
-            : maiden.description.split(',').slice(0, 2).join(',');
-
-        const prompt = `close-up portrait, (1girl:1.3), ${this.getAgeTag(maiden.age)}, ${ethnicity}, ${face}, soft lighting, neutral background`;
-        const seed = Math.abs(hashCode(maiden.id)) % 10000;
-
-        return this.buildUrl([prompt], { width: CONFIG.thumbnail.size, height: CONFIG.thumbnail.size }, seed);
-    }
-
-    getSceneImageUrl(carriageTemplateId: string, description?: string): string {
-        const template = getCarriageTemplate(carriageTemplateId);
-        const isAbyss = isAbyssTemplate(carriageTemplateId);
-
-        const parts = [
-            'wide shot, interior',
-            template?.visualTheme || 'dark train corridor',
-            description,
-            isAbyss ? 'eldritch horror, cosmic void, surreal, purple red tones' : 'gothic interior, dim lighting, elegant',
-            'cinematic, 8k'
-        ].filter(Boolean) as string[];
-
-        const seed = Math.abs(hashCode(carriageTemplateId + (description || ''))) % 10000;
-        return this.buildUrl(parts, CONFIG.scene, seed);
-    }
-
     // ============================================
     // 提示词构建器 (Prompt Helpers)
     // ============================================
@@ -316,9 +286,9 @@ export class ImageService {
         const a = maiden.attributes;
         const T = PORTRAIT_THRESHOLDS;
 
-        if (a.sanity < T.sanity[2]) effects.push('insane expression, frantic eyes');
+        if (a.sanity < T.sanity[0]) effects.push('insane expression, frantic eyes');
         else if (a.sanity < T.sanity[1]) effects.push('unstable look, dilated pupils');
-        else if (a.sanity < T.sanity[0]) effects.push('anxious, nervous, furrowed brows');
+        else if (a.sanity < T.sanity[2]) effects.push('anxious, nervous, furrowed brows');
 
         if (a.lust > T.lust[2]) effects.push('heavily aroused, flushed face, glazed eyes');
         else if (a.lust > T.lust[1]) effects.push('aroused, flushed cheeks, parted lips');
