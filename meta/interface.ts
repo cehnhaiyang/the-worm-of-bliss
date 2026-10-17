@@ -1087,6 +1087,48 @@ export interface AIResponse {
 }
 
 /**
+ * 叙事响应在实体上引起的**增量**。
+ *
+ * 属性一律记为增量而不是绝对值：请求在飞行的数秒里，时间循环仍在推进同一个实体，
+ * 若按"请求发起时的快照 + 增量"算出绝对值再整体覆盖，这段时间的属性漂移会被静默回滚。
+ * 增量归并到归并那一刻的实体上，两个来源的改动就都能留下。
+ *
+ * 因此"谁能改属性/状态"只有一个答案：增量叠加与集合增删。
+ * 只有时间循环不触碰的字段（阶级、水仙协议状态）才允许整体写入。
+ */
+export interface NarrativePlan {
+  attributeDeltas: Partial<Record<AttributeKey, number>>;
+  statusAdd: CharacterStatus[];
+  statusRemove: CharacterStatus[];
+  /** 时间循环不写入的字段，允许整体覆盖 */
+  absolute: Partial<Pick<Maiden, 'rank' | 'rankColor' | 'legacyMemoryChain'>>;
+  /** `null` 表示清除协议状态，`undefined` 表示本次不涉及 */
+  narcissusState?: NarcissusState | null;
+  fertilityDelta: number;
+  pregnancyProgress: number;
+  /**
+   * 记忆改动。节点在计划阶段就构造完成（`generateId` 等一次性动作只做一次），
+   * 归并阶段只做纯函数式的落链，因此更新函数被重放也不会产生第二个节点。
+   */
+  memoryOps: Array<
+    | { op: 'insert'; node: MemoryNode }
+    | { op: 'replace'; node: MemoryNode }
+    | { op: 'clear' }
+  >;
+  /**
+   * 归并之外必须发生的事。
+   *
+   * 原本整段写在 `setMaidens(updater)` 的更新函数里，而 React 要求更新函数是纯函数：
+   * StrictMode 下它会被重放，于是同一条指令写出重复日志、生成多个 id 不同的植入节点、
+   * 并发起多次创世纪请求。把"算什么"与"做什么"分开后，副作用只在此之外执行一次。
+   */
+  effects: Array<
+    | { kind: 'log'; type: LogType; content: string }
+    | { kind: 'genesis'; maiden: Maiden }
+  >;
+}
+
+/**
  * 文本生成服务商配置。
  */
 export interface LLMProviderConfig {
