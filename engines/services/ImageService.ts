@@ -116,10 +116,6 @@ const CLOTHING_STATE_MAP: Record<AttireState, string | null> = {
     bloody: 'clothes stained with blood splatters',
 };
 
-// ============================================
-// 图像服务类
-// ============================================
-
 export class ImageService {
     private currentModel: string = CONFIG.defaultModel;
 
@@ -438,10 +434,4 @@ export class ImageService {
     }
 }
 
-/**
- * 服务单例。
- *
- * 与文字生成服务彼此独立：立绘请求只依赖本模块，不经过任何模型路由表，
- * 因此改文字模型不会牵动图像，反之亦然。
- */
 export const imageService = new ImageService();

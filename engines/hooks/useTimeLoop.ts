@@ -1,9 +1,9 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange } from '../../meta';
-import { GAME_CONFIG, TIME_CONFIG, formatGameTime, getTimePeriod, isTemplateAccessible, TimePeriod } from '../../constants';
+import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange, TimePeriod } from '../../meta';
+import { GAME_CONFIG, isTemplateAccessible } from '../../constants';
 import { maidenSystem, carriageSystem } from '../systems';
 import { audioService } from '../services';
-import { getCurrentCarriageId, stepMovement, completeMovement, cancelMovement } from '../../const';
+import { getCurrentCarriageId, stepMovement, completeMovement, cancelMovement, formatGameTime, getTimePeriod } from '../../const';
 
 // 入参契约
 interface UseTimeLoopParams {
@@ -137,17 +137,17 @@ export const useTimeLoop = ({
 
     // 时间段变化检测
     const checkTimePeriodChange = (gameTimeMs: number) => {
-      const hours = Math.floor((gameTimeMs / TIME_CONFIG.MS_PER_HOUR) % 24);
+      const hours = Math.floor((gameTimeMs / (60 * 60 * 1000)) % 24);
       const currentPeriod = getTimePeriod(hours);
 
       if (lastTimePeriod.current !== null && lastTimePeriod.current !== currentPeriod) {
         const periodNames: Record<TimePeriod, string> = {
-          [TimePeriod.DAWN]: '黎明降临，微光穿透虚空',
-          [TimePeriod.MORNING]: '晨曦初现，新的一天开始',
-          [TimePeriod.NOON]: '正午时分，列车在虚空中穿行',
-          [TimePeriod.AFTERNOON]: '午后时光，空气中弥漫着慵懒',
-          [TimePeriod.EVENING]: '暮色降临，阴影开始蔓延',
-          [TimePeriod.NIGHT]: '夜幕笼罩，深渊的低语愈发清晰',
+          dawn: '黎明降临，微光穿透虚空',
+          morning: '晨曦初现，新的一天开始',
+          noon: '正午时分，列车在虚空中穿行',
+          afternoon: '午后时光，空气中弥漫着慵懒',
+          evening: '暮色降临，阴影开始蔓延',
+          night: '夜幕笼罩，深渊的低语愈发清晰',
         };
         addLog('narrative', periodNames[currentPeriod], undefined, 'SYSTEM');
       }
@@ -417,7 +417,7 @@ export const useTimeLoop = ({
       }
     };
 
-    tickRef.current = window.setInterval(tick, TIME_CONFIG.TICK_INTERVAL_MS);
+    tickRef.current = window.setInterval(tick, 1000);
 
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);

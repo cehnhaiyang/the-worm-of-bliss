@@ -17,11 +17,12 @@ import {
   HexacoProfile,
   OctantId,
   SignatureId,
+  TimePeriod,
   BehaviorWeights,
   PregnancyStats,
   RelationshipStats
 } from './meta';
-import { getCarriageTemplate, isTemplateAccessible, TIME_CONFIG, GRACE_REWARDS, GAME_CONFIG } from './constants';
+import { getCarriageTemplate, isTemplateAccessible, GRACE_REWARDS, GAME_CONFIG } from './constants';
 
 // ============================================
 // 1. 基础数学与概率
@@ -185,8 +186,8 @@ export const chunkArray = <T,>(array: T[], size: number): T[][] => {
  */
 export const formatGameTimeDisplay = (gameTimePassed: number, startTime?: number, includeSeconds: boolean = true): string => {
   const currentTotal = startTime ? startTime + gameTimePassed : gameTimePassed;
-  const days = Math.floor(currentTotal / TIME_CONFIG.MS_PER_DAY) + 1;
-  const totalSeconds = Math.floor(currentTotal / TIME_CONFIG.MS_PER_SECOND);
+  const days = Math.floor(currentTotal / (24 * 60 * 60 * 1000)) + 1;
+  const totalSeconds = Math.floor(currentTotal / 1000);
   const hours = Math.floor(totalSeconds / 3600) % 24;
   const minutes = Math.floor((totalSeconds % 3600) / 60);
 
@@ -201,10 +202,28 @@ export const formatGameTimeDisplay = (gameTimePassed: number, startTime?: number
 };
 
 /**
+ * 把游戏时间毫秒格式化为 HH:MM:SS（24 小时制回绕）
+ */
+export const formatGameTime = (gameTimeMs: number): string => {
+  const totalSeconds = Math.floor(gameTimeMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600) % 24;
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+};
+
+/**
  * 格式化实体精确年龄标识
  */
 export const formatPreciseAge = (ageInMs: number): string => {
-  const { MS_PER_YEAR, MS_PER_MONTH, MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } = TIME_CONFIG;
+  // 单位只在本函数内使用，且每个都用两次，因此就地命名
+  const MS_PER_YEAR = 365 * 24 * 60 * 60 * 1000;
+  const MS_PER_MONTH = 30 * 24 * 60 * 60 * 1000;
+  const MS_PER_DAY = 24 * 60 * 60 * 1000;
+  const MS_PER_HOUR = 60 * 60 * 1000;
+  const MS_PER_MINUTE = 60 * 1000;
+  const MS_PER_SECOND = 1000;
 
   const years = Math.floor(ageInMs / MS_PER_YEAR);
   let remaining = ageInMs % MS_PER_YEAR;
@@ -226,9 +245,9 @@ export const formatPreciseAge = (ageInMs: number): string => {
   return `${years}.${months}.${days}.${hours}.${minutes}.${seconds}`;
 };
 
-export const msToMinutes = (ms: number): number => ms / TIME_CONFIG.MS_PER_MINUTE;
+export const msToMinutes = (ms: number): number => ms / (60 * 1000);
 
-export const minutesToMs = (minutes: number): number => minutes * TIME_CONFIG.MS_PER_MINUTE;
+export const minutesToMs = (minutes: number): number => minutes * (60 * 1000);
 
 export const getGameHour = (gameTimeMs: number): number => {
   const totalSeconds = Math.floor(gameTimeMs / 1000);
@@ -237,7 +256,21 @@ export const getGameHour = (gameTimeMs: number): number => {
 
 export const isRestTime = (gameTimeMs: number): boolean => {
   const hour = getGameHour(gameTimeMs);
-  return hour >= TIME_CONFIG.REST_START_HOUR || hour < TIME_CONFIG.REST_END_HOUR;
+  return hour >= 22 || hour < 6;
+};
+
+/**
+ * 当前时段。
+ *
+ * 时刻边界只此一份：`TimePeriod` 只给名字，划分点全部落在这个函数里。
+ */
+export const getTimePeriod = (hour: number): TimePeriod => {
+  if (hour >= 5 && hour < 7) return 'dawn';
+  if (hour >= 7 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 14) return 'noon';
+  if (hour >= 14 && hour < 18) return 'afternoon';
+  if (hour >= 18 && hour < 22) return 'evening';
+  return 'night';
 };
 
 // ============================================

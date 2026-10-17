@@ -25,9 +25,6 @@ export * from './events';
 // 行为系统常量
 export * from './behavior';
 
-// 时间系统常量
-export * from './time';
-
 // 少女生成常量
 export * from './names';
 export * from './appearance';

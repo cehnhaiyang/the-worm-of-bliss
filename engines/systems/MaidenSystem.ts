@@ -145,7 +145,6 @@ import {
     STOCKING_COLORS,
     STOCKING_MATERIALS,
     STOCKING_TYPES,
-    TIME_CONFIG,
     TOP_COLORS,
     TOP_MATERIALS,
     TOP_TYPES,
@@ -1397,7 +1396,7 @@ class MaidenNarcissus {
             return { eligible: false, reasons, requirements };
         }
 
-        const daysOnTrain = Math.floor(gameTimePassed / TIME_CONFIG.MS_PER_DAY);
+        const daysOnTrain = Math.floor(gameTimePassed / (24 * 60 * 60 * 1000));
 
         if (daysOnTrain < requirements.minDaysOnTrain) {
             reasons.push(`在列车上的时间不足 (${daysOnTrain}/${requirements.minDaysOnTrain}天)`);
@@ -1601,7 +1600,7 @@ class MaidenNarcissus {
             return { stageChanged: false };
         }
 
-        const daysOutside = elapsedMs / TIME_CONFIG.MS_PER_DAY;
+        const daysOutside = elapsedMs / (24 * 60 * 60 * 1000);
         const fadingLevel = clamp(daysOutside * FADING_RATE_PER_DAY, 0, 100);
 
         // 邀请一经发出就锁定，避免玩家尚未抉择时重复触发
@@ -3241,7 +3240,7 @@ class MaidenGenerator {
     generateAgeData(arrivalTimestamp: number, gameTimePassed: number): { age: number; initialAgeMs: number; boardingAge: string } {
         const ageYears = randomInt(GAME_CONFIG.MAIDEN_AGE.MIN, GAME_CONFIG.MAIDEN_AGE.MAX);
         const now = gameTimePassed;
-        const msPerYear = TIME_CONFIG.MS_PER_YEAR;
+        const msPerYear = 365 * 24 * 60 * 60 * 1000;
         const initialAgeMs = (ageYears * msPerYear) + randomInt(0, msPerYear);
         const timeOnTrain = Math.max(0, now - arrivalTimestamp);
         const boardingAgeMs = Math.max(0, initialAgeMs - timeOnTrain);
@@ -4531,7 +4530,7 @@ class MaidenClothing {
 
 // 妊娠
 
-const MS_PER_WEEK = 7 * TIME_CONFIG.MS_PER_DAY;
+const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 const ABORTION_RISK_THRESHOLD = 85;
 
 /**
@@ -5192,13 +5191,13 @@ class MaidenSystem {
 
     /** 游戏内小时（0-23），由绝对游戏时间换算 */
     getGameHour(gameTimePassed: number): number {
-        return Math.floor((gameTimePassed / TIME_CONFIG.MS_PER_HOUR) % 24);
+        return Math.floor((gameTimePassed / (60 * 60 * 1000)) % 24);
     }
 
     /** 是否处于夜间休息时段（跨零点，因此判定必须用"或"而非区间） */
     isRestTime(gameTimePassed: number): boolean {
         const hour = this.getGameHour(gameTimePassed);
-        return hour >= TIME_CONFIG.REST_START_HOUR || hour < TIME_CONFIG.REST_END_HOUR;
+        return hour >= 22 || hour < 6;
     }
 
     /**
@@ -5391,7 +5390,7 @@ class MaidenSystem {
         const physiology = { ...maiden.physiology };
         const gameDeltaMs = deltaMinutes * 60 * 1000;
         const previousTime = gameTimePassed - gameDeltaMs;
-        const daysToAdvance = Math.floor(gameTimePassed / TIME_CONFIG.MS_PER_DAY) - Math.floor(previousTime / TIME_CONFIG.MS_PER_DAY);
+        const daysToAdvance = Math.floor(gameTimePassed / (24 * 60 * 60 * 1000)) - Math.floor(previousTime / (24 * 60 * 60 * 1000));
         if (daysToAdvance > 0) {
             physiology.cycleDay = ((physiology.cycleDay - 1 + daysToAdvance) % 28) + 1;
             physiology.isOvulating = physiology.cycleDay >= 12 && physiology.cycleDay <= 16;
@@ -5561,7 +5560,7 @@ class MaidenSystem {
 
         // 时间基：P2 的 ρ 与 P4 的漂移率都以**游戏日**定义，因此两者共用
         // lastDriftTime 这一个时钟，按实际经过的天数推进，与调用频率无关
-        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / TIME_CONFIG.MS_PER_DAY;
+        const elapsedDays = (maiden.lastUpdateTime - view.dynamics.lastDriftTime) / (24 * 60 * 60 * 1000);
         if (elapsedDays <= 0) return maiden.isshex;
 
         // P1：本时点的状态表达与情境期待

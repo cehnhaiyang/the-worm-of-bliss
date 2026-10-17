@@ -28,7 +28,6 @@ import {
     getCarriageTemplate,
     LLM_CONFIG,
     TAMPER_PERMISSIONS,
-    TIME_CONFIG,
     WORLD_LORE,
 } from '../../constants';
 import { maidenSystem, personalityView } from '../systems';
@@ -521,7 +520,7 @@ function buildMemoryGenerationPrompt(
     // 登车时刻用"距今多少天"表达，而不是换算成日历日期：`arrivalTimestamp` 是游戏内时间，
     // 且登车发生在开局之前（值为负），交给 Date 渲染只会得到 1969 年的假日期。
     const daysOnTrain = Math.max(0, Math.floor(
-        (maiden.lastUpdateTime - maiden.arrivalTimestamp) / TIME_CONFIG.MS_PER_DAY
+        (maiden.lastUpdateTime - maiden.arrivalTimestamp) / (24 * 60 * 60 * 1000)
     ));
     const initialAttire = serializeClothingState(maiden.initialClothing);
     const appearance = serializeAppearance(maiden.appearance);
