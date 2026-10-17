@@ -943,8 +943,22 @@ export const CARRIAGE_TEMPLATES: CarriageTemplate[] = [
 ];
 
 // ============================================
-// 派生索引
+// 功能词表与派生索引
 // ============================================
+
+/**
+ * 功能词表的运行期镜像。
+ *
+ * 写成 `Record<CarriageFunction, true>` 而不是数组，是为了让"往 meta 加了功能却忘了在
+ * 这里登记"变成编译错误——联合类型无法在运行期枚举，这张表是唯一的运行期来源，
+ * 供下面的自检判断哪些功能无人承载。
+ */
+const FUNCTION_REGISTRY: Record<CarriageFunction, true> = {
+  sleep: true, eat: true, bathe: true, pray: true, socialize: true,
+  rest: true, leisure: true, memory: true, ritual: true,
+};
+
+export const ALL_CARRIAGE_FUNCTIONS = Object.keys(FUNCTION_REGISTRY) as CarriageFunction[];
 
 const TEMPLATE_BY_ID = new Map(CARRIAGE_TEMPLATES.map(t => [t.id, t]));
 
@@ -1028,6 +1042,14 @@ function validateCarriageTemplates(): void {
   ]);
   for (const t of CARRIAGE_TEMPLATES) {
     if (!spawnable.has(t.id)) problems.push(`${t.id}: 未被任何生成配置引用，永远不会出现在地图上`);
+  }
+
+  // 功能无人承载时，行为引擎按功能挑选目的地会永远返回 undefined——分支静默失效，
+  // 因此词表与数据必须对上（这是本文件唯一能替引擎守住的跨文件不变式）
+  for (const fn of ALL_CARRIAGE_FUNCTIONS) {
+    if (carriageIdsWithFunction(fn).length === 0) {
+      problems.push(`功能 ${fn} 没有任何车厢承载，依赖它的行为分支永远不会触发`);
+    }
   }
 
   if (problems.length) {
