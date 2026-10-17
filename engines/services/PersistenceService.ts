@@ -119,10 +119,7 @@ class PersistenceService {
         maidens: Array.from(maidens.entries()),
         logs: logs.slice(-SAVE_CONFIG.maxLogEntries),
         subsystems: {
-          // 关系与妊娠状态嵌入 Maiden 对象；serialize 在此仅提取并二次归档，
-          // 主要恢复路径为 maidens 字段还原（deserialize 为空操作）。
-          relationships: maidenSystem.relationship.serialize(maidens),
-          pregnancy: maidenSystem.pregnancy.serialize(maidens),
+          // 关系与妊娠状态内嵌于 Maiden，随 maidens 字段全量往返，故不再二次归档
           narcissus: maidenSystem.narcissus.serialize(maidens),
           events: maidenSystem.event.serialize(),
         }
@@ -329,9 +326,6 @@ class PersistenceService {
   restoreSubsystems(subsystems: SubsystemsData, maidens: Map<string, Maiden>): void {
     if (!subsystems) return;
 
-    maidenSystem.relationship.deserialize(subsystems.relationships);
-    maidenSystem.pregnancy.deserialize(subsystems.pregnancy);
-    
     // 将 NarcissusData[] 转换为 [string, NarcissusState][]
     const narcissusData: [string, NarcissusState][] = subsystems.narcissus.map(
       (item: NarcissusData) => [item.maidenId, item.narcissusState]

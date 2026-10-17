@@ -34,8 +34,10 @@ import {
     MoodState,
     NameOrigin,
     NarcissusEligibility,
+    NarcissusOutcome,
     NarcissusStage,
     NarcissusState,
+    NarcissusTriggerResult,
     NeedKind,
     OctantAffinity,
     OctantId,
@@ -44,7 +46,6 @@ import {
     PersonalityState,
     PhysicalStats,
     PhysiologicalState,
-    PregnancyData,
     PregnancyEvent,
     PregnancyStage,
     PregnancyState,
@@ -54,7 +55,6 @@ import {
     RawMemoryNode,
     RelationType,
     Relationship,
-    RelationshipNetworkData,
     SignatureMatch,
     SignatureId,
     SituationType,
@@ -68,7 +68,6 @@ import {
 import {
     OCTANT_LABELS,
     SIGNATURE_LABELS,
-    buildRelationshipIndex,
     clamp,
     createUnifiedMovementState,
     deepCopy,
@@ -77,7 +76,6 @@ import {
     DOMAIN_FACETS,
     findNearestCarriageByFunction,
     generateId,
-    getAllRelationships,
     getCurrentCarriageId,
     getRelationship,
     isAlteredMemory,
@@ -176,6 +174,11 @@ function asText(value: unknown, fallback: string): string {
 /** 记忆分类合法性校验，越界时回落到调用方指定的类别 */
 function asCategory(value: unknown, fallback: MemoryCategory): MemoryCategory {
     return MEMORY_CATEGORIES.includes(value as MemoryCategory) ? value as MemoryCategory : fallback;
+}
+
+/** 移除若干状态标签；状态集合一律产出新数组，不复用入参引用 */
+function withoutStatus(maiden: Maiden, ...statuses: CharacterStatus[]): CharacterStatus[] {
+    return maiden.status.filter(s => !statuses.includes(s));
 }
 
 /**
@@ -707,10 +710,7 @@ class MaidenRelationship {
             type: this.determineRelationType(newAffinity, newTrust, newSharedTrauma, maiden, target),
         };
 
-        const updatedMaiden = setRelationship(maiden, newRelationship);
-
-        maiden.relationships = updatedMaiden.relationships;
-        maiden._relationshipIndex = updatedMaiden._relationshipIndex;
+        maiden.relationships = setRelationship(maiden, newRelationship).relationships;
     }
 
     /**
@@ -849,10 +849,8 @@ class MaidenRelationship {
         target?: Maiden
     ): RelationType {
         if (maiden && target && affinity >= 30) {
-            const mView = personalityView(maiden);
+            const mDomains = personalityView(maiden).domains;
             const tDomains = personalityView(target).domains;
-            const mDomains = mView.domains;
-            const mMachiavellianism = mView.proxies.machiavellianism;
 
             if (mDomains.E > 1.0 && mDomains.A < -0.5 && tDomains.E < -0.5 && tDomains.A > 1.0 && trust >= 50) {
                 return 'protector';
@@ -862,7 +860,9 @@ class MaidenRelationship {
                 return 'dependent';
             }
 
-            if (sharedTrauma && mMachiavellianism > 1.0 && trust >= 30) {
+            // 代理指标比维度贵近四倍（实测 4.16 µs vs 1.07 µs）且只有共犯分支用得上，
+            // 因此推到使用点现算：上面两个分支早退时它根本不需要求值
+            if (sharedTrauma && personalityView(maiden).proxies.machiavellianism > 1.0 && trust >= 30) {
                 return 'accomplice';
             }
         }
@@ -942,12 +942,7 @@ class MaidenRelationship {
             }
 
             if (changed) {
-                const newMaiden: Maiden = {
-                    ...maiden,
-                    relationships: updatedRelationships,
-                    _relationshipIndex: buildRelationshipIndex(updatedRelationships)
-                };
-                maidens.set(id, newMaiden);
+                maidens.set(id, { ...maiden, relationships: updatedRelationships });
             }
         }
     }
@@ -1118,7 +1113,7 @@ class MaidenSocialization {
 
         if (Math.random() > socialChance) return {};
 
-        const targetId = this.selectSocialTarget(maiden, othersInCarriage, allMaidens);
+        const targetId = this.selectSocialTarget(maiden, othersInCarriage);
         if (!targetId) return {};
 
         const target = allMaidens.get(targetId);
@@ -1137,18 +1132,15 @@ class MaidenSocialization {
 
     private selectSocialTarget(
         maiden: Maiden,
-        othersInCarriage: string[],
-        allMaidens: Map<string, Maiden>
+        othersInCarriage: string[]
     ): string | null {
         const candidates = othersInCarriage.filter(id => id !== maiden.id);
         if (candidates.length === 0) return null;
 
-        const relationships = getAllRelationships(maiden);
-
         const weights = candidates.map(id => {
             let weight = 10;
 
-            const rel = relationships.find(r => r.targetId === id);
+            const rel = getRelationship(maiden, id);
             if (rel) {
                 weight += Math.abs(rel.affinity) * 0.5;
                 if (rel.sharedTrauma) weight += 20;
@@ -1461,7 +1453,7 @@ class MaidenNarcissus {
         return Math.random() < chance;
     }
 
-    initiateProtocol(maiden: Maiden, gameTimePassed: number): { success: boolean; description: string; maidenUpdate: Partial<Maiden> } {
+    initiateProtocol(maiden: Maiden, gameTimePassed: number): NarcissusTriggerResult {
         const eligibility = this.checkEligibility(maiden, gameTimePassed);
 
         if (!eligibility.eligible) {
@@ -1486,7 +1478,7 @@ class MaidenNarcissus {
         };
     }
 
-    chooseToDeparture(maiden: Maiden, gameTimePassed: number): { description: string; maidenUpdate: Partial<Maiden> } {
+    chooseToDeparture(maiden: Maiden, gameTimePassed: number): NarcissusOutcome {
         const state = maiden.narcissusState;
         if (!state || state.stage !== 'choice') {
             return {
@@ -1502,7 +1494,7 @@ class MaidenNarcissus {
         };
 
         // 去重写入 dissociated 状态
-        const newStatus: CharacterStatus[] = maiden.status.filter(s => s !== 'panicked' && s !== 'dissociated');
+        const newStatus: CharacterStatus[] = withoutStatus(maiden, 'panicked', 'dissociated');
         newStatus.push('dissociated');
 
         return {
@@ -1517,7 +1509,7 @@ class MaidenNarcissus {
         };
     }
 
-    chooseToStay(maiden: Maiden): { description: string; maidenUpdate: Partial<Maiden> } {
+    chooseToStay(maiden: Maiden): NarcissusOutcome {
         const state = maiden.narcissusState;
         if (!state || state.stage !== 'choice') {
             return {
@@ -1613,7 +1605,7 @@ class MaidenNarcissus {
         };
     }
 
-    acceptInvitation(maiden: Maiden, gameTimePassed: number): { description: string; maidenUpdate: Partial<Maiden> } {
+    acceptInvitation(maiden: Maiden, gameTimePassed: number): NarcissusOutcome {
         const state = maiden.narcissusState;
         if (!state || state.stage !== 'invitation') {
             return {
@@ -1636,12 +1628,7 @@ class MaidenNarcissus {
         const archivedMaiden = maidenMemory.archiveMemoryChain(maiden);
 
         // 状态原子化处理：清洗对立状态，注入归拢状态
-        const newStatus: CharacterStatus[] = maiden.status.filter(s =>
-            s !== 'panicked' &&
-            s !== 'dissociated' &&
-            s !== 'deaconess' &&
-            s !== 'devoted'
-        );
+        const newStatus: CharacterStatus[] = withoutStatus(maiden, 'panicked', 'dissociated', 'deaconess', 'devoted');
         newStatus.push('deaconess', 'devoted');
 
         return {
@@ -1670,7 +1657,7 @@ class MaidenNarcissus {
      * 拒绝邀请：进入 rejected 终态，此后不再推进褪色。
      * 与 acceptInvitation 互斥，仅在 invitation 阶段有效。
      */
-    rejectInvitation(maiden: Maiden, gameTimePassed: number): { description: string; maidenUpdate: Partial<Maiden> } {
+    rejectInvitation(maiden: Maiden, gameTimePassed: number): NarcissusOutcome {
         const state = maiden.narcissusState;
         if (!state || state.stage !== 'invitation') {
             return {
@@ -1727,6 +1714,41 @@ class MaidenNarcissus {
                 maiden.narcissusState = state;
             }
         }
+    }
+
+    /**
+     * 单帧推进：已在协议中则推进褪色，否则按稀有概率尝试触发。
+     * 返回的 `maidenUpdate` 必须由调用方合并进实体——本方法不直接改写入参。
+     */
+    processProtocolTick(
+        maiden: Maiden,
+        gameTimePassed: number
+    ): { log?: string; maidenUpdate?: Partial<Maiden> } {
+        // 已在协议中：推进褪色。终态（returned/rejected）由 updateFading 自行拒绝，
+        // 因此这里无需再判一次阶段。
+        if (this.isInProtocol(maiden)) {
+            const fadingResult = this.updateFading(maiden, gameTimePassed);
+            if (!fadingResult.updatedState) return {};
+
+            const maidenUpdate: Partial<Maiden> = { narcissusState: fadingResult.updatedState };
+            // 仅在阶段真正切换时输出叙述，避免每帧刷屏
+            if (fadingResult.stageChanged && fadingResult.description) {
+                return { log: `>>> 水仙平原 >>> ${fadingResult.description}`, maidenUpdate };
+            }
+            return { maidenUpdate };
+        }
+
+        // 未在协议中：按稀有概率尝试触发
+        if (this.shouldAutonomousTrigger(maiden, gameTimePassed)) {
+            const result = this.initiateProtocol(maiden, gameTimePassed);
+            if (result.success) {
+                return {
+                    log: `>>> 异常波动检测 >>> ${result.description}`,
+                    maidenUpdate: result.maidenUpdate,
+                };
+            }
+        }
+        return {};
     }
 }
 
@@ -2142,7 +2164,7 @@ class MaidenRandomEvent {
 
         const newStatus = add
             ? [...maiden.status, statusKey]
-            : maiden.status.filter(s => s !== statusKey);
+            : withoutStatus(maiden, statusKey);
 
         const newMaiden: Maiden = {
             ...maiden,
@@ -2228,7 +2250,7 @@ class MaidenRandomEvent {
 
         const newMaiden: Maiden = {
             ...maiden,
-            status: maiden.status.filter(s => s !== 'pregnant' && s !== 'gestating'),
+            status: withoutStatus(maiden, 'pregnant', 'gestating'),
             physiology: {
                 ...maiden.physiology,
                 pregnancy: null
@@ -2258,12 +2280,14 @@ class MaidenRandomEvent {
         return true;
     }
 
-    public serialize(): [string, number][] {
-        return Array.from(this.globalEventTimestamps.entries());
+    /** 冷却时序的存档形状；读取方是持久化层，故直接产出它要的类型 */
+    public serialize(): EventTimestampData[] {
+        return Array.from(this.globalEventTimestamps.entries())
+            .map(([eventType, timestamp]) => ({ eventType, timestamp }));
     }
 
-    public deserialize(data: [string, number][]): void {
-        this.globalEventTimestamps = new Map(data as [EventType, number][]);
+    public deserialize(data: EventTimestampData[]): void {
+        this.globalEventTimestamps = new Map(data.map(d => [d.eventType, d.timestamp]));
     }
 }
 
@@ -2676,9 +2700,23 @@ export class PersonalityView {
     }
 }
 
-/** 便捷构造：调用点写作 `personalityView(maiden).meta` */
+/** 视图缓存：键是 `isshex` 对象身份，失效边界见 `personalityView` */
+const viewCache = new WeakMap<ISShexPersonality, PersonalityView>();
+
+/**
+ * 便捷构造：调用点写作 `personalityView(maiden).meta`。
+ *
+ * 视图按 `isshex` 对象身份缓存：推进时 `_updatePersonalityState` 一律产出新的 isshex 对象，
+ * 因此对象身份天然就是失效边界。没有缓存时同一帧内同一少女会被构造五到十余次，
+ * 关系衰退更是每条边构造两个视图、只为取一次关系定性（实测每帧 934 次）。
+ */
 export function personalityView(maiden: Maiden): PersonalityView {
-    return new PersonalityView(maiden.isshex);
+    const cached = viewCache.get(maiden.isshex);
+    if (cached) return cached;
+
+    const view = new PersonalityView(maiden.isshex);
+    viewCache.set(maiden.isshex, view);
+    return view;
 }
 
 function generateFullName(): { fullName: string; origin: NameOrigin } {
@@ -4903,9 +4941,7 @@ class MaidenPregnancy {
                     ...maiden.physiology,
                     pregnancy: null,
                 },
-                status: maiden.status.filter(s =>
-                    s !== 'pregnant' && s !== 'gestating'
-                ),
+                status: withoutStatus(maiden, 'pregnant', 'gestating'),
             };
         }
 
@@ -5019,81 +5055,54 @@ const CHARACTER_STATUS_NAMES: Record<CharacterStatus, string> = {
  * 子系统通过 `readonly` 字段暴露，但它们各自持有的数据都内嵌于 `Maiden` 实体，
  * 因此本类不持有任何需要与存档同步的独立状态。
  */
+/**
+ * 状态标签的日志描述表：数组下标 0 为新增、1 为移除。
+ * 放在模块作用域而非方法内：它是纯常量，写在方法里等于每次调用都重建一遍。
+ */
+const STATUS_CHANGE_DESCRIPTIONS: Record<CharacterStatus, [string, string]> = {
+    'panicked': ['陷入惊恐', '从惊恐中恢复'], 'aroused': ['情欲高涨', '欲望平息'],
+    'broken': ['精神崩溃', '精神逐渐恢复'], 'injured': ['受伤了', '伤势痊愈'],
+    'pregnant': ['怀孕了', '不再怀孕'], 'euphoric': ['陷入极度愉悦', '从愉悦中清醒'],
+    'dissociated': ['意识开始游离', '意识恢复清醒'], 'complicit': ['成为堕落共犯', '不再是共犯'],
+    'devoted': ['变得虔诚', '虔诚消退'], 'voyeur': ['成为窥视者', '不再窥视'],
+    'deaconess': ['晋升为执事', '失去执事身份'], 'gestating': ['开始孕育', '孕育结束'],
+    'performing': ['开始表演', '表演结束'], 'confessing': ['开始忏悔', '忏悔结束'],
+    'anchoring': ['开始锚定', '锚定结束'], 'normal': ['恢复正常', '状态异常'],
+    'sleeping': ['开始睡眠', '醒来'], 'eating': ['开始进食', '进食结束'],
+    'bathing': ['开始沐浴', '沐浴结束'], 'wandering': ['开始游荡', '停止游荡'],
+    'chatting': ['开始交谈', '交谈结束'], 'observing': ['开始观测深渊', '停止观测深渊'],
+};
+
+/** 互动结束叙述模板；`{name1}`/`{name2}` 由调用点替换为双方姓名 */
+const SOCIAL_END_DESCRIPTIONS: Partial<Record<SocialInteractionType, string[]>> = {
+    chat: ['{name1} 与 {name2} 结束了交谈', '{name1} 和 {name2} 的对话告一段落'],
+    comfort: ['{name1} 轻轻拍了拍 {name2}，安慰结束'],
+    gossip: ['{name1} 和 {name2} 停止了窃窃私语'],
+    argue: ['{name1} 与 {name2} 的争执平息了', '{name1} 和 {name2} 不再争吵'],
+    bully: ['{name1} 终于放过了 {name2}'],
+    seduce: ['{name1} 与 {name2} 之间的暧昧气氛消散了'],
+    confide: ['{name1} 向 {name2} 的倾诉结束了'],
+    pray: ['{name1} 与 {name2} 结束了共同祈祷'],
+    huddle: ['{name1} 和 {name2} 分开了', '{name1} 与 {name2} 不再依偎'],
+};
+
+/**
+ * 领域算法门面。
+ *
+ * 子系统以只读字段直接暴露，不再逐层转发：转发方法只是把同一份签名再抄一遍，
+ * 而这个文件的问题从来不是"调用点太长"，是同一个事实有多个所有者。
+ */
 class MaidenSystem {
     readonly generator = maidenGenerator;
-    private behavior = maidenBehavior;
-
+    readonly behavior = maidenBehavior;
     readonly socialization = maidenSocialization;
     readonly memory = maidenMemory;
     readonly narcissus = maidenNarcissus;
     readonly clothing = maidenClothing;
     readonly mood = maidenMood;
-
-    /**
-     * 随机事件系统门面：把事件轮询与冷却时序的序列化合并到一处。
-     */
-    readonly event = {
-        checkForEvents: (
-            maidens: Map<string, Maiden>,
-            carriages: Map<string, Carriage>,
-            gameTimePassed: number,
-            targetIds?: string[]
-        ): GameEvent[] =>
-            maidenRandomEvent.checkForEvents(maidens, carriages, gameTimePassed, targetIds),
-        serialize: (): EventTimestampData[] =>
-            maidenRandomEvent.serialize().map(([eventType, timestamp]) => ({ eventType: eventType as EventType, timestamp })),
-        deserialize: (data: EventTimestampData[]): void =>
-            maidenRandomEvent.deserialize(data.map(d => [d.eventType, d.timestamp])),
-    };
-
-    /** 事件效果结算器，与 event 共用同一底层实现 */
-    readonly eventEffects = {
-        applyEventEffects: (event: GameEvent, ctx: EventEffectContext): Map<string, Maiden> =>
-            maidenRandomEvent.applyEventEffects(event, ctx),
-    };
-
-    /**
-     * 妊娠子系统（附加序列化接口）。
-     * 妊娠状态内嵌于 Maiden.physiology，随 Maiden 全量存档；此处仅为满足 SubsystemsData 规范。
-     */
-    readonly pregnancy = Object.assign(maidenPregnancy, {
-        serialize: (maidens?: Map<string, Maiden>): PregnancyData[] => {
-            if (!maidens) return [];
-            const result: PregnancyData[] = [];
-            for (const maiden of maidens.values()) {
-                if (maiden.physiology.pregnancy) {
-                    result.push({ maidenId: maiden.id, pregnancyState: maiden.physiology.pregnancy });
-                }
-            }
-            return result;
-        },
-        deserialize: (_data: PregnancyData[]): void => {
-            // 妊娠状态通过 Maiden 全量恢复，此处为空操作
-        },
-    });
-
-    /**
-     * 关系子系统（附加序列化接口）。
-     * 关系数据内嵌于 Maiden.relationships，随 Maiden 全量存档；此处仅为满足 SubsystemsData 规范。
-     */
-    readonly relationship = Object.assign(maidenRelationship, {
-        serialize: (maidens?: Map<string, Maiden>): RelationshipNetworkData[] => {
-            if (!maidens) return [];
-            const result: RelationshipNetworkData[] = [];
-            for (const maiden of maidens.values()) {
-                if (maiden.relationships && maiden.relationships.length > 0) {
-                    result.push({
-                        maidenId: maiden.id,
-                        relationships: maiden.relationships.map(r => ({ targetId: r.targetId, relationship: r })),
-                    });
-                }
-            }
-            return result;
-        },
-        deserialize: (_data: RelationshipNetworkData[]): void => {
-            // 关系数据通过 Maiden 全量恢复，此处为空操作
-        },
-    });
+    readonly event = maidenRandomEvent;
+    readonly pregnancy = maidenPregnancy;
+    readonly relationship = maidenRelationship;
 
     /**
      * 生成初始少女种群并写入车厢占用。
@@ -5639,39 +5648,17 @@ class MaidenSystem {
         const context = maiden.behavior.socialContext;
         if (!context?.targetName) return null;
         const { targetName, interactionType } = context;
-        const descriptions: Partial<Record<SocialInteractionType, string[]>> = {
-            chat: [`${maiden.name} 与 ${targetName} 结束了交谈`, `${maiden.name} 和 ${targetName} 的对话告一段落`],
-            comfort: [`${maiden.name} 轻轻拍了拍 ${targetName}，安慰结束`],
-            gossip: [`${maiden.name} 和 ${targetName} 停止了窃窃私语`],
-            argue: [`${maiden.name} 与 ${targetName} 的争执平息了`, `${maiden.name} 和 ${targetName} 不再争吵`],
-            bully: [`${maiden.name} 终于放过了 ${targetName}`],
-            seduce: [`${maiden.name} 与 ${targetName} 之间的暧昧气氛消散了`],
-            confide: [`${maiden.name} 向 ${targetName} 的倾诉结束了`],
-            pray: [`${maiden.name} 与 ${targetName} 结束了共同祈祷`],
-            huddle: [`${maiden.name} 和 ${targetName} 分开了`, `${maiden.name} 与 ${targetName} 不再依偎`],
-        };
-        if (interactionType && descriptions[interactionType]) {
-            const opts = descriptions[interactionType]!;
-            return opts[Math.floor(Math.random() * opts.length)];
+        const options = interactionType ? SOCIAL_END_DESCRIPTIONS[interactionType] : undefined;
+        if (options?.length) {
+            return randomElement(options)!
+                .replace(/\{name1\}/g, maiden.name)
+                .replace(/\{name2\}/g, targetName);
         }
         return `${maiden.name} 与 ${targetName} 的互动结束了`;
     }
 
     private _statusDesc(status: CharacterStatus, added: boolean): string {
-        const descriptions: Record<CharacterStatus, [string, string]> = {
-            'panicked': ['陷入惊恐', '从惊恐中恢复'], 'aroused': ['情欲高涨', '欲望平息'],
-            'broken': ['精神崩溃', '精神逐渐恢复'], 'injured': ['受伤了', '伤势痊愈'],
-            'pregnant': ['怀孕了', '不再怀孕'], 'euphoric': ['陷入极度愉悦', '从愉悦中清醒'],
-            'dissociated': ['意识开始游离', '意识恢复清醒'], 'complicit': ['成为堕落共犯', '不再是共犯'],
-            'devoted': ['变得虔诚', '虔诚消退'], 'voyeur': ['成为窥视者', '不再窥视'],
-            'deaconess': ['晋升为执事', '失去执事身份'], 'gestating': ['开始孕育', '孕育结束'],
-            'performing': ['开始表演', '表演结束'], 'confessing': ['开始忏悔', '忏悔结束'],
-            'anchoring': ['开始锚定', '锚定结束'], 'normal': ['恢复正常', '状态异常'],
-            'sleeping': ['开始睡眠', '醒来'], 'eating': ['开始进食', '进食结束'],
-            'bathing': ['开始沐浴', '沐浴结束'], 'wandering': ['开始游荡', '停止游荡'],
-            'chatting': ['开始交谈', '交谈结束'], 'observing': ['开始观测深渊', '停止观测深渊'],
-        };
-        const [addDesc, removeDesc] = descriptions[status] || ['状态变化', '状态恢复'];
+        const [addDesc, removeDesc] = STATUS_CHANGE_DESCRIPTIONS[status] ?? ['状态变化', '状态恢复'];
         return added ? addDesc : removeDesc;
     }
 
@@ -5682,89 +5669,6 @@ class MaidenSystem {
             case 'aroused': case 'euphoric': return 'narrative';
             default: return 'system';
         }
-    }
-
-    decideMaidenBehavior(
-        maiden: Maiden,
-        currentCarriage: Carriage,
-        allCarriages: Map<string, Carriage>,
-        allMaidens: Map<string, Maiden>,
-        gameTimePassed: number
-    ) {
-        return this.behavior.decideMaidenBehavior(
-            maiden, currentCarriage, allCarriages, allMaidens, gameTimePassed
-        );
-    }
-
-    /**
-     * 抵达目的地后接续本次移动的意图活动。
-     * 调用方必须在清除移动意图之前取出 `intendedActivity`——意图一清，它就没了。
-     */
-    arriveAtIntent(
-        behavior: BehaviorState,
-        intendedActivity: ActivityStatus,
-        gameTimePassed: number
-    ): BehaviorState {
-        return this.behavior.arriveAtIntent(behavior, intendedActivity, gameTimePassed);
-    }
-
-    processSocialInteractions(
-        maiden: Maiden,
-        othersInCarriage: string[],
-        allMaidens: Map<string, Maiden>,
-        carriage: Carriage,
-        gameTimePassed: number
-    ) {
-        return this.socialization.processSocialInteractions(
-            maiden, othersInCarriage, allMaidens, carriage, gameTimePassed
-        );
-    }
-
-    /**
-     * 群体行为检查（按车厢）。返回值是待写入日志的叙述，没有触发时为 null；
-     * 节流状态由社交子系统自己持有，调用方每帧对每节车厢调用即可。
-     */
-    checkGroupBehavior(
-        carriage: Carriage,
-        allMaidens: Map<string, Maiden>,
-        now: number
-    ): string | null {
-        return this.socialization.checkGroupBehavior(carriage, allMaidens, now);
-    }
-
-    /**
-     * 水仙协议单帧推进：已在协议中则推进褪色，否则按稀有概率尝试触发。
-     * 返回的 `maidenUpdate` 必须由调用方合并进实体——本方法不直接改写入参。
-     */
-    processNarcissusLogic(
-        maiden: Maiden,
-        gameTimePassed: number
-    ): { log?: string; maidenUpdate?: Partial<Maiden> } {
-        // 已在协议中：推进褪色。终态（returned/rejected）由 updateFading 自行拒绝，
-        // 因此这里无需再判一次阶段。
-        if (this.narcissus.isInProtocol(maiden)) {
-            const fadingResult = this.narcissus.updateFading(maiden, gameTimePassed);
-            if (!fadingResult.updatedState) return {};
-
-            const maidenUpdate: Partial<Maiden> = { narcissusState: fadingResult.updatedState };
-            // 仅在阶段真正切换时输出叙述，避免每帧刷屏
-            if (fadingResult.stageChanged && fadingResult.description) {
-                return { log: `>>> 水仙平原 >>> ${fadingResult.description}`, maidenUpdate };
-            }
-            return { maidenUpdate };
-        }
-
-        // 未在协议中：按稀有概率尝试触发
-        if (this.narcissus.shouldAutonomousTrigger(maiden, gameTimePassed)) {
-            const result = this.narcissus.initiateProtocol(maiden, gameTimePassed);
-            if (result.success) {
-                return {
-                    log: `>>> 异常波动检测 >>> ${result.description}`,
-                    maidenUpdate: result.maidenUpdate,
-                };
-            }
-        }
-        return {};
     }
 
     /** 卡片列表所需的轻量投影，避免把完整实体传进 UI 层 */

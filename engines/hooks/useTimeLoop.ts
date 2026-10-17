@@ -177,7 +177,7 @@ export const useTimeLoop = ({
       );
 
       // --- 2. 行为决策 ---
-      const behaviorResult = maidenSystem.decideMaidenBehavior(
+      const behaviorResult = maidenSystem.behavior.decideMaidenBehavior(
         updatedMaiden, carriage, nextCarriages, nextMaidens, newGameTime
       );
 
@@ -219,7 +219,7 @@ export const useTimeLoop = ({
               // completeMovement 刚把意图清掉，晚一步就只剩"继续游荡"。
               updatedMaiden = {
                 ...updatedMaiden,
-                behavior: maidenSystem.arriveAtIntent(
+                behavior: maidenSystem.behavior.arriveAtIntent(
                   updatedMaiden.behavior,
                   intent.intendedActivity,
                   newGameTime
@@ -276,7 +276,7 @@ export const useTimeLoop = ({
         !updatedMaiden.behavior.socialContext &&
         updatedCarriage.occupants.length > 1
       ) {
-        const result = maidenSystem.processSocialInteractions(
+        const result = maidenSystem.socialization.processSocialInteractions(
           updatedMaiden, updatedCarriage.occupants, nextMaidens, updatedCarriage, gameDeltaMs
         );
         if (result.updatedMaiden) {
@@ -287,7 +287,7 @@ export const useTimeLoop = ({
       }
 
       // --- 7. 水仙协议（新版同时返回 log 和 maidenUpdate）---
-      const narcissusResult = maidenSystem.processNarcissusLogic(updatedMaiden, newGameTime);
+      const narcissusResult = maidenSystem.narcissus.processProtocolTick(updatedMaiden, newGameTime);
       if (narcissusResult.log) {
         addLog('system', narcissusResult.log, 'SYSTEM', getCurrentCarriageId(updatedMaiden));
       }
@@ -386,7 +386,7 @@ export const useTimeLoop = ({
         );
         for (const event of events) {
           addLog(event.logType, event.description, undefined, event.carriageId);
-          const changedMaidens = maidenSystem.eventEffects.applyEventEffects(event, {
+          const changedMaidens = maidenSystem.event.applyEventEffects(event, {
             maidens: nextMaidens,
             gameTimePassed: newGameTime,
           });
@@ -400,7 +400,7 @@ export const useTimeLoop = ({
       // 群体行为是**按车厢**成立的，因此不在上面那趟逐人循环里。
       // 配置只声明叙述，所以这里只播报，不改写参与者状态。
       for (const carriage of nextCarriages.values()) {
-        const groupLog = maidenSystem.checkGroupBehavior(carriage, nextMaidens, now);
+        const groupLog = maidenSystem.socialization.checkGroupBehavior(carriage, nextMaidens, now);
         if (groupLog) addLog('social', groupLog, undefined, carriage.id);
       }
 

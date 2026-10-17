@@ -544,6 +544,22 @@ export interface NarcissusState {
 }
 
 /**
+ * 水仙协议一次结算的结果。
+ *
+ * `description` 与 `maidenUpdate` 成对返回：子系统只描述发生了什么，改写入参一律交给调用方，
+ * 因此两者必须同进同出——只取其一都会让日志与实体状态对不上。
+ */
+export interface NarcissusOutcome {
+  description: string;
+  maidenUpdate: Partial<Maiden>;
+}
+
+/** 协议触发结果；`success` 为假时其余字段无意义 */
+export interface NarcissusTriggerResult extends NarcissusOutcome {
+  success: boolean;
+}
+
+/**
  * 水仙协议候选资质测算
  */
 export interface NarcissusEligibility {
@@ -586,11 +602,12 @@ export interface EventTimestampData {
 }
 
 /**
- * 子系统数据聚合（存档序列化用）
+ * 子系统数据聚合（存档序列化用）。
+ *
+ * 只放**不内嵌于 Maiden** 的状态：关系与妊娠都在实体上、随实体表全量往返，
+ * 在此再存一份只会得到永不读取的副本。
  */
 export interface SubsystemsData {
-  relationships: RelationshipNetworkData[];
-  pregnancy: PregnancyData[];
   narcissus: NarcissusData[];
   events: EventTimestampData[];
 }
@@ -650,8 +667,6 @@ export interface Maiden {
 
   // --- 关系与协议 ---
   relationships: Relationship[];
-  /** @internal 运行时索引，不参与序列化 */
-  _relationshipIndex?: Map<string, number>;
   narcissusState?: NarcissusState;
 }
 
