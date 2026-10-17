@@ -415,8 +415,8 @@ export interface MovementIntent {
   targetCarriageId: string;
   intendedActivity: ActivityStatus;
   movementState: MovementState;
+  /** 剩余跳数，不含起点：首元素即下一跳，空数组表示已抵达 */
   movementPath: string[];
-  estimatedArrivalTime?: number;
 }
 
 /**
@@ -961,7 +961,6 @@ export interface StateUpdaters {
  */
 export interface EventEffectContext {
   maidens: Map<string, Maiden>;
-  stateUpdaters: StateUpdaters;
   gameTimePassed: number;
 }
 

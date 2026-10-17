@@ -487,31 +487,56 @@ export const updateMovementState = (
 });
 
 /**
- * 触发路径巡游意图
+ * 触发路径巡游意图。
+ *
+ * `movementPath` 是**剩余跳数且不含起点**：首元素即下一跳，空数组表示已在目的地。
+ * 含起点会让每个 tick 的第一跳落在自己身上，而终点又由 completeMovement 一次性坍缩，
+ * 于是整段路程在一帧内走完，`occupants` 却只记了一跳。
  */
 export const startMovement = (
   movement: UnifiedMovementState,
   targetCarriageId: string,
   intendedActivity: ActivityStatus,
-  movementPath: string[],
-  estimatedDuration?: number
+  movementPath: string[]
 ): UnifiedMovementState => {
   const intent: MovementIntent = {
     targetCarriageId,
     intendedActivity,
-    movementState: 'moving',
+    movementState: movementPath.length > 0 ? 'moving' : 'arriving',
     movementPath,
-    estimatedArrivalTime: estimatedDuration ? Date.now() + estimatedDuration : undefined,
   };
 
   return updateMovementState(movement, {
     intent,
-    isMoving: true,
+    isMoving: movementPath.length > 0,
   });
 };
 
 /**
- * 闭合验证巡游到达，执行状态坍缩
+ * 消耗一步移动：把落点推进到下一跳并缩短剩余路径。
+ * 只推进一格，因此实体在网格上的位置与 `occupants` 始终逐跳同步。
+ */
+export const stepMovement = (
+  movement: UnifiedMovementState
+): { nextCarriageId?: string; movement: UnifiedMovementState } => {
+  const intent = movement.intent;
+  if (!intent || intent.movementPath.length === 0) return { movement };
+
+  const [nextCarriageId, ...rest] = intent.movementPath;
+
+  return {
+    nextCarriageId,
+    movement: updateMovementState(movement, {
+      currentCarriageId: nextCarriageId,
+      intent: { ...intent, movementPath: rest },
+      isMoving: rest.length > 0,
+    }),
+  };
+};
+
+/**
+ * 闭合验证巡游到达，执行状态坍缩。
+ * 只清除意图，位置在逐跳推进时已经同步，不在此处再改写。
  */
 export const completeMovement = (movement: UnifiedMovementState): UnifiedMovementState => {
   if (!movement.intent) {
@@ -519,7 +544,6 @@ export const completeMovement = (movement: UnifiedMovementState): UnifiedMovemen
   }
 
   return updateMovementState(movement, {
-    currentCarriageId: movement.intent.targetCarriageId,
     intent: undefined,
     isMoving: false,
   });
@@ -587,15 +611,27 @@ export const buildRelationshipIndex = (relationships: Relationship[]): Map<strin
 };
 
 /**
+ * 取用惰性关系索引。
+ *
+ * 不能以"字段是否存在"判断可用性：存档是 JSON，Map 会被写成 `{}`，
+ * 读档后该字段为真值却不是 Map，`get` 会在第一次关系结算时抛 TypeError。
+ * 索引是纯派生物，因此这里只认"确实是 Map"，其余一律重建。
+ */
+const ensureRelationshipIndex = (maiden: Maiden): Map<string, number> => {
+  if (maiden._relationshipIndex instanceof Map) return maiden._relationshipIndex;
+
+  const index = buildRelationshipIndex(maiden.relationships || []);
+  maiden._relationshipIndex = index;
+  return index;
+};
+
+/**
  * 单向提取关系边快照
  */
 export const getRelationship = (maiden: Maiden, targetId: string): Relationship | undefined => {
   if (!maiden.relationships) return undefined;
 
-  if (!maiden._relationshipIndex) {
-    maiden._relationshipIndex = buildRelationshipIndex(maiden.relationships);
-  }
-  const idx = maiden._relationshipIndex.get(targetId);
+  const idx = ensureRelationshipIndex(maiden).get(targetId);
   return idx !== undefined ? maiden.relationships[idx] : undefined;
 };
 
@@ -604,10 +640,11 @@ export const getRelationship = (maiden: Maiden, targetId: string): Relationship 
  */
 export const setRelationship = (maiden: Maiden, rel: Relationship): Maiden => {
   const relationships = [...(maiden.relationships || [])];
-  const index = maiden._relationshipIndex ?? buildRelationshipIndex(relationships);
-  const idx = index.get(rel.targetId);
+  // 位置从当前数组现算，不读缓存索引：关系数组被整体替换过时，
+  // 旧索引会指向错误的下标，写回就落到别人的边上。
+  const idx = relationships.findIndex(r => r.targetId === rel.targetId);
 
-  if (idx !== undefined) {
+  if (idx !== -1) {
     relationships[idx] = rel;
   } else {
     relationships.push(rel);

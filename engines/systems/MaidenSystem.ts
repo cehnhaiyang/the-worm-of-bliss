@@ -103,7 +103,6 @@ import {
     ACCESSORY_COLORS,
     ACCESSORY_MATERIALS,
     ACCESSORY_TYPES,
-    ACTIVITY_STATUS_NAMES,
     ALL_NAME_DATASETS,
     BATHING_OUTERWEAR_LAYER,
     BIRTHMARKS,
@@ -532,26 +531,24 @@ class MaidenRelationship {
         const totalMaidens = maidenIds.length;
 
         for (const id of maidenIds) {
-            const maiden = maidens.get(id)!;
             const targetRelationCount = 2 + Math.floor(Math.random() * 4);
 
-            let attempts = 0;
-            while (maiden.relationships.length < targetRelationCount && attempts < 15) {
-                attempts++;
-                const targetIdx = Math.floor(Math.random() * totalMaidens);
-                const targetId = maidenIds[targetIdx];
+            // 每轮重读实体：setRelationship 返回新对象而非就地追加，
+            // 在循环外持有快照会让计数永远停在初值，每条边都填满重试上限。
+            for (let attempts = 0; attempts < 15; attempts++) {
+                const maiden = maidens.get(id)!;
+                if (maiden.relationships.length >= targetRelationCount) break;
 
+                const targetId = maidenIds[Math.floor(Math.random() * totalMaidens)];
                 if (targetId === id || getRelationship(maiden, targetId)) continue;
 
                 const target = maidens.get(targetId)!;
 
                 const relationship = this.createInitialRelationship(maiden, target, gameTimePassed);
-                const updatedMaiden = setRelationship(maidens.get(id)!, relationship);
-                maidens.set(id, updatedMaiden);
+                maidens.set(id, setRelationship(maiden, relationship));
 
                 const mirrorRel = this.createMirrorRelationship(relationship, target, maiden, gameTimePassed);
-                const updatedTarget = setRelationship(maidens.get(targetId)!, mirrorRel);
-                maidens.set(targetId, updatedTarget);
+                maidens.set(targetId, setRelationship(maidens.get(targetId)!, mirrorRel));
             }
         }
     }
@@ -672,6 +669,15 @@ class MaidenRelationship {
      * 注意：本方法**就地修改**传入的两个实体（沿用社交结算的浅拷贝隔离约定），
      * 而本文件其余部分一律返回新对象。
      */
+    /**
+     * 细粒度更新单向关系。
+     * 关系不存在时以 'stranger' 基线创建；每次调用都会累加互动次数并刷新 lastInteraction，
+     * 因此不要用它做"只读探测"。
+     *
+     * 本方法**就地写入** `maiden`（沿用社交结算的浅拷贝隔离约定），
+     * 而本文件其余部分一律返回新对象——调用方传入的必须是自己的浅拷贝，
+     * 否则会改到实体表里仍在被他人读取的那一份。
+     */
     public updateRelationship(
         maiden: Maiden,
         target: Maiden,
@@ -683,23 +689,18 @@ class MaidenRelationship {
         },
         gameTimePassed: number
     ): void {
-        if (!maiden.relationships) maiden.relationships = [];
-        if (!target.relationships) target.relationships = [];
+        const existing = getRelationship(maiden, target.id);
 
-        let relationship = getRelationship(maiden, target.id);
-
-        if (!relationship) {
-            relationship = {
-                targetId: target.id,
-                type: 'stranger',
-                affinity: 0,
-                trust: 10,
-                interactions: 0,
-                lastInteraction: gameTimePassed,
-                sharedTrauma: false,
-                isSecret: false,
-            };
-        }
+        const relationship: Relationship = existing ?? {
+            targetId: target.id,
+            type: 'stranger',
+            affinity: 0,
+            trust: 10,
+            interactions: 0,
+            lastInteraction: gameTimePassed,
+            sharedTrauma: false,
+            isSecret: false,
+        };
 
         let newAffinity = relationship.affinity;
         let newTrust = relationship.trust;
@@ -736,10 +737,6 @@ class MaidenRelationship {
         maiden._relationshipIndex = updatedMaiden._relationshipIndex;
     }
 
-    /**
-     * 处理具体的双向社交事件
-     * 严格遵循 SocialInteractionType 向量与非对称人格结算
-     */
     /**
      * 结算一次双向社交事件。
      * 双方各按自身人格得到不同的增减（非对称），因此同一场互动对两人的意义并不相同。
@@ -876,9 +873,10 @@ class MaidenRelationship {
         target?: Maiden
     ): RelationType {
         if (maiden && target && affinity >= 30) {
-            const mDomains = personalityView(maiden).domains;
+            const mView = personalityView(maiden);
             const tDomains = personalityView(target).domains;
-            const mMachiavellianism = personalityView(maiden).proxies.machiavellianism;
+            const mDomains = mView.domains;
+            const mMachiavellianism = mView.proxies.machiavellianism;
 
             if (mDomains.E > 1.0 && mDomains.A < -0.5 && tDomains.E < -0.5 && tDomains.A > 1.0 && trust >= 50) {
                 return 'protector';
@@ -1023,6 +1021,43 @@ const SOCIAL_INTERACTION_DESCRIPTIONS: Record<SocialInteractionType, string[]> =
         '{name1}在余光瞥见{name2}后，迅速后退拉开了冰冷的距离。',
     ]
 };
+
+/** 社交互动的基础时长（游戏分钟），实际时长再乘 0.7–1.3 的抖动 */
+const SOCIAL_DURATION_MINUTES: Record<SocialInteractionType, number> = {
+    chat: 15,
+    comfort: 10,
+    gossip: 20,
+    argue: 8,
+    bully: 5,
+    seduce: 12,
+    confide: 25,
+    pray: 30,
+    huddle: 20,
+    avoid: 0,
+};
+
+/** 社交互动的强度系数，作为关系结算的基础增量倍率 */
+const SOCIAL_INTERACTION_INTENSITY: Record<SocialInteractionType, number> = {
+    chat: 0.5,
+    comfort: 1.0,
+    gossip: 0.3,
+    argue: 0.8,
+    bully: 1.2,
+    seduce: 0.7,
+    confide: 1.5,
+    pray: 0.6,
+    huddle: 0.9,
+    avoid: 0,
+};
+
+/** 目标正在进行的活动若属此类，社交不会打断它 */
+const CRITICAL_ACTIVITIES: readonly CharacterStatus[] = [
+    'sleeping',
+    'eating',
+    'bathing',
+    'performing',
+    'confessing',
+];
 
 /**
  * 社交互动子系统：决定同车厢少女之间是否互动、互动类型及其属性结算。
@@ -1243,14 +1278,6 @@ class MaidenSocialization {
             socialContext: initiatorSocialContext,
         };
 
-        const CRITICAL_ACTIVITIES: ActivityStatus[] = [
-            'sleeping',
-            'eating',
-            'bathing',
-            'performing',
-            'confessing'
-        ];
-
         const targetSocialContext: SocialContext = {
             targetId: maiden.id,
             targetName: maiden.name,
@@ -1284,36 +1311,12 @@ class MaidenSocialization {
     }
 
     private getSocialDuration(type: SocialInteractionType): number {
-        const durations: Record<SocialInteractionType, number> = {
-            'chat': 15,
-            'comfort': 10,
-            'gossip': 20,
-            'argue': 8,
-            'bully': 5,
-            'seduce': 12,
-            'confide': 25,
-            'pray': 30,
-            'huddle': 20,
-            'avoid': 0,
-        };
-        const base = durations[type] || 10;
+        const base = SOCIAL_DURATION_MINUTES[type] ?? 10;
         return base * (0.7 + Math.random() * 0.6);
     }
 
     private getInteractionIntensity(type: SocialInteractionType): number {
-        const intensities: Record<SocialInteractionType, number> = {
-            'chat': 0.5,
-            'comfort': 1.0,
-            'gossip': 0.3,
-            'argue': 0.8,
-            'bully': 1.2,
-            'seduce': 0.7,
-            'confide': 1.5,
-            'pray': 0.6,
-            'huddle': 0.9,
-            'avoid': 0,
-        };
-        return intensities[type] || 1.0;
+        return SOCIAL_INTERACTION_INTENSITY[type] ?? 1.0;
     }
 }
 
@@ -1810,11 +1813,12 @@ class MaidenRandomEvent {
             }
 
             // 6. 妊娠表征显化 (孕期推进里程碑)
+            // 不设周数上界：跨周结算可能一次越过多个里程碑，设了上界会让
+            // "还没被察觉就已超过 8 周"的实体永远触发不到这条事件。
             const pregnancyInfo = maiden.physiology.pregnancy;
             if (
                 pregnancyInfo &&
                 pregnancyInfo.weekNumber >= GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK &&
-                pregnancyInfo.weekNumber <= 8 &&
                 !maiden.status.includes('pregnant') &&
                 this.canTriggerGlobal('pregnancy', now)
             ) {
@@ -1862,7 +1866,7 @@ class MaidenRandomEvent {
         event: GameEvent,
         ctx: EventEffectContext
     ): Map<string, Maiden> {
-        const { maidens, stateUpdaters, gameTimePassed } = ctx;
+        const { maidens, gameTimePassed } = ctx;
         const changedMaidens = new Map<string, Maiden>();
 
         for (const effect of event.effects) {
@@ -1897,6 +1901,11 @@ class MaidenRandomEvent {
                     if (effect.key === 'reset' && event.targetMaidenId) {
                         this.applyPregnancyReset(maidens, changedMaidens, event.targetMaidenId);
                     }
+                    break;
+                }
+                case 'system': {
+                    // 系统级效果由 CarriageSystem 自己拥有并结算，本模块只处理实体效果；
+                    // 静默忽略而不是猜一个落点，避免两个模块写同一个熵值。
                     break;
                 }
             }
@@ -2279,13 +2288,6 @@ const SITUATION_NORM_PRESSURE: Record<SituationType, SituationalNorm> = {
     intimate: { sentimentality: 0.6, gentleness: 0.6, socialBoldness: 0.3 },
 };
 
-/** 标准正态取样（Box-Muller），供状态表达的 ε_jt 使用 */
-function sampleStandardNormal(): number {
-    const u1 = Math.max(Number.EPSILON, Math.random());
-    const u2 = Math.random();
-    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-}
-
 /** 情境在某个维度上的线索相关度：取该维度内子维度线索的均值 */
 function domainCueRelevance(situation: SituationType, domain: keyof HexacoProfile): number {
     const cues = SITUATION_CUE_RELEVANCE[situation];
@@ -2312,8 +2314,6 @@ const LOAD_PARAMS = {
     retention: 0.7,
     /** λ 恢复效率 */
     recoveryEfficiency: 0.6,
-    /** φ 自选目标的负荷折扣 */
-    chosenDiscount: 0.4,
 } as const;
 
 /**
@@ -2571,23 +2571,34 @@ function stateFromDeviation(deviationSquared: number): PersonalityState {
  * `ISShexPersonality` 只存权威（facets + dynamics），因此所有读取派生值的调用点
  * 都经过这里，而不是各自重算——v1 的问题是八层派生值各存一份到存档，
  * 却没有一处维护它们与 facets 的一致性。
+ *
+ * 派生值按实例惰性缓存：视图构造后 `facets` 视为不可变快照（写入方一律产出新对象），
+ * 因此一次读取即可复用。没有缓存时 `octants` 会连带重算 `meta`，
+ * 而 `determineRelationType` 这类要读三个值的地方会构造三次视图、算九遍。
  */
 export class PersonalityView {
+    private cachedDomains?: HexacoProfile;
+    private cachedMeta?: MetaTraits;
+    private cachedOctants?: OctantAffinity[];
+    private cachedSignatures?: SignatureMatch[];
+    private cachedProxies?: Record<ProxyId, number>;
+    private cachedWeights?: BehaviorWeights;
+
     constructor(private readonly isshex: ISShexPersonality) { }
 
     /** 六个维度分数（z） */
     get domains(): HexacoProfile {
-        return deriveDomains(this.isshex.facets);
+        return this.cachedDomains ??= deriveDomains(this.isshex.facets);
     }
 
     /** 三个元因子 α/β/γ（z，已重标准化） */
     get meta(): MetaTraits {
-        return deriveMetaTraits(this.isshex.facets);
+        return this.cachedMeta ??= deriveMetaTraits(this.isshex.facets);
     }
 
     /** 八分构型软隶属度，按隶属度降序 */
     get octants(): OctantAffinity[] {
-        return deriveOctantAffinities(this.meta);
+        return this.cachedOctants ??= deriveOctantAffinities(this.meta);
     }
 
     /** 隶属度最高的构型；β≈0 时相邻构型本就接近，故调用方应展示隶属度而非只取首位 */
@@ -2597,7 +2608,7 @@ export class PersonalityView {
 
     /** 子维度签名匹配，按匹配度降序 */
     get signatures(): SignatureMatch[] {
-        return deriveSignatureMatches(this.isshex.facets);
+        return this.cachedSignatures ??= deriveSignatureMatches(this.isshex.facets);
     }
 
     /**
@@ -2605,12 +2616,12 @@ export class PersonalityView {
      * 未通过验证门槛，仅可用于群体层面分析与创作设定，禁止据此对个体下判断（§3.4.3）。
      */
     get proxies(): Record<ProxyId, number> {
-        return deriveProxies(this.isshex.facets);
+        return this.cachedProxies ??= deriveProxies(this.isshex.facets);
     }
 
     /** 行为驱动权重 */
     get weights(): BehaviorWeights {
-        return deriveBehaviorWeights(this.isshex.facets);
+        return this.cachedWeights ??= deriveBehaviorWeights(this.isshex.facets);
     }
 
     /** 过程平面的可变状态 */
@@ -3187,18 +3198,20 @@ class MaidenGenerator {
 // Maiden Behavior - Need calculation & behavior decisions
 // 基于 IS-SHEX 六维层级人格模型
 
-/** 情境-特质激活映射 */
-const SITUATION_TRAIT_ACTIVATION: Record<SituationType, {
-    primary: keyof HexacoProfile;
-    secondary: keyof HexacoProfile;
-    description: string;
-}> = {
-    threat: { primary: 'E', secondary: 'A', description: '威胁敏感度与对抗反应' },
-    opportunity: { primary: 'X', secondary: 'O', description: '奖赏追求与探索倾向' },
-    task: { primary: 'C', secondary: 'H', description: '执行力与规则遵守' },
-    intimate: { primary: 'E', secondary: 'A', description: '情感共鸣与温和度' },
-    competition: { primary: 'X', secondary: 'A', description: '社交大胆与对抗性' },
-    ambiguous: { primary: 'O', secondary: 'E', description: '认知开放与焦虑反应' },
+/**
+ * 情境的主激活维度。
+ *
+ * 只保留被读取的 `primary`：v1 的同名表还带 `secondary` 与 `description`，
+ * 但增益计算只用到主维度，那两个字段是零读取的死数据，留着会让读者以为
+ * 次维度参与了激活。
+ */
+const SITUATION_PRIMARY_DOMAIN: Record<SituationType, keyof HexacoProfile> = {
+    threat: 'E',
+    opportunity: 'X',
+    task: 'C',
+    intimate: 'E',
+    competition: 'X',
+    ambiguous: 'O',
 };
 
 /** 心境对行为倾向的概率修正 */
@@ -3295,12 +3308,6 @@ const RESTORATIVE_ACCESS: Partial<Record<ActivityStatus, number>> = {
  * 移动中的实体不重新决策，否则会在抵达前反复改写路径。
  */
 class MaidenBehavior {
-    // 当前游戏时间（毫秒累计），确保行为决策基于游戏逻辑流转时间
-    private currentGameTime: number = 0;
-
-    private getGameNow(): number {
-        return this.currentGameTime;
-    }
 
     /**
      * 情境的特质激活增益 g_jt（§4.1）：`g = 1 + κ·(r − 0.5)`。
@@ -3310,15 +3317,15 @@ class MaidenBehavior {
      * 任何情境下都被放大，这不是特质激活。
      */
     private getTraitActivationMultiplier(situation: SituationType): number {
-        const domain = SITUATION_TRAIT_ACTIVATION[situation].primary;
+        const domain = SITUATION_PRIMARY_DOMAIN[situation];
         return 1 + TRAIT_ACTIVATION_GAIN * (domainCueRelevance(situation, domain) - 0.5);
     }
 
-    // 计算需求优先级（基于IS-SHEX人格与当前情境）
+    /** 计算需求优先级（基于 IS-SHEX 人格与当前情境），按紧迫度降序 */
     calculateNeedPriorities(
         maiden: Maiden,
-        currentCarriage?: Carriage,
-        gameTime?: number
+        gameTime: number,
+        currentCarriage?: Carriage
     ): { need: string; urgency: number; activity: ActivityStatus; targetType: CarriageType }[] {
         const { attributes: a, physiology } = maiden;
         const view = personalityView(maiden);
@@ -3391,9 +3398,8 @@ class MaidenBehavior {
         }
 
         // 社交需求
-        const now = gameTime ?? this.getGameNow();
         const timeSinceInteraction = maiden.behavior.lastInteractionTime > 0
-            ? Math.min(30, (now - maiden.behavior.lastInteractionTime) / 60000)
+            ? Math.min(30, (gameTime - maiden.behavior.lastInteractionTime) / 60000)
             : 20;
         let socialNeed = weights.socialSeek * 80 - timeSinceInteraction;
 
@@ -3432,7 +3438,6 @@ class MaidenBehavior {
         gameTimePassed: number
     ): { behavior: BehaviorState; movement?: UnifiedMovementState } {
         const behavior = { ...maiden.behavior };
-        this.currentGameTime = gameTimePassed;
         const now = gameTimePassed;
         const attrs = maiden.attributes;
 
@@ -3454,7 +3459,7 @@ class MaidenBehavior {
             return { behavior };
         }
 
-        const needs = this.calculateNeedPriorities(maiden, currentCarriage, gameTimePassed);
+        const needs = this.calculateNeedPriorities(maiden, gameTimePassed, currentCarriage);
         const isNight = isRestTime(gameTimePassed);
         const carriageFunc = CARRIAGE_FUNCTIONS[currentCarriage.type];
         const situation = CARRIAGE_SITUATION_MAP[currentCarriage.type];
@@ -3713,9 +3718,7 @@ class MaidenBehavior {
         const currentId = getCurrentCarriageId(maiden);
         const movementPath = this.findPath(currentId, targetCarriageId, allCarriages);
 
-        // 启动物理移动流转，分配预期消耗时间基准常量
-        const estimatedDuration = movementPath.length * GAME_CONFIG.DURATIONS.WANDER * 60 * 1000;
-        const movement = startMovement(maiden.movement, targetCarriageId, intendedActivity, movementPath, estimatedDuration);
+        const movement = startMovement(maiden.movement, targetCarriageId, intendedActivity, movementPath);
 
         // 在抵达意图前处于默认的游荡状态机中
         const behavior = this.createActivityBehavior('wandering', 5, maiden.behavior, gameTime);
@@ -3724,7 +3727,7 @@ class MaidenBehavior {
     }
 
     /**
-     * BFS 网格寻路。
+     * BFS 网格寻路，返回**不含起点**的剩余跳数。
      * 只走 `isAccessible` 的车厢；无路径或坐标非法时退化为"直达目标"，
      * 这样移动仍会推进（可被后续 tick 纠正），而不是把实体卡死在原地。
      */
@@ -3734,7 +3737,7 @@ class MaidenBehavior {
         allCarriages: Map<string, Carriage>
     ): string[] {
         if (startCarriageId === targetCarriageId) {
-            return [startCarriageId];
+            return [];
         }
 
         const start = parseCarriageId(startCarriageId);
@@ -3744,9 +3747,8 @@ class MaidenBehavior {
             return [targetCarriageId];
         }
 
-        const visited = new Set<string>();
-        const queue: { id: string; path: string[] }[] = [{ id: startCarriageId, path: [startCarriageId] }];
-        visited.add(startCarriageId);
+        const visited = new Set<string>([startCarriageId]);
+        const queue: { id: string; path: string[] }[] = [{ id: startCarriageId, path: [] }];
 
         const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
 
@@ -4646,14 +4648,15 @@ class MaidenPregnancy {
     }
 
     /**
-     * 获取妊娠对基础维生属性的平滑影响乘区
+     * 妊娠对基础维生属性的平滑影响乘区。
+     * 只给出被消费的两项：移动受限目前由活动时长与需求优先级表达，
+     * 没有独立的移动速度通道，因此不再计算无人读取的 mobilityMod。
      */
-    getPregnancyImpacts(weekNumber: number): { hungerMod: number; fatigueMod: number; mobilityMod: number } {
-        if (weekNumber <= 0) return { hungerMod: 1, fatigueMod: 1, mobilityMod: 1 };
+    getPregnancyImpacts(weekNumber: number): { hungerMod: number; fatigueMod: number } {
+        if (weekNumber <= 0) return { hungerMod: 1, fatigueMod: 1 };
 
         let hungerMod = 1.0;
         let fatigueMod = 1.0;
-        let mobilityMod = 1.0;
 
         if (weekNumber < 12) {
             // 早期：食欲轻微下降，疲劳感快速上升
@@ -4666,14 +4669,13 @@ class MaidenPregnancy {
             hungerMod = 0.85 + (progress * 0.65); // 最高 1.5
             fatigueMod = 1.3 - (progress * 0.2);  // 降至 1.1
         } else {
-            // 晚期：负担极重，移动受限
+            // 晚期：负担极重，食欲回落、疲劳陡增
             const progress = Math.min(1.0, (weekNumber - 28) / 12);
             hungerMod = 1.5 - (progress * 0.3);   // 降至 1.2
             fatigueMod = 1.1 + (progress * 0.5);  // 升至 1.6
-            mobilityMod = 1.0 - (progress * 0.5); // 最低 0.5
         }
 
-        return { hungerMod, fatigueMod, mobilityMod };
+        return { hungerMod, fatigueMod };
     }
 
     /**
@@ -4896,12 +4898,12 @@ class MaidenPregnancy {
         }
 
         const newStatus = new Set(maiden.status);
-        if (state.isDiscovered) {
-            newStatus.add('pregnant');
-        }
-        if (state.stage === 'late' || state.stage === 'labor') {
-            newStatus.add('gestating');
-        }
+        // 两个标签都成对增删：只增不减会让 gestating 在阶段回退后永久驻留
+        if (state.isDiscovered) newStatus.add('pregnant');
+        else newStatus.delete('pregnant');
+
+        if (state.stage === 'late' || state.stage === 'labor') newStatus.add('gestating');
+        else newStatus.delete('gestating');
 
         return {
             ...maiden,
@@ -5205,7 +5207,9 @@ class MaidenSystem {
         const discomfort = 1 - carriageFunc.comfortLevel;
         attrs.stress = clamp(attrs.stress + discomfort * 0.05 * deltaMinutes);
 
-        const statusSet = this._updateStatusTags(maiden, attrs, THRESHOLDS);
+        // 状态标签必须从 syncedMaiden 推导：syncToMaiden 刚写入的 pregnant/gestating
+        // 只存在于它的 status 上，用入参 maiden 会让这两个标签每帧被丢掉。
+        const statusSet = this._updateStatusTags(syncedMaiden, attrs, THRESHOLDS);
         const updatedPhysiology = this._updatePhysiology(syncedMaiden, deltaMinutes, gameTimePassed);
         const isshex = this._updatePersonalityState(maiden, carriage);
 
@@ -5358,9 +5362,7 @@ class MaidenSystem {
         for (const key of Object.keys(DOMAIN_FACETS) as (keyof HexacoProfile)[]) {
             const relevance = domainCueRelevance(situation, key);
             const gain = 1 + TRAIT_ACTIVATION_GAIN * (relevance - 0.5);
-            const expected = (1 - strength) * gain * theta[key] + strength * domainNormPressure(situation, key);
-            // withNoise 参数只在需要模拟个体内波动的调用点才为 true，此处固定取期望值
-            expressed[key] = expected;
+            expressed[key] = (1 - strength) * gain * theta[key] + strength * domainNormPressure(situation, key);
         }
 
         return expressed;

@@ -3,7 +3,7 @@ import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange } from
 import { GAME_CONFIG, TIME_CONFIG, formatGameTime, getTimePeriod, TimePeriod } from '../../constants';
 import { maidenSystem, carriageSystem } from '../systems';
 import { audioService } from '../services';
-import { getCurrentCarriageId, setCurrentCarriageId, completeMovement } from '../../const';
+import { getCurrentCarriageId, stepMovement, completeMovement, cancelMovement } from '../../const';
 
 // 入参契约
 interface UseTimeLoopParams {
@@ -65,10 +65,11 @@ export const useTimeLoop = ({
       }
 
       if (otherChanges.length > 3) {
+        // 摘要只列前三人的名字，人数取真实总数；描述沿用第一条，
+        // 因此必须先抹掉它自带的名字，否则会与前面的名字列表重复。
         const names = otherChanges.slice(0, 3).map(c => c.maidenName).join('、');
-        const extra = otherChanges.length - 3;
         const desc = otherChanges[0].description.replace(otherChanges[0].maidenName, '');
-        addLog('system', `${names} 等${extra > 0 ? `${extra + 3}人` : ''}${desc}`, undefined, 'SYSTEM');
+        addLog('system', `${names} 等${otherChanges.length}人${desc}`, undefined, 'SYSTEM');
       } else {
         for (const change of otherChanges) {
           addLog(change.logType, change.description, undefined, change.carriageId);
@@ -161,8 +162,7 @@ export const useTimeLoop = ({
       nextMaidens: Map<string, Maiden>,
       gameDeltaMs: number,
       newGameTime: number,
-      sys: SystemState,
-      now: number
+      sys: SystemState
     ): { updatedMaiden: Maiden; changes: StateChange[]; carriagesChanged: boolean } => {
       const currentCarriageId = getCurrentCarriageId(maiden);
       const carriage = nextCarriages.get(currentCarriageId);
@@ -188,27 +188,39 @@ export const useTimeLoop = ({
       }
 
       // --- 3. 移动执行（单步推进）---
-      // movement.intent.movementPath[0] 是下一跳目标，完成移动后由 completeMovement 清理
-      if (
-        updatedMaiden.movement?.isMoving &&
-        updatedMaiden.movement?.intent?.movementPath &&
-        updatedMaiden.movement.intent.movementPath.length > 0
-      ) {
-        const targetId = updatedMaiden.movement.intent.movementPath[0];
-        const targetCarriage = nextCarriages.get(targetId);
+      // intent.movementPath 是剩余跳数且不含起点，首元素即下一跳；
+      // 只有走完最后一跳才清除意图，否则位置与 occupants 会与路径脱节。
+      {
+        const intent = updatedMaiden.movement?.intent;
+        const nextId = intent?.movementPath[0];
+        if (intent && nextId) {
+          // 必须从 nextCarriages 现读：同一帧内前面的实体可能已改写这两节车厢的 occupants，
+          // 用本帧开头的 carriage 快照回写会把它们的增删覆盖掉。
+          const fromId = getCurrentCarriageId(updatedMaiden);
+          const fromCarriage = nextCarriages.get(fromId);
+          const targetCarriage = nextCarriages.get(nextId);
 
-        if (targetCarriage && targetCarriage.isAccessible) {
-          // 从旧车厢移除
-          const oldOccupants = carriage.occupants.filter(oid => oid !== id);
-          nextCarriages.set(carriage.id, { ...carriage, occupants: oldOccupants });
+          if (fromCarriage && targetCarriage && targetCarriage.isAccessible) {
+            nextCarriages.set(fromId, {
+              ...fromCarriage,
+              occupants: fromCarriage.occupants.filter(oid => oid !== id),
+            });
 
-          // 加入新车厢
-          const newOccupants = [...targetCarriage.occupants, id];
-          nextCarriages.set(targetCarriage.id, { ...targetCarriage, occupants: newOccupants });
+            nextCarriages.set(nextId, {
+              ...targetCarriage,
+              occupants: [...targetCarriage.occupants, id],
+            });
 
-          updatedMaiden = setCurrentCarriageId(updatedMaiden, targetId);
-          updatedMaiden = { ...updatedMaiden, movement: completeMovement(updatedMaiden.movement) };
-          carriagesChanged = true;
+            const stepped = stepMovement(updatedMaiden.movement);
+            updatedMaiden = { ...updatedMaiden, movement: stepped.movement };
+            if (!stepped.movement.isMoving) {
+              updatedMaiden = { ...updatedMaiden, movement: completeMovement(updatedMaiden.movement) };
+            }
+            carriagesChanged = true;
+          } else {
+            // 下一跳已不可通行：中止本次巡游，让下一帧重新决策，而不是原地空转
+            updatedMaiden = { ...updatedMaiden, movement: cancelMovement(updatedMaiden.movement) };
+          }
         }
       }
 
@@ -226,7 +238,9 @@ export const useTimeLoop = ({
 
       // --- 5. 社交超时/目标离场清理 ---
       if (updatedMaiden.behavior.socialContext) {
-        const socialElapsed = now - updatedMaiden.behavior.socialContext.startTime;
+        // startTime 是游戏时间，因此必须用 newGameTime 相减；
+        // 用墙钟 now 会得到"游戏时间减纪元"的巨值，社交永远立即超时。
+        const socialElapsed = newGameTime - updatedMaiden.behavior.socialContext.startTime;
         const socialDuration = updatedMaiden.behavior.activityDuration || 10 * 60 * 1000;
         // 获取当前最新车厢（移动后位置可能已变）
         const currentOccupants = nextCarriages.get(getCurrentCarriageId(updatedMaiden))?.occupants ?? [];
@@ -327,7 +341,7 @@ export const useTimeLoop = ({
     const tick = () => {
       if (!stateRef.current) return;
 
-      const { systemState: sys, carriages: cars, maidens: mds, masterState: master } = stateRef.current;
+      const { systemState: sys, carriages: cars, maidens: mds } = stateRef.current;
 
       if (sys.isPaused) return;
 
@@ -347,7 +361,7 @@ export const useTimeLoop = ({
       let carriagesChanged = false;
 
       for (const [id, maiden] of mds) {
-        const result = processMaiden(id, maiden, nextCarriages, nextMaidens, gameDeltaMs, newGameTime, sys, now);
+        const result = processMaiden(id, maiden, nextCarriages, nextMaidens, gameDeltaMs, newGameTime, sys);
         nextMaidens.set(id, result.updatedMaiden);
         if (result.changes.length > 0) {
           allChanges.push(...result.changes);
@@ -364,7 +378,6 @@ export const useTimeLoop = ({
           addLog(event.logType, event.description, undefined, event.carriageId);
           const changedMaidens = maidenSystem.eventEffects.applyEventEffects(event, {
             maidens: nextMaidens,
-            stateUpdaters: { updateSystemState: setSystemState, updateCarriages: setCarriages, addLog },
             gameTimePassed: newGameTime,
           });
           for (const [mid, m] of changedMaidens) {
