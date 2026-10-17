@@ -4,7 +4,7 @@
 // ============================================
 
 import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData, ItemDef } from '../../../meta';
-import { ATTIRE_STATE_LABELS, CARRIAGE_TYPE_INFO, ABYSS_TYPES, TIME_CONFIG, WORLD_LORE, SIGNATURE_STYLES, PERSONALITY_STATE_LABELS } from '../../../constants';
+import { ATTIRE_STATE_LABELS, CARRIAGE_TYPE_INFO, ABYSS_TYPES, TIME_CONFIG, WORLD_LORE, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../constants';
 import { maidenSystem, personalityView } from '../../systems';
 
 // ============================================
@@ -113,7 +113,7 @@ function serializePersonality(maiden: Maiden): string {
 
   const signatures = view.signatures
     .filter(s => s.match >= 0.75)
-    .map(s => SIGNATURE_STYLES[s.signature]?.name ?? s.signature);
+    .map(s => SIGNATURE_LABELS[s.signature]);
 
   return `
 [人格档案 IS-SHEX]

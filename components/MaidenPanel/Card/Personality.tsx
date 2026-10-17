@@ -1,7 +1,43 @@
 import { memo } from 'react';
-import { ISShexPersonality, PersonalityProfile, HexacoFacets } from '../../../meta';
-import { OCTANT_STYLES, SIGNATURE_STYLES, PERSONALITY_STATE_STYLES, toDisplayScore, gradeOf } from '../../../constants';
+import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState } from '../../../meta';
+import { OCTANT_LABELS, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS, toDisplayScore, gradeOf } from '../../../constants';
 import { PersonalityView } from '../../../engines/systems';
+
+/**
+ * 构型与签名的配色。
+ *
+ * 只在这里存在：颜色是纯 UI 表达，系统层与提示词层都不需要它，放回 constants
+ * 会让领域文件承担配色职责。速记名仍取 `OCTANT_LABELS` / `SIGNATURE_LABELS`，
+ * 因为那三处显示的是同一个名字，各存一份必然漂移。
+ */
+const OCTANT_COLORS: Record<OctantId, string> = {
+    PPP: 'bg-emerald-900/50 text-emerald-400',
+    PPN: 'bg-amber-900/50 text-amber-400',
+    PNP: 'bg-blue-900/50 text-blue-400',
+    PNN: 'bg-slate-900/50 text-slate-400',
+    NPP: 'bg-cyan-900/50 text-cyan-400',
+    NPN: 'bg-orange-900/50 text-orange-400',
+    NNP: 'bg-teal-900/50 text-teal-400',
+    NNN: 'bg-violet-900/50 text-violet-400',
+};
+
+const SIGNATURE_COLORS: Record<SignatureId, string> = {
+    benevolent_strategist: 'bg-violet-900/50 text-violet-400',
+    vulnerable_superiority: 'bg-rose-900/50 text-rose-400',
+    chaotic_innovator: 'bg-orange-900/50 text-orange-400',
+    calm_executor: 'bg-slate-900/50 text-slate-400',
+    needed_helper: 'bg-pink-900/50 text-pink-400',
+    rule_enforcer: 'bg-yellow-900/50 text-yellow-400',
+    steady_caregiver: 'bg-emerald-900/50 text-emerald-400',
+    quiet_principled: 'bg-cyan-900/50 text-cyan-400',
+};
+
+const PERSONALITY_STATE_COLORS: Record<PersonalityState, string> = {
+    typical: 'text-emerald-400',
+    stretched: 'text-cyan-400',
+    atypical: 'text-orange-400',
+    extreme: 'text-red-400',
+};
 
 const FACET_DEFINITIONS = {
     // H维度细分
@@ -144,7 +180,7 @@ const ISShexDisplay = memo<ISShexDisplayProps>(({ isshex }) => {
     const { meta, domains, dynamics } = view;
     const state = view.state;
 
-    const stateStyle = PERSONALITY_STATE_STYLES[state] || { color: 'text-zinc-400', name: '未知' };
+    const stateStyle = { color: PERSONALITY_STATE_COLORS[state], name: PERSONALITY_STATE_LABELS[state] };
 
     /** 显示前三位构型：β≈0 时相邻构型本就接近，只取首位会造成虚假的确定性 */
     const topThree = view.octants.slice(0, 3);
@@ -186,7 +222,7 @@ const ISShexDisplay = memo<ISShexDisplayProps>(({ isshex }) => {
                 <div className="text-[8px] text-zinc-600">构型隶属度</div>
                 {topThree.map(({ octant, membership }) => (
                     <div key={octant} className="flex items-center justify-between text-[9px]">
-                        <span className="text-zinc-400">{OCTANT_STYLES[octant]?.name ?? octant}</span>
+                        <span className="text-zinc-400">{OCTANT_LABELS[octant]}</span>
                         <span className="text-zinc-500 font-mono">{(membership * 100).toFixed(1)}%</span>
                     </div>
                 ))}
@@ -196,7 +232,7 @@ const ISShexDisplay = memo<ISShexDisplayProps>(({ isshex }) => {
                 <div className="flex items-center justify-between text-[9px]">
                     <span className="text-zinc-600">子维度签名</span>
                     <span className="text-zinc-400">
-                        {SIGNATURE_STYLES[bestSignature.signature]?.name ?? bestSignature.signature}
+                        {SIGNATURE_LABELS[bestSignature.signature]}
                         <span className="text-zinc-600 font-mono ml-1">{(bestSignature.match * 100).toFixed(0)}%</span>
                     </span>
                 </div>
@@ -281,14 +317,10 @@ export const Personality = memo<PersonalityProps>(({ isshex, profile, personalit
         // 优先取匹配度高的子维度签名，否则用隶属度最高的八分构型
         const signature = view.signatures[0];
         if (signature && signature.match >= 0.75) {
-            const style = SIGNATURE_STYLES[signature.signature];
-            if (style) return { ...style, name: personalityDescription };
+            return { color: SIGNATURE_COLORS[signature.signature], name: personalityDescription };
         }
 
-        const style = OCTANT_STYLES[view.topOctant.octant];
-        if (style) return { ...style, name: personalityDescription };
-
-        return { color: 'bg-zinc-700 text-zinc-300', name: personalityDescription };
+        return { color: OCTANT_COLORS[view.topOctant.octant], name: personalityDescription };
     };
 
     const personalityStyle = getPersonalityStyle();

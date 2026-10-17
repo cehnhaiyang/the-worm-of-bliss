@@ -6,8 +6,8 @@
 import React, { useState, useEffect, memo } from 'react';
 import { SoundCategory, AudioState, SaveSlotInfo } from '../../meta';
 import { audioService, persistenceService, aiService } from '../../engines/services';
-import { AVAILABLE_TEXT_MODELS } from '../../engines/services/AIService/TextService';
 import { AVAILABLE_IMAGE_MODELS } from '../../engines/services/AIService/ImageService';
+import { LLM_CONFIG } from '../../constants';
 
 // ============================================
 // Props 接口
@@ -275,20 +275,13 @@ export const Settings: React.FC<SettingsProps> = memo(({
                                 onChange={handleModelChange}
                                 className="w-full bg-zinc-900/50 border border-zinc-800/50 rounded px-2 py-1.5 text-[10px] font-mono text-zinc-300 outline-none focus:border-zinc-600"
                             >
-                                <optgroup label="Groq">
-                                    <option value={AVAILABLE_TEXT_MODELS.QWEN}>{AVAILABLE_TEXT_MODELS.QWEN}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.LLAMA_MAVERICK}>{AVAILABLE_TEXT_MODELS.LLAMA_MAVERICK}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.LLAMA_3_3_70B}>{AVAILABLE_TEXT_MODELS.LLAMA_3_3_70B}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.GROQ_COMPOUND}>{AVAILABLE_TEXT_MODELS.GROQ_COMPOUND}</option>
-                                </optgroup>
-                                <optgroup label="Agent2API (localhost:3065)">
-                                    <option value={AVAILABLE_TEXT_MODELS.GLM_5_2_CN}>{AVAILABLE_TEXT_MODELS.GLM_5_2_CN}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.GLM_5_2_GLOBAL}>{AVAILABLE_TEXT_MODELS.GLM_5_2_GLOBAL}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.STEP_5_PREVIEW_GLOBAL}>{AVAILABLE_TEXT_MODELS.STEP_5_PREVIEW_GLOBAL}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.STEP_5_PREVIEW_CN}>{AVAILABLE_TEXT_MODELS.STEP_5_PREVIEW_CN}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.GLM_5_3_FLASH}>{AVAILABLE_TEXT_MODELS.GLM_5_3_FLASH}</option>
-                                    <option value={AVAILABLE_TEXT_MODELS.GLM_5_3}>{AVAILABLE_TEXT_MODELS.GLM_5_3}</option>
-                                </optgroup>
+                                {LLM_CONFIG.PROVIDERS.map(provider => (
+                                    <optgroup key={provider.id} label={provider.id}>
+                                        {provider.models.map(model => (
+                                            <option key={model} value={model}>{model}</option>
+                                        ))}
+                                    </optgroup>
+                                ))}
                             </select>
                         </div>
 

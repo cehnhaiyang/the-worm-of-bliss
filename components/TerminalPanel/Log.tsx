@@ -6,7 +6,74 @@
 
 import React, { useEffect, useRef, useState, useMemo, useCallback, memo } from 'react';
 import { GameLog, LogType } from '../../meta';
-import { LOG_STYLES, LOG_FILTER_OPTIONS } from '../../constants';
+
+/**
+ * 日志类型的视觉样式：容器底色、标签行颜色、标签文字。
+ *
+ * 只有本组件消费，故不再经 constants 中转；标签文字与配色是同一处设计决定，
+ * 拆开放会让"改配色时忘了改标签"这类不一致无从对照。
+ */
+const LOG_STYLES: Record<LogType, { container: string; label: string; labelText: string }> = {
+  player: {
+    container: 'bg-blue-900/20 text-blue-100 border-l-2 border-blue-500',
+    label: 'text-blue-400',
+    labelText: 'ME'
+  },
+  system: {
+    container: 'text-yellow-500 font-mono text-xs bg-yellow-900/10 border-l-2 border-yellow-600/50',
+    label: 'text-yellow-600',
+    labelText: 'SYSTEM'
+  },
+  narrative: {
+    container: 'text-zinc-300 bg-zinc-900/30 border-l-2 border-zinc-600',
+    label: 'text-zinc-500',
+    labelText: 'NARRATIVE'
+  },
+  thought: {
+    container: 'bg-pink-900/10 text-pink-200 italic font-serif border-r-2 border-pink-500',
+    label: 'text-pink-400',
+    labelText: ''
+  },
+  abyss: {
+    container: 'bg-purple-900/20 text-purple-300 border-l-2 border-purple-500 font-mono',
+    label: 'text-purple-400',
+    labelText: 'ABYSS'
+  },
+  grace: {
+    container: 'bg-amber-900/20 text-amber-200 border-l-2 border-amber-500',
+    label: 'text-amber-400',
+    labelText: 'GRACE'
+  },
+  ritual: {
+    container: 'bg-red-900/20 text-red-200 border-l-2 border-red-500',
+    label: 'text-red-400',
+    labelText: 'RITUAL'
+  },
+  movement: {
+    container: 'text-cyan-400 font-mono text-xs bg-cyan-900/10 border-l-2 border-cyan-600/50',
+    label: 'text-cyan-600',
+    labelText: 'MOVE'
+  },
+  social: {
+    container: 'text-emerald-400 font-serif text-xs bg-emerald-900/10 border-l-2 border-emerald-600/50',
+    label: 'text-emerald-600',
+    labelText: 'SOCIAL'
+  }
+};
+
+/** 过滤器按钮的取值与文案；顺序即按钮顺序，前 6 个是默认展示的一行 */
+const LOG_FILTER_OPTIONS: { value: LogType | 'all'; label: string }[] = [
+  { value: 'all', label: '全部' },
+  { value: 'narrative', label: '叙事' },
+  { value: 'thought', label: '心声' },
+  { value: 'player', label: '指令' },
+  { value: 'system', label: '系统' },
+  { value: 'abyss', label: '深渊' },
+  { value: 'grace', label: '神恩' },
+  { value: 'ritual', label: '仪式' },
+  { value: 'movement', label: '移动' },
+  { value: 'social', label: '社交' },
+];
 
 // ============================================
 // 类型定义

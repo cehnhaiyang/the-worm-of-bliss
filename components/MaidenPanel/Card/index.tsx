@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { Maiden, CharacterStatus, CarriageType } from '../../../meta';
-import { STATUS_STYLES, ABYSS_TYPES } from '../../../constants';
+import { STATUS_LABELS, ABYSS_TYPES } from '../../../constants';
 import { aiService, maidenSystem, useGameEngine } from '../../../engines';
 import { formatPreciseAge, isAlteredMemory } from '../../../meta';
 import { Appearance } from './Appearance';
@@ -28,11 +28,35 @@ interface StatusTagProps {
     status: CharacterStatus;
 }
 
-const StatusTag = memo<StatusTagProps>(({ status }) => {
-    const style = STATUS_STYLES[status];
-    if (!style) return null;
-    return <span className={`status-tag ${style.color}`}>{style.name}</span>;
-});
+/** 徽标配色：卡片上是带底色的实心标签，与列表里的纯文字着色是两套视觉处理 */
+const STATUS_BADGE_COLORS: Record<CharacterStatus, string> = {
+    'normal': 'bg-zinc-700 text-zinc-300',
+    'panicked': 'bg-yellow-900/60 text-yellow-400',
+    'aroused': 'bg-pink-900/60 text-pink-400',
+    'injured': 'bg-red-900/60 text-red-400',
+    'broken': 'bg-gray-900/60 text-gray-400',
+    'pregnant': 'bg-purple-900/60 text-purple-400',
+    'euphoric': 'bg-fuchsia-900/60 text-fuchsia-400',
+    'dissociated': 'bg-blue-900/60 text-blue-400',
+    'devoted': 'bg-amber-900/60 text-amber-400',
+    'complicit': 'bg-orange-900/60 text-orange-400',
+    'voyeur': 'bg-indigo-900/60 text-indigo-400',
+    'deaconess': 'bg-violet-900/60 text-violet-400',
+    'gestating': 'bg-teal-900/60 text-teal-400',
+    'performing': 'bg-rose-900/60 text-rose-400',
+    'confessing': 'bg-slate-900/60 text-slate-400',
+    'anchoring': 'bg-cyan-900/60 text-cyan-400',
+    'sleeping': 'bg-blue-900/60 text-blue-400',
+    'eating': 'bg-amber-900/60 text-amber-400',
+    'bathing': 'bg-cyan-900/60 text-cyan-400',
+    'wandering': 'bg-zinc-700 text-zinc-400',
+    'chatting': 'bg-emerald-900/60 text-emerald-400',
+    'observing': 'bg-fuchsia-900/40 text-fuchsia-400 border border-fuchsia-500/30 animate-pulse',
+};
+
+const StatusTag = memo<StatusTagProps>(({ status }) => (
+    <span className={`status-tag ${STATUS_BADGE_COLORS[status]}`}>{STATUS_LABELS[status]}</span>
+));
 
 StatusTag.displayName = 'StatusTag';
 

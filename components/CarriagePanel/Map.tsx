@@ -5,8 +5,77 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Carriage, ViewMode } from '../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, SANCTUARY_TYPES, TYPE_COLORS, CARRIAGE_ICONS, MAP_VIEW_MODES, GAME_CONFIG } from '../../constants';
+import { Carriage, CarriageType, ViewMode } from '../../meta';
+import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, SANCTUARY_TYPES, GAME_CONFIG } from '../../constants';
+
+/**
+ * 车厢类型的底色。
+ *
+ * 按语义分组而非逐个挑色：圣所按"社会性剥离 / 个体性瓦解 / 价值观重塑 / 循环"
+ * 四组递进，深渊按三层递进。分组关系只有对照着看才成立，拆到别处就失去了。
+ */
+const TYPE_COLORS: Partial<Record<CarriageType, string>> = {
+    // 圣所 - 社会性剥离
+    ['ATRIUM']: 'bg-emerald-900/50',
+    ['POOLS']: 'bg-cyan-900/50',
+    ['VEIL']: 'bg-pink-900/50',
+    ['CONFESSIONAL']: 'bg-purple-900/50',
+    ['GARDEN']: 'bg-green-900/50',
+    ['SCALES_CONSERVATORY']: 'bg-yellow-900/50',
+    ['ARCHIVE']: 'bg-orange-900/50',
+    ['MUSE_THEATRE']: 'bg-rose-900/50',
+    ['NURSERY']: 'bg-teal-900/50',
+    ['ALTAR']: 'bg-red-900/50',
+    ['CAULDRON']: 'bg-red-950/50',
+    // 深渊
+    ['SILENT_SALON']: 'bg-violet-900/70',
+    ['ORACLE_WHISPER']: 'bg-violet-900/70',
+    ['NEGATIVE_GALLERY']: 'bg-violet-900/70',
+    ['ESCHER_STAIRS']: 'bg-violet-900/70',
+    ['MIRROR_HALL']: 'bg-fuchsia-900/70',
+    ['TIME_INFIRMARY']: 'bg-fuchsia-900/70',
+    ['DISSOLUTION_CHAMBER']: 'bg-fuchsia-900/70',
+    ['FLESH_HIVE']: 'bg-purple-950/80',
+    ['INVERTED_TREE']: 'bg-purple-950/80',
+    ['SYMBIOTIC_GALLERY']: 'bg-purple-950/80',
+    ['VOID_WINDOW']: 'bg-purple-950/80',
+    ['ENTROPY_CLOCK']: 'bg-purple-950/80',
+};
+
+/** 车厢类型在格子与悬浮卡上的单字标识 */
+const CARRIAGE_ICONS: Partial<Record<CarriageType, string>> = {
+    ['POOLS']: 'P',
+    ['ATRIUM']: 'A',
+    ['VEIL']: 'V',
+    ['CONFESSIONAL']: 'C',
+    ['ARCHIVE']: 'R',
+    ['MUSE_THEATRE']: 'M',
+    ['SCALES_CONSERVATORY']: 'S',
+    ['GARDEN']: 'G',
+    ['NURSERY']: 'N',
+    ['ALTAR']: 'T',
+    ['CAULDRON']: 'X',
+    ['SILENT_SALON']: 'I',
+    ['ORACLE_WHISPER']: 'O',
+    ['NEGATIVE_GALLERY']: 'E',
+    ['ESCHER_STAIRS']: 'H',
+    ['MIRROR_HALL']: 'L',
+    ['TIME_INFIRMARY']: 'F',
+    ['DISSOLUTION_CHAMBER']: 'D',
+    ['FLESH_HIVE']: 'B',
+    ['INVERTED_TREE']: 'Y',
+    ['SYMBIOTIC_GALLERY']: 'W',
+    ['VOID_WINDOW']: 'Z',
+    ['ENTROPY_CLOCK']: 'K',
+};
+
+/** 地图视图模式；顺序即按钮顺序 */
+const MAP_VIEW_MODES = [
+    { mode: 'all' as const, label: '全部' },
+    { mode: 'sanctuary' as const, label: '圣所' },
+    { mode: 'abyss' as const, label: '深渊' },
+    { mode: 'occupied' as const, label: '有人' },
+];
 
 // ============================================
 // Props 接口

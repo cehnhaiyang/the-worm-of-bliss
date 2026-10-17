@@ -1038,3 +1038,26 @@ export interface AIResponse {
   abyssEffect?: string;
   soundEffect?: string;
 }
+
+/**
+ * 文本生成服务商配置。
+ */
+export interface LLMProviderConfig {
+  readonly id: string;
+  readonly url: string;
+  readonly apiKey: string;
+  readonly models: readonly string[];
+}
+
+/**
+ * 文本生成 (LLM) 配置结构。
+ *
+ * 结构固化在这里、取值放在 `constants/config.ts`：结构改一次要动代码，
+ * 取值（密钥、端点、模型名、超时）随时可改，改完即时生效。
+ */
+export interface LLMConfig {
+  readonly REQUEST_TIMEOUT_MS: number;
+  readonly MAX_TOKENS: number;
+  readonly DEFAULT_MODEL: string;
+  readonly PROVIDERS: readonly LLMProviderConfig[];
+}

@@ -113,6 +113,38 @@ export const GROUP_BEHAVIOR_CONFIG = {
 // ============================================
 
 /**
+ * 状态短标签，用于卡片与列表上的徽标。
+ *
+ * 与下面的 `ACTIVITY_STATUS_NAMES` 是两套措辞而非重复：这里是两三个字的标签
+ * （"睡眠"），那里是叙述句（"正在睡眠"），后者会嵌进日志行文。两处都保留，
+ * 但**同一个状态在两个组件里必须显示同一个标签**，所以标签只有这一份。
+ */
+export const STATUS_LABELS: Record<CharacterStatus, string> = {
+  'normal': '正常',
+  'panicked': '恐惧',
+  'aroused': '动情',
+  'injured': '受伤',
+  'broken': '崩溃',
+  'pregnant': '怀孕',
+  'euphoric': '极乐',
+  'dissociated': '解离',
+  'devoted': '虔诚',
+  'complicit': '共犯',
+  'voyeur': '窥伺',
+  'deaconess': '执事',
+  'gestating': '孕育',
+  'performing': '表演',
+  'confessing': '忏悔',
+  'anchoring': '锚定',
+  'sleeping': '睡眠',
+  'eating': '进食',
+  'bathing': '沐浴',
+  'wandering': '游荡',
+  'chatting': '交谈',
+  'observing': '观测',
+};
+
+/**
  * 活动状态名称映射（用于状态描述）
  */
 export const ACTIVITY_STATUS_NAMES: Record<CharacterStatus, string> = {

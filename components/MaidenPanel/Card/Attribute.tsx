@@ -4,7 +4,18 @@
 
 import React, { memo } from 'react';
 import { CharacterAttributes, PhysiologicalState } from '../../../meta';
-import { STAT_BAR_COLORS } from '../../../constants';
+
+/** 属性条的填充色，与各属性的语义色保持一致（理智蓝、欲望红、堕落橙……） */
+const STAT_BAR_COLORS = {
+  sanity: 'bg-blue-500',
+  obedience: 'bg-purple-500',
+  lust: 'bg-red-500',
+  corruption: 'bg-orange-500',
+  devotion: 'bg-amber-500',
+  hunger: 'bg-amber-600',
+  fatigue: 'bg-blue-600',
+  hygiene: 'bg-cyan-600',
+};
 
 interface StatBarProps {
   label: string;

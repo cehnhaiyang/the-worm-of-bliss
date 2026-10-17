@@ -6,7 +6,95 @@
 
 import React, { useState, useCallback, useMemo, useRef, memo } from 'react';
 import { SystemState } from '../../meta';
-import { ALL_QUICK_COMMANDS, TIME_SCALE_OPTIONS } from '../../constants';
+
+/**
+ * 快捷指令分类。
+ *
+ * 指令文案是提示词的一部分而不是可调参数，只有本组件消费，故留在组件内。
+ * 前 4 类默认展示，其余收在 [CMD] 展开后——这个切分靠对象键序表达，
+ * 因此分类顺序本身就是"重要程度"的声明，改动顺序会改变默认可见的按钮。
+ */
+const QUICK_COMMANDS = {
+  basic: {
+    label: '基础',
+    commands: [
+      { label: '观察', cmd: '仔细观察她现在的状态和表情。' },
+      { label: '对话', cmd: '和她说话，询问她的感受。' },
+      { label: '抚摸', cmd: '轻轻抚摸她的头发。' },
+      { label: '安慰', cmd: '给她一个拥抱，安慰她。' },
+    ]
+  },
+  control: {
+    label: '控制',
+    commands: [
+      { label: '命令', cmd: '命令她跪下。' },
+      { label: '惩罚', cmd: '她需要被惩罚。' },
+      { label: '训诫', cmd: '严厉地训斥她的不服从。' },
+      { label: '奖励', cmd: '因为她的顺从给予奖励。' },
+    ]
+  },
+  intimate: {
+    label: '亲密',
+    commands: [
+      { label: '亲吻', cmd: '吻她。' },
+      { label: '爱抚', cmd: '爱抚她的身体。' },
+      { label: '侵犯', cmd: '侵犯她。' },
+      { label: '标记', cmd: '在她身上留下印记。' },
+    ]
+  },
+  psychological: {
+    label: '心理',
+    commands: [
+      { label: '审视', cmd: '审视她的内心，探究她的恐惧。' },
+      { label: '暗示', cmd: '在她耳边低语，植入暗示。' },
+      { label: '记忆', cmd: '触发她的记忆，让她回忆过去。' },
+      { label: '崩溃', cmd: '打破她最后的心理防线。' },
+    ]
+  },
+  movement: {
+    label: '移动',
+    commands: [
+      { label: '带走', cmd: '带她去另一个车厢。' },
+      { label: '隔离', cmd: '把她单独关起来。' },
+      { label: '召唤', cmd: '命令她来到我面前。' },
+      { label: '驱逐', cmd: '把她赶到深渊区域。' },
+    ]
+  },
+  ritual: {
+    label: '仪式',
+    commands: [
+      { label: '献祭', cmd: '开始献祭仪式。' },
+      { label: '洗礼', cmd: '为她进行洗礼仪式。' },
+      { label: '晋升', cmd: '提升她的等级。' },
+      { label: '净化', cmd: '净化她的记忆。' },
+    ]
+  },
+  memory: {
+    label: '记忆',
+    commands: [
+      { label: '唤醒', cmd: '唤醒她的某段记忆。' },
+      { label: '篡改', cmd: '篡改她的记忆。' },
+      { label: '植入', cmd: '植入一段虚假的记忆。' },
+      { label: '抹除', cmd: '抹除她的某段记忆。' },
+    ]
+  },
+  social: {
+    label: '社交',
+    commands: [
+      { label: '引见', cmd: '让她认识另一个少女。' },
+      { label: '分离', cmd: '拆散她和她的朋友。' },
+      { label: '对质', cmd: '让她和另一个少女对质。' },
+      { label: '共犯', cmd: '让她成为我的共犯。' },
+    ]
+  },
+};
+
+/** 时间倍速档位；label 直接显示在按钮上，value 是传给时间系统的倍数 */
+const TIME_SCALE_OPTIONS = [
+  { value: 1, label: '1x' },
+  { value: 5, label: '5x' },
+  { value: 10, label: '10x' },
+] as const;
 
 // ============================================
 // 类型定义
@@ -94,10 +182,10 @@ export const Control: React.FC<ControlProps> = memo(({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // 数据转换
-  const categories = useMemo(() => Object.entries(ALL_QUICK_COMMANDS), []);
+  const categories = useMemo(() => Object.entries(QUICK_COMMANDS), []);
 
   const currentCommands = useMemo(() => {
-    const cat = ALL_QUICK_COMMANDS[activeCategory as keyof typeof ALL_QUICK_COMMANDS];
+    const cat = QUICK_COMMANDS[activeCategory as keyof typeof QUICK_COMMANDS];
     return cat?.commands || [];
   }, [activeCategory]);
 

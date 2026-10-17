@@ -4,6 +4,7 @@ import {
   ChainRejection,
   CharacterRank,
   CharacterStatus,
+  LLMProviderConfig,
   Maiden,
   MemoryAction,
   MemoryNode,
@@ -24,90 +25,52 @@ import {
   NARRATIVE_STATUSES,
 } from './schema';
 import * as Builder from './builder';
-import { TAMPER_PERMISSIONS } from '../../../constants';
+import { LLM_CONFIG, TAMPER_PERMISSIONS } from '../../../constants';
 import { maidenSystem } from '../../systems';
 
-const GROQ_API_KEY = "";
-const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const AGENT2API_KEY = "sk-a2a-f345da9360a116c54801e02675eb0c37";
-const AGENT2API_URL = "http://localhost:3065/v1/chat/completions";
-const REQUEST_TIMEOUT_MS = 60_000;
-
 /**
- * 模型 → 服务商的路由表。
+ * 模型 → 服务商配置。
  *
- * 唯一权威：`AVAILABLE_TEXT_MODELS` 的取值必须在这里出现，反过来这里也不许
- * 出现表外的模型。v1 把二者写成两份清单（一份 options 对象 + 一个
- * `AGENT2API_MODELS` 集合），于是新增模型时只要漏改一处，请求就会被发到
- * 不支持它的服务商——表现为 404/鉴权失败，而代码里看不出任何不一致。
- * 启动时由 `assertModelRoutingComplete` 把这条不变量钉死。
+ * 查不到即表示配置漏登记，调用方必须当错误处理而不是猜一个默认值：
+ * 猜出来的服务商会把请求发到不支持的端点，404 被上层当成网络问题。
+ * 导出以便直接断言覆盖性，而不是靠 grep 源码比对清单。
  */
-const MODEL_PROVIDERS = {
-  groq: {
-    url: GROQ_URL,
-    apiKey: GROQ_API_KEY,
-    label: "Groq",
-    models: [
-      "qwen/qwen3-32b",
-      "meta-llama/llama-4-maverick-17b-128e-instruct",
-      "llama-3.3-70b-versatile",
-      "groq/compound",
-    ],
-  },
-  agent2api: {
-    url: AGENT2API_URL,
-    apiKey: AGENT2API_KEY,
-    label: "Agent2API",
-    models: [
-      "cn:glm-5.2",
-      "global:glm-5.2",
-      "global:step-5-preview",
-      "cn:step-5-preview",
-      "GLM-5.3-Flash",
-      "glm-5.3",
-    ],
-  },
-} as const;
-
-type ProviderId = keyof typeof MODEL_PROVIDERS;
-
-/** 可用模型列表，值即请求中直接使用的模型 id */
-export const AVAILABLE_TEXT_MODELS = {
-  QWEN: MODEL_PROVIDERS.groq.models[0],
-  LLAMA_MAVERICK: MODEL_PROVIDERS.groq.models[1],
-  LLAMA_3_3_70B: MODEL_PROVIDERS.groq.models[2],
-  GROQ_COMPOUND: MODEL_PROVIDERS.groq.models[3],
-  GLM_5_2_CN: MODEL_PROVIDERS.agent2api.models[0],
-  GLM_5_2_GLOBAL: MODEL_PROVIDERS.agent2api.models[1],
-  STEP_5_PREVIEW_GLOBAL: MODEL_PROVIDERS.agent2api.models[2],
-  STEP_5_PREVIEW_CN: MODEL_PROVIDERS.agent2api.models[3],
-  GLM_5_3_FLASH: MODEL_PROVIDERS.agent2api.models[4],
-  GLM_5_3: MODEL_PROVIDERS.agent2api.models[5],
-} as const;
-
-/**
- * 模型 → 服务商；查不到即表示路由表漏登记，调用方必须当错误处理而不是猜一个默认值。
- * 导出以便直接断言路由表的覆盖性，而不是靠 grep 源码比对两份清单。
- */
-export function resolveProvider(model: string): ProviderId | null {
-  for (const [id, provider] of Object.entries(MODEL_PROVIDERS) as [ProviderId, typeof MODEL_PROVIDERS[ProviderId]][]) {
-    if ((provider.models as readonly string[]).includes(model)) return id;
-  }
-  return null;
+export function resolveProvider(model: string): LLMProviderConfig | null {
+  return LLM_CONFIG.PROVIDERS.find(p => p.models.includes(model)) ?? null;
 }
 
 /**
- * 路由表覆盖性断言：`AVAILABLE_TEXT_MODELS` 的每个取值都必须能解析出服务商。
- * 在模块加载时执行，让"两份清单不同步"在启动瞬间就暴露，而不是等某个模型被选中。
+ * 配置自检：在模块加载时把三类不一致钉死在启动瞬间。
+ *
+ * 默认模型不在任何服务商名下、同一模型登记在两个服务商下（路由取决于遍历顺序，
+ * 即"靠时序侥幸正确"）、服务商 id 重复（设置面板的 optgroup key 会撞车）——
+ * 这些都只在配置改动时发生，晚到运行时才暴露就表现为某个模型随机失效。
  */
-function assertModelRoutingComplete(): void {
-  const unregistered = Object.values(AVAILABLE_TEXT_MODELS).filter(m => resolveProvider(m) === null);
-  if (unregistered.length > 0) {
-    throw new Error(`[TextService] 模型未登记服务商: ${unregistered.join(', ')}`);
+function assertLLMConfig(): void {
+  const ids = new Set<string>();
+  const seen = new Map<string, string>();
+
+  for (const provider of LLM_CONFIG.PROVIDERS) {
+    if (ids.has(provider.id)) {
+      throw new Error(`[TextService] 服务商 id 重复: ${provider.id}`);
+    }
+    ids.add(provider.id);
+
+    for (const model of provider.models) {
+      const owner = seen.get(model);
+      if (owner !== undefined) {
+        throw new Error(`[TextService] 模型重复登记: ${model}（${owner} 与 ${provider.id}）`);
+      }
+      seen.set(model, provider.id);
+    }
+  }
+
+  if (!seen.has(LLM_CONFIG.DEFAULT_MODEL)) {
+    throw new Error(`[TextService] 默认模型未登记服务商: ${LLM_CONFIG.DEFAULT_MODEL}`);
   }
 }
 
-assertModelRoutingComplete();
+assertLLMConfig();
 
 /** 信任边界：把模型返回的顶层数组字段收敛成数组，缺失或类型不符时给出空数组 */
 function asRawArray<T>(data: unknown, key: string): T[] {
@@ -211,8 +174,7 @@ export class TextService {
   private currentModel: string;
 
   constructor() {
-    // 默认使用 glm-5.3 (Agent2API)
-    this.currentModel = AVAILABLE_TEXT_MODELS.GLM_5_3;
+    this.currentModel = LLM_CONFIG.DEFAULT_MODEL;
   }
 
   // ============================================
@@ -260,15 +222,14 @@ IMPORTANT: You must strictly output valid JSON matching the following structure:
 ${schemaDescription}`;
 
     // 路由决策
-    const providerId = resolveProvider(this.currentModel);
-    if (providerId === null) {
+    const providerConfig = resolveProvider(this.currentModel);
+    if (providerConfig === null) {
       throw new Error(`[TextService] 模型未登记服务商，拒绝请求: ${this.currentModel}`);
     }
-    const providerConfig = MODEL_PROVIDERS[providerId];
-    const provider = providerConfig.label;
+    const provider = providerConfig.id;
 
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const timeout = setTimeout(() => controller.abort(), LLM_CONFIG.REQUEST_TIMEOUT_MS);
 
     try {
       const response = await fetch(providerConfig.url, {
@@ -286,7 +247,7 @@ ${schemaDescription}`;
           ],
           temperature: temperature,
           response_format: { type: "json_object" },
-          max_tokens: 4096
+          max_tokens: LLM_CONFIG.MAX_TOKENS
         })
       });
 
@@ -309,7 +270,7 @@ ${schemaDescription}`;
 
     } catch (error) {
       const reason = controller.signal.aborted
-        ? `请求超时 (${REQUEST_TIMEOUT_MS / 1000}s)`
+        ? `请求超时 (${LLM_CONFIG.REQUEST_TIMEOUT_MS / 1000}s)`
         : error;
       console.error(`[TextService] ${provider} Call Failed (Model: ${this.currentModel}):`, reason);
       throw error;

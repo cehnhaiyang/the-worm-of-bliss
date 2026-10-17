@@ -127,7 +127,7 @@ import {
     NAKED_UNDERGARMENT_LAYER,
     NEED_THRESHOLDS,
     NEGATIVE_TRAITS,
-    OCTANT_STYLES,
+    OCTANT_LABELS,
     PANTY_COLORS,
     PANTY_MATERIALS,
     PANTY_TYPES,
@@ -136,7 +136,7 @@ import {
     SHOE_COLORS,
     SHOE_MATERIALS,
     SHOE_TYPES,
-    SIGNATURE_STYLES,
+    SIGNATURE_LABELS,
     SKIN_TEXTURES,
     SKIN_TONES,
     STOCKING_COLORS,
@@ -5257,10 +5257,10 @@ class MaidenSystem {
 
         const signature = view.signatures[0];
         if (signature && signature.match >= 0.75) {
-            return SIGNATURE_STYLES[signature.signature]?.name ?? view.topOctant.octant;
+            return SIGNATURE_LABELS[signature.signature];
         }
 
-        return OCTANT_STYLES[view.topOctant.octant]?.name ?? '平衡型';
+        return OCTANT_LABELS[view.topOctant.octant];
     }
 }
 

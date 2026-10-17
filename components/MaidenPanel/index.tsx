@@ -5,14 +5,62 @@
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
 import { Maiden, MaidenSummary, CharacterStatus, getCurrentCarriageId, RANK_ORDER } from '../../meta';
-import {
+import { STATUS_LABELS } from '../../constants';
 
-    STATUS_COLORS,
-    getStatusName,
-    RANK_STYLES,
-    MAIDEN_SORT_OPTIONS,
-    STATUS_FILTER_OPTIONS
-} from '../../constants';
+/**
+ * 等级徽标的颜色与罗马数字标识。
+ *
+ * 中文名（"黑曜""金"…）不在此列：列表只显示图标，卡片则用 `badge` 组件自己
+ * 按等级选色，两处视觉本就不同，硬凑一张带名字的表只会多出一份没人读的字面量。
+ */
+const RANK_STYLES: Record<string, { color: string; icon: string }> = {
+    obsidian: { color: 'text-purple-400', icon: 'IV' },
+    gold: { color: 'text-yellow-400', icon: 'III' },
+    silver: { color: 'text-gray-300', icon: 'II' },
+    copper: { color: 'text-orange-400', icon: 'I' },
+    unranked: { color: 'text-zinc-500', icon: '0' },
+};
+
+/** 排序下拉；value 与 `filteredMaidens` 里的 switch 分支一一对应 */
+const MAIDEN_SORT_OPTIONS = [
+    { value: 'name', label: '名字' },
+    { value: 'sanity', label: '理智↑' },
+    { value: 'sanity_desc', label: '理智↓' },
+    { value: 'status', label: '状态数' },
+    { value: 'rank', label: '等级' },
+] as const;
+
+/**
+ * 状态过滤器；value 与 `filterMap` 的键一一对应，`all` 是唯一的非状态值。
+ * `critical` 不是状态而是"理智低于临界"，故它不查 status 而查 sanity。
+ */
+const STATUS_FILTER_OPTIONS = [
+    { value: 'all', label: '全部' },
+    { value: 'critical', label: '危险' },
+    { value: 'pregnant', label: '怀孕' },
+    { value: 'broken', label: '崩溃' },
+    { value: 'sleeping', label: '睡眠' },
+    { value: 'devoted', label: '虔诚' },
+] as const;
+
+/**
+ * 状态标签的配色。
+ *
+ * 只为列表里这几个高频状态给色，其余沿用默认灰；配色是纯 UI 表达，因此留在
+ * 组件里。名称取 `STATUS_LABELS`——v1 在 UI 层另存了一份带名字的同名表，
+ * 于是同一个状态在列表里叫"恐惧"、在卡片里叫别的措辞。
+ */
+const STATUS_COLORS: Partial<Record<CharacterStatus, string>> = {
+    'panicked': 'text-yellow-400',
+    'aroused': 'text-pink-400',
+    'injured': 'text-red-400',
+    'broken': 'text-gray-400',
+    'pregnant': 'text-purple-400',
+    'devoted': 'text-amber-400',
+    'sleeping': 'text-blue-400',
+    'chatting': 'text-emerald-400',
+    'observing': 'text-fuchsia-400',
+};
 
 interface MaidenListProps {
     maidens: Maiden[];
@@ -74,7 +122,7 @@ const MaidenItem = memo<MaidenItemProps>(({ maiden, isFocused, isInCurrentCarria
                             key={status}
                             className={`text-[8px] px-1 py-0.5 rounded ${STATUS_COLORS[status] || 'text-zinc-400'} bg-zinc-900/60`}
                         >
-                            {getStatusName(status)}
+                            {STATUS_LABELS[status]}
                         </span>
                     ))}
                     {maiden.status.filter(s => s !== 'normal').length > 3 && (

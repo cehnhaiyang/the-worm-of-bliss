@@ -589,6 +589,35 @@ export const PERSONALITY_STATE_LABELS: Record<PersonalityState, string> = {
   extreme: '极端偏离',
 };
 
+/**
+ * 八分构型速记名（§3.4.1）。
+ *
+ * 与 `PERSONALITY_STATE_LABELS` 同理，是构型词汇的一部分而非配色：卡片、系统层
+ * 与提示词三处都要显示同一个名字，各存一份必然漂移。颜色只属于 UI，留在组件里。
+ */
+export const OCTANT_LABELS: Record<OctantId, string> = {
+  PPP: '建设型引领者',
+  PPN: '策略型竞争者',
+  PNP: '守护型维系者',
+  PNN: '审慎型独行者',
+  NPP: '热忱型探索者',
+  NPN: '冲动型挑战者',
+  NNP: '敏感型照护者',
+  NNN: '疏离型防御者',
+};
+
+/** 子维度签名速记名（§3.4.2） */
+export const SIGNATURE_LABELS: Record<SignatureId, string> = {
+  benevolent_strategist: '仁慈的策略者',
+  vulnerable_superiority: '易受伤的优越感',
+  chaotic_innovator: '混乱的创新者',
+  calm_executor: '冷静的执行者',
+  needed_helper: '需要被需要的助人者',
+  rule_enforcer: '规则的执法者',
+  steady_caregiver: '稳健的照护者',
+  quiet_principled: '沉静的原则者',
+};
+
 // ============================================================================
 // 过程平面 P4：长期变化（§4.4）
 // ============================================================================
