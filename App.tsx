@@ -34,9 +34,6 @@ export default function App() {
         triggerGrace,
         setTimeScale,
         togglePause,
-        setMemoryChain,
-        replaceMemoryNode,
-        implantMemory,
         getCurrentCarriage,
         getFocusedMaiden,
         getMaidensInCarriage,
@@ -89,9 +86,7 @@ export default function App() {
     }, [currentCarriage, getMaidensInCarriage, maidens]);
 
     // 所有少女摘要
-    const allMaidenSummaries = useMemo(() => {
-        return getAllMaidenSummaries();
-    }, [getAllMaidenSummaries, maidens]);
+    const allMaidenSummaries = useMemo(() => getAllMaidenSummaries, [getAllMaidenSummaries]);
 
     const handleSplashComplete = useCallback(() => {
         setShowSplash(false);
@@ -229,9 +224,6 @@ export default function App() {
                     maiden={focusedMaiden}
                     gameStartTime={systemState.gameStartTime}
                     onClose={() => setShowMemory(false)}
-                    onSetChain={setMemoryChain}
-                    onReplaceNode={replaceMemoryNode}
-                    onImplant={implantMemory}
                 />
             )}
 
@@ -239,7 +231,6 @@ export default function App() {
             {showPregnancy && focusedMaiden && (
                 <Pregnancy
                     maiden={focusedMaiden}
-                    allMaidens={maidens}
                     onClose={() => setShowPregnancy(false)}
                     onMaidenSelect={focusMaiden}
                 />

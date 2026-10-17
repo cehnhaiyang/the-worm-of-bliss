@@ -669,6 +669,52 @@ export interface MaidenSummary {
   currentActivity: ActivityStatus;
 }
 
+/**
+ * 角色派生视图：由实体现算，不落存档。
+ *
+ * 人格与记忆的权威分别是 `isshex` 与 `memoryChain`，此处只承载"读出来给 UI"的那一层，
+ * 因此任何写入链的路径都自动让摘要保持一致。
+ */
+export interface MaidenView {
+  /** 人格构型的速记名 */
+  personalityDescription: string;
+  /** 记忆链派生的摘要 */
+  memorySummary: string;
+  /** 被篡改或植入的记忆段数 */
+  alteredMemoryCount: number;
+  /** 行为驱动权重，由 facets 派生 */
+  weights: BehaviorWeights;
+  /** 人格权威：子维度原值，其余派生值都从它算出 */
+  facets: HexacoFacets;
+  /** 人格派生值：维度、元因子、构型、签名与过程平面 */
+  personality: {
+    readonly domains: HexacoProfile;
+    readonly meta: MetaTraits;
+    readonly octants: OctantAffinity[];
+    readonly topOctant: OctantAffinity;
+    readonly signatures: SignatureMatch[];
+    readonly dynamics: PersonalityDynamics;
+    readonly state: PersonalityState;
+  };
+}
+
+/** 妊娠统计（群体投影） */
+export interface PregnancyStats {
+  total: number;
+  byStage: Record<PregnancyStage, number>;
+  averageWeek: number;
+}
+
+/** 关系分组统计（单实体投影） */
+export interface RelationshipStats {
+  friends: number;
+  enemies: number;
+  accomplices: number;
+  protectors: number;
+  dependents: number;
+  traumaBonds: number;
+}
+
 // ============================================================================
 // 10. 世界观与设施配置 (World & Facilities)
 // ============================================================================

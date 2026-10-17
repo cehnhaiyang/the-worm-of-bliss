@@ -8,8 +8,8 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { Maiden, CharacterStatus, CarriageType } from '../../../meta';
 import { STATUS_LABELS, ABYSS_TYPES } from '../../../constants';
-import { aiService, maidenSystem, useGameEngine } from '../../../engines';
-import { formatPreciseAge, isAlteredMemory } from '../../../const';
+import { aiService, useGameEngine } from '../../../engines';
+import { formatPreciseAge } from '../../../const';
 import { Appearance } from './Appearance';
 import { Attire } from './Attire';
 import { Attribute } from './Attribute';
@@ -94,7 +94,8 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
     const lastRequestedHashRef = useRef<string>('');
     const mountedRef = useRef(true);
 
-    const { systemState } = useGameEngine();
+    const { systemState, getMaidenView } = useGameEngine();
+    const view = maiden ? getMaidenView(maiden) : undefined;
 
     const isInAbyss = carriageType ? ABYSS_TYPES.includes(carriageType) : false;
 
@@ -153,13 +154,9 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
         setRetryNonce(n => n + 1);
     };
 
-    if (!maiden) return <EmptyState />;
+    if (!maiden || !view) return <EmptyState />;
 
     const { attributes, physiology, status, clothing, isshex } = maiden;
-    const personalityDescription = maidenSystem.getPersonalityDescription(maiden);
-    const corruptedMemoryCount = maiden.memoryChain.filter(isAlteredMemory).length;
-    // 摘要由链派生，卡片不持有第二份记忆状态
-    const memorySummary = maidenSystem.memory.generateSummaryFromChain(maiden.memoryChain);
     const isCritical = attributes.sanity < 30;
     const currentAgeMs = (maiden.initialAgeMs || 0) + (systemState?.gameTimePassed || 0);
     const preciseAgeString = formatPreciseAge(currentAgeMs);
@@ -287,21 +284,20 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
 
                 <div className="divider" />
                 <Personality
-                    isshex={isshex}
+                    view={view}
                     profile={maiden.profile}
-                    personalityDescription={personalityDescription}
                 />
 
                 {/* 记忆摘要 */}
                 <div className="divider" />
                 <div className="text-[10px] text-zinc-500 mb-1">
-                    记忆 <span className={corruptedMemoryCount > 0 ? 'text-purple-400' : 'text-zinc-400'}>
-                        {corruptedMemoryCount} 段异常
+                    记忆 <span className={view.alteredMemoryCount > 0 ? 'text-purple-400' : 'text-zinc-400'}>
+                        {view.alteredMemoryCount} 段异常
                     </span>
                 </div>
-                {memorySummary && (
+                {view.memorySummary && (
                     <p className="text-[10px] text-zinc-600 leading-relaxed line-clamp-2 italic">
-                        "{memorySummary}"
+                        "{view.memorySummary}"
                     </p>
                 )}
 

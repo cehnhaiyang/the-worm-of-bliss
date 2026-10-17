@@ -26,8 +26,8 @@ import { audioService, persistenceService } from '../services';
 
 // Hook 导入
 import { useGameLog } from './useGameLog';
+import { useMaiden } from './useMaiden';
 import { useTimeLoop } from './useTimeLoop';
-import { commitChain, commitNodeEdit, commitNodeInsert } from './maidenUpdates';
 import { usePlayerActions } from './usePlayerActions';
 
 // ============================================
@@ -63,11 +63,21 @@ export const useGameEngine = () => {
   // 核心状态 (Core State)
   // --------------------------------------------
   const [carriages, setCarriages] = useState<Map<string, Carriage>>(() => carriageSystem.generateGrid());
-  const [maidens, setMaidens] = useState<Map<string, Maiden>>(() => new Map());
   const [systemState, setSystemState] = useState<SystemState>(createInitialSystemState);
   const [masterState, setMasterState] = useState<MasterState>(() => createInitialMasterState('R2C25'));
   const [isProcessing, setIsProcessing] = useState(false);
   const [graceHistory, setGraceHistory] = useState<GraceEvent[]>([]);
+
+  // --------------------------------------------
+  // 子模块 (Sub-Hooks)
+  // --------------------------------------------
+
+  // 日志系统
+  const { logs, logsRef, addLog, setLogs } = useGameLog();
+
+  // 少女子系统：实体表由它持有，本 hook 只把控制器转出
+  const maiden = useMaiden();
+  const { maidens, setMaidens } = maiden;
 
   // --------------------------------------------
   // 引用状态 (Refs) - 解决闭包陷阱
@@ -84,13 +94,6 @@ export const useGameEngine = () => {
   useEffect(() => {
     stateRef.current = { systemState, carriages, maidens, masterState };
   }, [systemState, carriages, maidens, masterState]);
-
-  // --------------------------------------------
-  // 子模块 (Sub-Hooks)
-  // --------------------------------------------
-
-  // 日志系统
-  const { logs, logsRef, addLog, setLogs } = useGameLog();
 
   // --------------------------------------------
   // 共享逻辑: 神恩系统 (定义在此处因为被多个模块使用)
@@ -190,13 +193,13 @@ export const useGameEngine = () => {
   const { moveMaster, focusMaiden, handleAction } = usePlayerActions({
     stateRef,
     setMasterState,
-    setMaidens,
     setSystemState,
     setCarriages,
+    setMaidens,
     setIsProcessing,
     addLog,
     executeGrace,
-    isProcessing
+    isProcessing,
   });
 
   // --------------------------------------------
@@ -208,8 +211,7 @@ export const useGameEngine = () => {
     initialized.current = true;
 
     // 1. 生成少女数据
-    const newMaidens = maidenSystem.generateMaidens(carriages);
-    setMaidens(newMaidens);
+    maiden.generate(carriages);
 
     // 2. 初始化关系网络（已在 maidenSystem.generateMaidens 中完成）
 
@@ -284,38 +286,14 @@ export const useGameEngine = () => {
   }, []);
 
   const getMaidensInCarriage = useCallback((carriageId: string): Maiden[] => {
-    const { carriages: currCarriages, maidens: currMaidens } = stateRef.current;
-    const carriage = currCarriages.get(carriageId);
-    if (!carriage) return [];
-    return carriage.occupants
-      .map(id => currMaidens.get(id))
-      .filter((m): m is Maiden => m !== undefined);
-  }, []);
-
-  const getAllMaidenSummaries = useCallback((): MaidenSummary[] => {
-    return maidenSystem.getMaidenSummaries(stateRef.current.maidens);
-  }, []);
-
-  // --------------------------------------------
-  // 记忆写回 (Memory Chain Writes)
-  // 记忆链的写点集中在这里：面板与叙事路径都经由它回写，
-  // 每次都只按 id 合并记忆字段，绝不整对象替换。
-  // --------------------------------------------
-
-  const setMemoryChain = useCallback((maidenId: string, chain: MemoryNode[]) => {
-    commitChain(setMaidens, maidenId, chain);
-  }, [setMaidens]);
-
-  const replaceMemoryNode = useCallback((maidenId: string, node: MemoryNode) => {
-    commitNodeEdit(setMaidens, maidenId, node);
-  }, [setMaidens]);
-
-  const implantMemory = useCallback((maidenId: string, node: MemoryNode, afterNodeId?: string) => {
-    commitNodeInsert(setMaidens, maidenId, node, afterNodeId);
-  }, [setMaidens]);
+    const carriage = stateRef.current.carriages.get(carriageId);
+    return carriage ? maiden.maidensIn(carriage) : [];
+  }, [maiden]);
 
   // --------------------------------------------
   // API 返回
+  // 只暴露 useGameEngine 一个出口：UI 不接触任何子 hook，也不导入它们的接口。
+  // 少女子系统的能力在此逐项透传，调用方看到的是一套扁平 API。
   // --------------------------------------------
 
   return {
@@ -336,15 +314,31 @@ export const useGameEngine = () => {
     triggerGrace,
     setTimeScale,
     togglePause,
-    setMemoryChain,
-    replaceMemoryNode,
-    implantMemory,
+
+    // 少女：派生视图
+    getMaidenView: maiden.viewOf,
+    getAllMaidenSummaries: maiden.summaries,
+    getMaidensInCarriage,
+
+    // 少女：写入
+    updateMaiden: maiden.updateMaiden,
+
+    // 少女：记忆
+    setMemoryChain: maiden.setMemoryChain,
+    applyGenesis: maiden.applyGenesis,
+    tamperMemory: maiden.tamperMemory,
+    implantMemory: maiden.implantMemory,
+
+    // 少女：妊娠与关系
+    getPregnancyOf: maiden.pregnancyOf,
+    getPregnancies: maiden.getPregnancies,
+    getPregnancyStats: maiden.getPregnancyStats,
+    getRelationshipsOf: maiden.relationshipsOf,
+    getRelationshipStats: maiden.relationshipStats,
 
     // 数据获取器
     getCurrentCarriage,
     getFocusedMaiden,
-    getMaidensInCarriage,
-    getAllMaidenSummaries,
     getFormattedGameTime,
 
     // 状态设置器 (供Load使用)
@@ -359,5 +353,3 @@ export const useGameEngine = () => {
 
 export * from './useGameLog';
 export * from './usePersistence';
-export * from './usePlayerActions';
-export * from './useTimeLoop';

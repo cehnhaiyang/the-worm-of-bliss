@@ -7,7 +7,7 @@ import React, { useMemo, memo } from 'react';
 import { Maiden, RelationType } from '../../../../meta';
 import { getCurrentCarriageId } from '../../../../const';
 
-import { maidenSystem, personalityView } from '../../../../engines/systems';
+import { useGameEngine } from '../../../../engines';
 
 interface RelationshipProps {
   maiden: Maiden;
@@ -100,20 +100,19 @@ const RelationshipItem = memo<RelationshipItemProps>(({ targetMaiden, relationTy
 RelationshipItem.displayName = 'RelationshipItem';
 
 export const Relationship: React.FC<RelationshipProps> = ({ maiden, allMaidens, onClose, onMaidenSelect }) => {
-  const relationships = useMemo(() => {
-    return (maiden.relationships || [])
-      .filter(r => r.type !== RelationType.STRANGER)
-      .sort((a, b) => b.affinity - a.affinity);
-  }, [maiden.relationships]);
+  const { getRelationshipsOf, getRelationshipStats, getMaidenView } = useGameEngine();
 
-  const stats = useMemo(() => ({
-    friends: relationships.filter(r => r.type === RelationType.FRIEND || r.type === RelationType.CLOSE_FRIEND).length,
-    enemies: relationships.filter(r => r.type === RelationType.RIVAL || r.type === RelationType.ENEMY).length,
-    accomplices: relationships.filter(r => r.type === RelationType.ACCOMPLICE).length,
-    protectors: relationships.filter(r => r.type === RelationType.PROTECTOR).length,
-    dependents: relationships.filter(r => r.type === RelationType.DEPENDENT).length,
-    traumaBonds: relationships.filter(r => r.sharedTrauma).length,
-  }), [relationships]);
+  const relationships = useMemo(
+    () => getRelationshipsOf(maiden),
+    [getRelationshipsOf, maiden]
+  );
+
+  const stats = useMemo(
+    () => getRelationshipStats(maiden),
+    [getRelationshipStats, maiden]
+  );
+
+  const weights = getMaidenView(maiden).weights;
 
   // 计算社交状态标签
   const socialStatus = useMemo(() => {
@@ -185,23 +184,24 @@ export const Relationship: React.FC<RelationshipProps> = ({ maiden, allMaidens, 
               <div className="space-y-2">
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">社交寻求</span>
-                  <span className="text-cyan-400 font-mono">{Math.round(personalityView(maiden).weights.socialSeek * 100)}</span>
+                  <span className="text-cyan-400 font-mono">{Math.round(weights.socialSeek * 100)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">独处倾向</span>
-                  <span className="text-blue-400 font-mono">{Math.round(personalityView(maiden).weights.solitudeSeek * 100)}</span>
+                  <span className="text-blue-400 font-mono">{Math.round(weights.solitudeSeek * 100)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">共情能力</span>
-                  <span className="text-green-400 font-mono">{Math.round(personalityView(maiden).weights.empathy * 100)}</span>
+                  <span className="text-green-400 font-mono">{Math.round(weights.empathy * 100)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
                   <span className="text-zinc-400">攻击性</span>
-                  <span className="text-red-400 font-mono">{Math.round(personalityView(maiden).weights.aggressiveness * 100)}</span>
+                  <span className="text-red-400 font-mono">{Math.round(weights.aggressiveness * 100)}</span>
                 </div>
               </div>
             </div>
           )}
+
         </div>
 
         {/* 右侧：关系列表 */}

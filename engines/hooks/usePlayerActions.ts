@@ -16,11 +16,10 @@ import {
   AIResponse,
   LogType,
 } from '../../meta';
-import { clamp, getCurrentCarriageId } from '../../const';
+import { clamp, getCurrentCarriageId, mergeMaiden } from '../../const';
 import { ABYSS_TYPES, CARRIAGE_TYPE_INFO, GAME_CONFIG } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
 import { audioService, aiService } from '../services';
-import { commitGenesis } from './maidenUpdates';
 
 // ============================================
 // 叙事响应的应用
@@ -277,9 +276,9 @@ interface UsePlayerActionsParams {
     masterState: MasterState;
   }>;
   setMasterState: React.Dispatch<React.SetStateAction<MasterState>>;
-  setMaidens: React.Dispatch<React.SetStateAction<Map<string, Maiden>>>;
   setSystemState: React.Dispatch<React.SetStateAction<SystemState>>;
   setCarriages: React.Dispatch<React.SetStateAction<Map<string, Carriage>>>;
+  setMaidens: React.Dispatch<React.SetStateAction<Map<string, Maiden>>>;
   setIsProcessing: React.Dispatch<React.SetStateAction<boolean>>;
   addLog: (type: LogType, content: string, speaker?: string, carriageId?: string) => void;
   executeGrace: (targetId: string, manual: boolean) => void;
@@ -295,13 +294,13 @@ interface UsePlayerActionsReturn {
 export const usePlayerActions = ({
   stateRef,
   setMasterState,
-  setMaidens,
   setSystemState,
   setCarriages,
+  setMaidens,
   setIsProcessing,
   addLog,
   executeGrace,
-  isProcessing
+  isProcessing,
 }: UsePlayerActionsParams): UsePlayerActionsReturn => {
 
   // --------------------------------------------
@@ -416,13 +415,11 @@ export const usePlayerActions = ({
 
       // 写回：更新函数只做纯归并。请求在飞期间该少女仍被时间循环推进，
       // 增量归并到"归并那一刻"的实体上，两个来源的改动都不会被覆盖。
-      setMaidens(prev => {
-        const current = prev.get(focusedMaiden.id);
-        if (!current) return prev;
-        const next = new Map(prev);
-        next.set(focusedMaiden.id, reduceMaiden(current, plan, currSystem.gameTimePassed));
-        return next;
-      });
+      setMaidens(prev => mergeMaiden(
+        prev,
+        focusedMaiden.id,
+        current => reduceMaiden(current, plan, currSystem.gameTimePassed)
+      ));
 
       // 副作用在更新函数之外执行，因此无论 React 如何重放更新都只发生一次
       for (const effect of plan.effects) {
@@ -437,7 +434,11 @@ export const usePlayerActions = ({
                 addLog('system', `>>> 意识重构失败: ${effect.maiden.name} 的旧档案仍被封存。`, 'SYSTEM');
                 return;
               }
-              commitGenesis(setMaidens, effect.maiden.id, nodes);
+              setMaidens(prev => mergeMaiden(
+                prev,
+                effect.maiden.id,
+                current => ({ ...current, memoryChain: nodes })
+              ));
               addLog('system', `>>> 意识重构完成: ${effect.maiden.name} 的新档案已生效。`, 'SYSTEM');
             }).catch(err => {
               console.error('[Genesis] 意识重构中断:', err);

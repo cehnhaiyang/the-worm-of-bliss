@@ -5,7 +5,7 @@
  * 本文件是纯函数与派生表——它们需要读 `constants/` 的配置才能工作。
  */
 
-import { CarriageType, EventType, ActivityStatus, PersonalityState } from './meta/type';
+import { CarriageType, EventType, ActivityStatus, PersonalityState, RelationType, PregnancyStage } from './meta/type';
 import {
   Carriage,
   CarriageFunction,
@@ -25,7 +25,9 @@ import {
   HexacoProfile,
   OctantId,
   SignatureId,
-  BehaviorWeights
+  BehaviorWeights,
+  PregnancyStats,
+  RelationshipStats
 } from './meta/interface';
 import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from './constants';
 
@@ -658,10 +660,73 @@ export const setRelationship = (maiden: Maiden, rel: Relationship): Maiden => {
 };
 
 /**
+ * 按 id 归并单个实体，返回新表。
+ *
+ * 这是整实体写入的唯一合并点：`updater` 收到**当前表里**的实体，因此异步结果
+ * 不会覆盖请求在飞期间时间循环对该实体做的推进。实体已不存在时原样返回，不复活它。
+ */
+export const mergeMaiden = (
+  maidens: Map<string, Maiden>,
+  maidenId: string,
+  updater: (current: Maiden) => Maiden
+): Map<string, Maiden> => {
+  const current = maidens.get(maidenId);
+  if (!current) return maidens;
+  const next = new Map(maidens);
+  next.set(maidenId, updater(current));
+  return next;
+};
+
+/**
  * 全量输出关联投影数组隔离副本
  */
 export const getAllRelationships = (maiden: Maiden): Relationship[] =>
   [...(maiden.relationships || [])];
+
+/**
+ * 真实关系边，按好感降序。
+ *
+ * 陌生关系不构成"联系"：`initializeNetwork` 会给同车厢的所有配对建边，
+ * 若把它算进去，关系面板里每个人都会显示几十条"陌生"。
+ */
+export const getSignificantRelationships = (maiden: Maiden): Relationship[] =>
+  getAllRelationships(maiden)
+    .filter(r => r.type !== RelationType.STRANGER)
+    .sort((a, b) => b.affinity - a.affinity);
+
+/** 关系分组统计；判据只此一份，面板与摘要都读它 */
+export const getRelationshipStats = (relationships: Relationship[]): RelationshipStats => ({
+  friends: relationships.filter(r => r.type === RelationType.FRIEND || r.type === RelationType.CLOSE_FRIEND).length,
+  enemies: relationships.filter(r => r.type === RelationType.RIVAL || r.type === RelationType.ENEMY).length,
+  accomplices: relationships.filter(r => r.type === RelationType.ACCOMPLICE).length,
+  protectors: relationships.filter(r => r.type === RelationType.PROTECTOR).length,
+  dependents: relationships.filter(r => r.type === RelationType.DEPENDENT).length,
+  traumaBonds: relationships.filter(r => r.sharedTrauma).length,
+});
+
+/**
+ * 妊娠群体统计。
+ *
+ * 按 `physiology.pregnancy` 判定而不是按 `pregnant` 标签：标签要等 isDiscovered
+ * 之后才由 `syncToMaiden` 加上，未显怀的妊娠同样是妊娠。
+ */
+export const getPregnancyStats = (maidens: Map<string, Maiden>): PregnancyStats => {
+  const byStage: Record<PregnancyStage, number> = {
+    none: 0, conception: 0, early: 0, middle: 0, late: 0, labor: 0,
+  };
+  let total = 0;
+  let totalWeeks = 0;
+
+  for (const maiden of maidens.values()) {
+    const state = maiden.physiology.pregnancy;
+    if (!state) continue;
+    total++;
+    byStage[state.stage]++;
+    totalWeeks += state.weekNumber;
+  }
+
+  return { total, byStage, averageWeek: total > 0 ? totalWeeks / total : 0 };
+};
 
 // ============================================
 // 11. 人格派生（权威为 HexacoFacets）

@@ -5,15 +5,14 @@
 // ============================================
 
 import React, { memo } from 'react';
-import { SystemState, Carriage, Maiden } from '../../meta';
-import { maidenSystem } from '../../engines/systems';
+import { SystemState, Carriage } from '../../meta';
+import { useGameEngine } from '../../engines';
 
 interface StatusProps {
     systemState: SystemState;
     carriages: Map<string, Carriage>;
     maidensInCarriageCount: number;
     isInAbyss: boolean;
-    maidens?: Map<string, Maiden>;
 }
 
 export const Status: React.FC<StatusProps> = memo(({
@@ -21,8 +20,9 @@ export const Status: React.FC<StatusProps> = memo(({
     carriages,
     maidensInCarriageCount,
     isInAbyss,
-    maidens,
 }) => {
+    const { getPregnancyStats } = useGameEngine();
+
     return (
         <div className={`panel flex flex-col shrink-0 ${isInAbyss ? 'panel-abyss' : ''}`}>
             <div className="panel-header flex items-center justify-between shrink-0">
@@ -101,7 +101,7 @@ export const Status: React.FC<StatusProps> = memo(({
                     </div>
                     <div className="flex justify-between">
                         <span className="text-zinc-600">GRAVID</span>
-                        <span className="text-pink-400 font-mono">{maidens ? maidenSystem.pregnancy.getAllPregnantMaidens(maidens).length : 0}</span>
+                        <span className="text-pink-400 font-mono">{getPregnancyStats().total}</span>
                     </div>
                 </div>
             </div>

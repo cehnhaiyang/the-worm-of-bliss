@@ -2631,6 +2631,21 @@ export class PersonalityView {
     get state(): PersonalityState {
         return stateFromDeviation(this.isshex.dynamics.deviationSquared);
     }
+
+    /**
+     * 构型的速记名。
+     *
+     * 优先取匹配度最高的子维度签名（比元因子更具体、更适合叙事），否则退回
+     * 八分构型。**只描述构型，不给诊断式标签**：v1 在此输出"操纵者/自恋者/冷血者"
+     * 一类词，属于规范明确禁止的用法。
+     */
+    get label(): string {
+        const signature = this.signatures[0];
+        if (signature && signature.match >= 0.75) {
+            return SIGNATURE_LABELS[signature.signature];
+        }
+        return OCTANT_LABELS[this.topOctant.octant];
+    }
 }
 
 /** 便捷构造：调用点写作 `personalityView(maiden).meta` */
@@ -5752,23 +5767,6 @@ class MaidenSystem {
         }));
     }
 
-    /**
-     * 人格构型的中文速记名，用于卡片展示。
-     *
-     * 优先取匹配度最高的子维度签名（比元因子更具体、更适合叙事），
-     * 否则退回八分构型的速记名。**只描述构型，不给诊断式标签**：
-     * v1 在此输出"操纵者/自恋者/冷血者"等词，属于 spec §7.2 明确禁止的用法。
-     */
-    getPersonalityDescription(maiden: Maiden): string {
-        const view = personalityView(maiden);
-
-        const signature = view.signatures[0];
-        if (signature && signature.match >= 0.75) {
-            return SIGNATURE_LABELS[signature.signature];
-        }
-
-        return OCTANT_LABELS[view.topOctant.octant];
-    }
 }
 
 export const maidenSystem = new MaidenSystem();

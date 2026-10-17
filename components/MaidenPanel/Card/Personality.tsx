@@ -1,7 +1,6 @@
 import { memo } from 'react';
-import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState } from '../../../meta';
+import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState, MaidenView } from '../../../meta';
 import { OCTANT_LABELS, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../const';
-import { PersonalityView } from '../../../engines/systems';
 
 /** 五点分档边界（§2.3），对称且每端人群占比一致 */
 const GRADE_BOUNDARIES = [
@@ -196,19 +195,19 @@ const FacetDescription = memo<FacetDescriptionProps>(({ facets, showAll = false 
 FacetDescription.displayName = 'FacetDescription';
 
 interface ISShexDisplayProps {
-    isshex: ISShexPersonality;
+    view: MaidenView;
 }
 
-const ISShexDisplay = memo<ISShexDisplayProps>(({ isshex }) => {
-    const view = new PersonalityView(isshex);
-    const { meta, domains, dynamics } = view;
-    const state = view.state;
+const ISShexDisplay = memo<ISShexDisplayProps>(({ view }) => {
+    const { personality } = view;
+    const { domains, dynamics, meta } = personality;
+    const state = personality.state;
 
     const stateStyle = { color: PERSONALITY_STATE_COLORS[state], name: PERSONALITY_STATE_LABELS[state] };
 
     /** 显示前三位构型：β≈0 时相邻构型本就接近，只取首位会造成虚假的确定性 */
-    const topThree = view.octants.slice(0, 3);
-    const bestSignature = view.signatures[0];
+    const topThree = personality.octants.slice(0, 3);
+    const bestSignature = personality.signatures[0];
 
     return (
         <div className="space-y-2 bg-zinc-900/30 p-2 rounded border border-zinc-800/50">
@@ -278,7 +277,7 @@ const ISShexDisplay = memo<ISShexDisplayProps>(({ isshex }) => {
             )}
 
             {/* 显示极端特质描述 */}
-            <FacetDescription facets={isshex.facets} />
+            <FacetDescription facets={view.facets} />
         </div>
     );
 });
@@ -327,24 +326,21 @@ const PsychProfileDisplay = memo<PsychProfileDisplayProps>(({ profile }) => (
 PsychProfileDisplay.displayName = 'PsychProfileDisplay';
 
 interface PersonalityProps {
-    isshex: ISShexPersonality | undefined;
+    view: MaidenView | undefined;
     profile: PersonalityProfile | undefined;
-    personalityDescription: string;
 }
 
-export const Personality = memo<PersonalityProps>(({ isshex, profile, personalityDescription }) => {
+export const Personality = memo<PersonalityProps>(({ view, profile }) => {
     const getPersonalityStyle = () => {
-        if (!isshex) return { color: 'bg-zinc-800 text-zinc-400', name: '未知' };
-
-        const view = new PersonalityView(isshex);
+        if (!view) return { color: 'bg-zinc-800 text-zinc-400', name: '未知' };
 
         // 优先取匹配度高的子维度签名，否则用隶属度最高的八分构型
-        const signature = view.signatures[0];
+        const signature = view.personality.signatures[0];
         if (signature && signature.match >= 0.75) {
-            return { color: SIGNATURE_COLORS[signature.signature], name: personalityDescription };
+            return { color: SIGNATURE_COLORS[signature.signature], name: view.personalityDescription };
         }
 
-        return { color: OCTANT_COLORS[view.topOctant.octant], name: personalityDescription };
+        return { color: OCTANT_COLORS[view.personality.topOctant.octant], name: view.personalityDescription };
     };
 
     const personalityStyle = getPersonalityStyle();
@@ -357,7 +353,7 @@ export const Personality = memo<PersonalityProps>(({ isshex, profile, personalit
                     {personalityStyle.name}
                 </span>
             </div>
-            {isshex && <ISShexDisplay isshex={isshex} />}
+            {view && <ISShexDisplay view={view} />}
 
             {profile && (
                 <>

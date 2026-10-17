@@ -52,7 +52,6 @@ export const CarriagePanel: React.FC<CarriagePanelProps> = memo((props) => {
             <Status
                 systemState={props.systemState}
                 carriages={props.carriages}
-                maidens={props.maidens}
                 maidensInCarriageCount={props.occupantCount}
                 isInAbyss={isInAbyss}
             />

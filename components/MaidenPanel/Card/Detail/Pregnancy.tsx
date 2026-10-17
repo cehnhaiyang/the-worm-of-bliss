@@ -3,13 +3,12 @@
 // 怀孕状态全屏面板
 // ============================================
 
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { Maiden, CharacterStatus } from '../../../../meta';
-import { maidenSystem } from '../../../../engines/systems';
+import { useGameEngine } from '../../../../engines';
 
 interface PregnancyProps {
   maiden: Maiden;
-  allMaidens: Map<string, Maiden>;
   onClose: () => void;
   onMaidenSelect: (maidenId: string) => void;
 }
@@ -79,23 +78,15 @@ const PregnancyItem = memo<PregnancyItemProps>(({ maiden, weekNumber, stage, isS
 
 PregnancyItem.displayName = 'PregnancyItem';
 
-export const Pregnancy: React.FC<PregnancyProps> = ({ maiden, allMaidens, onClose, onMaidenSelect }) => {
-  const pregnantMaidenIds = maidenSystem.pregnancy.getAllPregnantMaidens(allMaidens);
-  const stats = maidenSystem.pregnancy.getPregnancyStats(allMaidens);
+export const Pregnancy: React.FC<PregnancyProps> = ({ maiden, onClose, onMaidenSelect }) => {
+  const { getPregnancies, getPregnancyStats, getPregnancyOf } = useGameEngine();
+  const pregnantMaidens = getPregnancies();
+  const stats = getPregnancyStats();
 
-  const pregnantMaidens = useMemo(() => {
-    return pregnantMaidenIds
-      .map(id => {
-        const m = allMaidens.get(id);
-        const state = m ? maidenSystem.pregnancy.getPregnancyState(m) : undefined;
-        return m && state ? { maiden: m, state } : null;
-      })
-      .filter(Boolean) as { maiden: Maiden; state: { weekNumber: number; stage: string } }[];
-  }, [pregnantMaidenIds, allMaidens]);
-
+  // 未显怀的妊娠不出现在详情里：'pregnant' 标签只在 isDiscovered 后由 syncToMaiden 加上
   const currentMaidenPregnancy = maiden.status.includes(CharacterStatus.PREGNANT)
-    ? maidenSystem.pregnancy.getPregnancyState(maiden)
-    : null;
+    ? getPregnancyOf(maiden)
+    : undefined;
 
   return (
     <div className="fixed inset-0 z-50 bg-black/95 flex flex-col">
