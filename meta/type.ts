@@ -192,6 +192,28 @@ export type CarriageFunction =
   | 'ritual';    // 仪式献祭：神恩与献祭的发生地
 
 /**
+ * 需求词表。
+ *
+ * 与 `CarriageFunction` 成对：需求系统按需求产出优先级，行为决策再按需求查车厢。
+ * 声明成封闭联合而不是 `string`，是为了让"加了需求却忘了登记它的车厢映射"变成
+ * 编译错误——此前两处映射（能不能就地满足 / 去哪种车厢）各写一份，已经漂移过。
+ */
+export type NeedKind =
+  | 'sleep'      // 疲劳
+  | 'eat'        // 饥饿
+  | 'bathe'      // 清洁
+  | 'pray'       // 压力（虔诚者）
+  | 'hide'       // 压力（怯懦者）
+  | 'relax'      // 压力（其余）
+  | 'indulge'    // 欲望（放纵者）
+  | 'confess'    // 欲望（高诚实者）
+  | 'submit'     // 欲望（顺从者）
+  | 'socialize'  // 社交
+  | 'solitude'   // 独处
+  | 'worship'    // 虔诚
+  | 'rest';      // 孕期疲劳
+
+/**
  * 全局透视观测模式
  */
 export type ViewMode =

@@ -428,18 +428,6 @@ class CarriageSystem {
     }
 
     // ============================================
-    // 域方法
-    // ============================================
-
-    getTemplate(templateId: string) {
-        return getCarriageTemplate(templateId);
-    }
-
-    isAbyss(templateId: string): boolean {
-        return isAbyssTemplate(templateId);
-    }
-
-    // ============================================
     // 系统异常检测 (System Anomaly Detection)
     // ============================================
 

@@ -62,7 +62,7 @@ interface CarriageCellProps {
     isFocusedMaidenHere: boolean;
     isHighlighted: boolean;
     onClick: (id: string) => void;
-    onHover: (carriage: Carriage | null) => void;
+    onHover: (carriageId: string | null) => void;
 }
 
 const CarriageCell = memo<CarriageCellProps>(({
@@ -84,7 +84,7 @@ const CarriageCell = memo<CarriageCellProps>(({
     return (
         <button
             onClick={() => onClick(carriage.id)}
-            onMouseEnter={() => onHover(carriage)}
+            onMouseEnter={() => onHover(carriage.id)}
             onMouseLeave={() => onHover(null)}
             className={`
         relative w-full aspect-square rounded text-[8px] font-tech
@@ -226,7 +226,7 @@ export const Map: React.FC<MapProps> = memo(({
     const [viewportStart, setViewportStart] = useState(0);
     const [viewMode, setViewMode] = useState<ViewMode>('all');
     const [showMinimap, setShowMinimap] = useState(false);
-    const [hoveredCarriage, setHoveredCarriage] = useState<Carriage | null>(null);
+    const [hoveredCarriageId, setHoveredCarriageId] = useState<string | null>(null);
 
     // 将车厢转换为网格数组
     const grid = useMemo(() => {
@@ -255,6 +255,13 @@ export const Map: React.FC<MapProps> = memo(({
     const masterCol = useMemo(() =>
         carriages.get(masterCarriageId)?.position.col ?? 0,
         [carriages, masterCarriageId]
+    );
+
+    // 悬停卡片按 id 现读。存车厢对象会把它冻结在鼠标进入的那一刻：
+    // 占用人数随后每帧都在变，枢纽重组还会把这一格换成另一种车厢。
+    const hoveredCarriage = useMemo(
+        () => (hoveredCarriageId ? carriages.get(hoveredCarriageId) ?? null : null),
+        [carriages, hoveredCarriageId]
     );
 
     // 当前视口的车厢（带过滤）
@@ -417,7 +424,7 @@ export const Map: React.FC<MapProps> = memo(({
                                     isFocusedMaidenHere={carriage?.id === focusedMaidenCarriageId}
                                     isHighlighted={isHighlighted}
                                     onClick={onCarriageClick}
-                                    onHover={setHoveredCarriage}
+                                    onHover={setHoveredCarriageId}
                                 />
                             ))}
                         </div>

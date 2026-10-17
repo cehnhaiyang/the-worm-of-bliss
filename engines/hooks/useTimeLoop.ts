@@ -215,6 +215,16 @@ export const useTimeLoop = ({
             updatedMaiden = { ...updatedMaiden, movement: stepped.movement };
             if (!stepped.movement.isMoving) {
               updatedMaiden = { ...updatedMaiden, movement: completeMovement(updatedMaiden.movement) };
+              // 走完最后一跳即到达：切换到本次巡游的意图活动。必须在这里取用，
+              // completeMovement 刚把意图清掉，晚一步就只剩"继续游荡"。
+              updatedMaiden = {
+                ...updatedMaiden,
+                behavior: maidenSystem.arriveAtIntent(
+                  updatedMaiden.behavior,
+                  intent.intendedActivity,
+                  newGameTime
+                ),
+              };
             }
             carriagesChanged = true;
           } else {

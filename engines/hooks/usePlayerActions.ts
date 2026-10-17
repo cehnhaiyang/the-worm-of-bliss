@@ -263,7 +263,7 @@ export const usePlayerActions = ({
   // 移动我 (Move Master)
   // --------------------------------------------
   const moveMaster = useCallback((targetCarriageId: string) => {
-    const { carriages: currCarriages, masterState: currMaster, maidens: currMaidens } = stateRef.current!;
+    const { carriages: currCarriages, maidens: currMaidens } = stateRef.current!;
     const targetCarriage = currCarriages.get(targetCarriageId);
 
     if (!targetCarriage || !targetCarriage.isAccessible) {
@@ -272,20 +272,19 @@ export const usePlayerActions = ({
       return;
     }
 
-    // 检查当前聚焦的少女是否在目标车厢，如果不在则清除聚焦
-    let newFocusedMaidenId: string | undefined = currMaster.focusedMaidenId;
-    if (newFocusedMaidenId) {
-      const focusedMaiden = currMaidens.get(newFocusedMaidenId);
-      if (!focusedMaiden || getCurrentCarriageId(focusedMaiden) !== targetCarriageId) {
-        newFocusedMaidenId = undefined;
-      }
-    }
+    // 聚焦是否保留必须在 updater 里按 prev 判断：focusMaiden 会在同一次事件里先写入
+    // 新聚焦对象再调到这里，而 stateRef 要等渲染后才更新，读它拿到的是写入之前的快照。
+    // 快照里没有聚焦时，这里会把刚设好的聚焦一并清成 undefined。
+    setMasterState(prev => {
+      const focused = prev.focusedMaidenId ? currMaidens.get(prev.focusedMaidenId) : undefined;
+      const keepFocus = !!focused && getCurrentCarriageId(focused) === targetCarriageId;
 
-    setMasterState(prev => ({
-      ...prev,
-      carriageId: targetCarriageId,
-      focusedMaidenId: newFocusedMaidenId
-    }));
+      return {
+        ...prev,
+        carriageId: targetCarriageId,
+        focusedMaidenId: keepFocus ? prev.focusedMaidenId : undefined,
+      };
+    });
 
     const template = getCarriageTemplate(targetCarriage.templateId);
     const isAbyss = targetCarriage.category === 'abyss';

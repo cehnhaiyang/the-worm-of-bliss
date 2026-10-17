@@ -36,6 +36,7 @@ import {
     NarcissusEligibility,
     NarcissusStage,
     NarcissusState,
+    NeedKind,
     OctantAffinity,
     OctantId,
     PersonalityDynamics,
@@ -3251,6 +3252,38 @@ const carriageHasFunction = (carriage: Carriage, fn: CarriageFunction): boolean 
     templateFunctions(carriage).includes(fn);
 
 /**
+ * 就就地满足一项需求而言，车厢要满足什么。
+ * `'anywhere'`：任何车厢都可以；`'solitude'`：人少即可（唯一要看占用人数的判据）。
+ */
+type NeedSatisfier = CarriageFunction | 'anywhere' | 'solitude';
+
+/**
+ * 需求判据表——**唯一**的需求-车厢映射。
+ *
+ * 两列不可合并：虔诚类需求在任何"允许祈祷"的车厢就地了结，但只有祭坛才是它们的目的地。
+ * 键是封闭联合，因此"加了需求却忘了登记它的车厢映射"是编译错误。
+ */
+const NEED_CARRIAGE: Record<NeedKind, {
+    satisfies: NeedSatisfier;
+    destination: CarriageFunction | null;
+}> = {
+    sleep: { satisfies: 'sleep', destination: 'sleep' },
+    eat: { satisfies: 'eat', destination: 'eat' },
+    bathe: { satisfies: 'bathe', destination: 'bathe' },
+    pray: { satisfies: 'pray', destination: 'ritual' },
+    worship: { satisfies: 'pray', destination: 'ritual' },
+    confess: { satisfies: 'pray', destination: 'pray' },
+    // 这四项的活动是游荡，随处可做，因此不指定目的地
+    hide: { satisfies: 'anywhere', destination: null },
+    relax: { satisfies: 'anywhere', destination: null },
+    indulge: { satisfies: 'anywhere', destination: null },
+    submit: { satisfies: 'anywhere', destination: null },
+    socialize: { satisfies: 'socialize', destination: 'socialize' },
+    solitude: { satisfies: 'solitude', destination: 'memory' },
+    rest: { satisfies: 'sleep', destination: 'sleep' },
+};
+
+/**
  * 深渊层级一（"入门"层）的车厢 id。
  *
  * 由层级表派生而不是就地写死列表：新增入门层车厢时只需改常量文件。
@@ -3290,13 +3323,13 @@ class MaidenBehavior {
         maiden: Maiden,
         gameTime: number,
         currentCarriage?: Carriage
-    ): { need: string; urgency: number; activity: ActivityStatus; targetFunction: CarriageFunction }[] {
+    ): { need: NeedKind; urgency: number; activity: ActivityStatus }[] {
         const { attributes: a, physiology } = maiden;
         const view = personalityView(maiden);
         const weights = view.weights;
         const facets = maiden.isshex.facets;
         const domains = view.domains;
-        const needs: { need: string; urgency: number; activity: ActivityStatus; targetFunction: CarriageFunction }[] = [];
+        const needs: { need: NeedKind; urgency: number; activity: ActivityStatus }[] = [];
 
         const situation: SituationType = (currentCarriage && getCarriageTemplate(currentCarriage.templateId)?.situation) ?? 'ambiguous';
         const traitMod = this.getTraitActivationMultiplier(situation);
@@ -3310,14 +3343,14 @@ class MaidenBehavior {
             if (situation === 'task') urgency *= (0.8 / traitMod);
             if (situation === 'threat') urgency *= (1.2 * traitMod);
 
-            needs.push({ need: 'sleep', urgency, activity: 'sleeping', targetFunction: 'sleep' });
+            needs.push({ need: 'sleep', urgency, activity: 'sleeping' });
         }
 
         // 饥饿需求 - 进食
         if (a.hunger > NEED_THRESHOLDS.LOW) {
             let urgency = a.hunger;
             if (a.hunger > NEED_THRESHOLDS.CRITICAL) urgency += 50;
-            needs.push({ need: 'eat', urgency, activity: 'eating', targetFunction: 'eat' });
+            needs.push({ need: 'eat', urgency, activity: 'eating' });
         }
 
         // 清洁需求 - 沐浴
@@ -3329,7 +3362,7 @@ class MaidenBehavior {
 
             if (situation === 'intimate') urgency *= 1.3;
 
-            needs.push({ need: 'bathe', urgency, activity: 'bathing', targetFunction: 'bathe' });
+            needs.push({ need: 'bathe', urgency, activity: 'bathing' });
         }
 
         // 压力需求 - 休憩/祈祷
@@ -3340,11 +3373,11 @@ class MaidenBehavior {
             if (situation === 'competition') urgency *= 1.2;
 
             if (weights.devotionTendency > 0.5) {
-                needs.push({ need: 'pray', urgency: urgency * 1.5, activity: 'confessing', targetFunction: 'ritual' });
+                needs.push({ need: 'pray', urgency: urgency * 1.5, activity: 'confessing' });
             } else if (facets.fearfulness > 1.0 && domains.X < -0.5) {
-                needs.push({ need: 'hide', urgency: urgency * 1.2, activity: 'wandering', targetFunction: 'rest' });
+                needs.push({ need: 'hide', urgency: urgency * 1.2, activity: 'wandering' });
             } else {
-                needs.push({ need: 'relax', urgency, activity: 'wandering', targetFunction: 'rest' });
+                needs.push({ need: 'relax', urgency, activity: 'wandering' });
             }
         }
 
@@ -3353,11 +3386,11 @@ class MaidenBehavior {
             let urgency = a.lust * weights.lustSensitivity;
 
             if (domains.O > 1.0 && facets.prudence < -1.0) {
-                needs.push({ need: 'indulge', urgency: urgency * 1.5, activity: 'wandering', targetFunction: 'leisure' });
+                needs.push({ need: 'indulge', urgency: urgency * 1.5, activity: 'wandering' });
             } else if (domains.H > 1.0) {
-                needs.push({ need: 'confess', urgency: urgency * 1.2, activity: 'confessing', targetFunction: 'pray' });
+                needs.push({ need: 'confess', urgency: urgency * 1.2, activity: 'confessing' });
             } else if (domains.A < -1.0 && domains.H < -1.0) {
-                needs.push({ need: 'submit', urgency, activity: 'wandering', targetFunction: 'leisure' });
+                needs.push({ need: 'submit', urgency, activity: 'wandering' });
             }
         }
 
@@ -3371,24 +3404,24 @@ class MaidenBehavior {
         if (situation === 'intimate') socialNeed *= 1.1;
 
         if (socialNeed > 20) {
-            needs.push({ need: 'socialize', urgency: socialNeed, activity: 'chatting', targetFunction: 'socialize' });
+            needs.push({ need: 'socialize', urgency: socialNeed, activity: 'chatting' });
         }
 
         // 独处需求
         const solitudeNeed = weights.solitudeSeek * 60;
         if (solitudeNeed > 25 && a.stress > 40) {
-            needs.push({ need: 'solitude', urgency: solitudeNeed, activity: 'wandering', targetFunction: 'memory' });
+            needs.push({ need: 'solitude', urgency: solitudeNeed, activity: 'wandering' });
         }
 
         // 虔诚需求
         if (weights.devotionTendency > 0.6 && a.devotion > 30) {
-            needs.push({ need: 'worship', urgency: a.devotion * 0.8, activity: 'confessing', targetFunction: 'ritual' });
+            needs.push({ need: 'worship', urgency: a.devotion * 0.8, activity: 'confessing' });
         }
 
         // 怀孕特殊需求
         if (physiology.pregnancy && physiology.pregnancy.stage !== 'none') {
             const pregnancyFatigue = physiology.pregnancy.weekNumber * 2;
-            needs.push({ need: 'rest', urgency: 50 + pregnancyFatigue, activity: 'sleeping', targetFunction: 'sleep' });
+            needs.push({ need: 'rest', urgency: 50 + pregnancyFatigue, activity: 'sleeping' });
         }
 
         return needs.sort((a, b) => b.urgency - a.urgency);
@@ -3476,11 +3509,11 @@ class MaidenBehavior {
                 };
             }
 
-            const targetCarriageId = findNearestCarriageByFunction(
-                currentCarriage,
-                allCarriages,
-                topNeed.targetFunction
-            );
+            // 目的地由需求判据表给出；`destination` 为 null 的需求没有场地要求，不产生移动
+            const destination = NEED_CARRIAGE[topNeed.need].destination;
+            const targetCarriageId = destination
+                ? findNearestCarriageByFunction(currentCarriage, allCarriages, destination)
+                : undefined;
 
             if (targetCarriageId && targetCarriageId !== currentCarriage.id) {
                 return this.executeMovement(maiden, targetCarriageId, topNeed.activity, allCarriages, gameTimePassed);
@@ -3674,16 +3707,47 @@ class MaidenBehavior {
         intendedActivity: ActivityStatus,
         allCarriages: Map<string, Carriage>,
         gameTime: number
-    ): { behavior: BehaviorState; movement: UnifiedMovementState } {
+    ): { behavior: BehaviorState; movement?: UnifiedMovementState } {
         const currentId = getCurrentCarriageId(maiden);
         const movementPath = this.findPath(currentId, targetCarriageId, allCarriages);
 
+        // 已经在目的地：没有路可走，就地开始意图活动。
+        // 若照旧发出空路径的意图，它会永远停在 'arriving'——移动推进只处理
+        // 非空路径，没有任何一帧会去清理它。
+        if (movementPath.length === 0) {
+            return { behavior: this.arriveAtIntent(maiden.behavior, intendedActivity, gameTime) };
+        }
+
         const movement = startMovement(maiden.movement, targetCarriageId, intendedActivity, movementPath);
 
-        // 在抵达意图前处于默认的游荡状态机中
+        // 在抵达意图前处于默认的游荡状态机中；抵达时由 `arriveAtIntent` 切换到意图活动
         const behavior = this.createActivityBehavior('wandering', 5, maiden.behavior, gameTime);
 
         return { behavior, movement };
+    }
+
+    /**
+     * 开始巡游意图所要求的那项活动。
+     *
+     * 意图会在 `completeMovement` 里被清除，所以调用方必须在清除之前取用
+     * `intent.intendedActivity`，否则"走到食堂再吃饭"永远退化成在食堂继续游荡。
+     *
+     * 意图活动与当前活动相同时原样返回：走过去继续游荡这类意图不该重启计时器，
+     * 否则每抵达一格都会按 `DURATIONS.WANDER` 重新计时。
+     */
+    arriveAtIntent(
+        behavior: BehaviorState,
+        intendedActivity: ActivityStatus,
+        gameTime: number
+    ): BehaviorState {
+        if (behavior.currentActivity === intendedActivity) return behavior;
+
+        return this.createActivityBehavior(
+            intendedActivity,
+            this.getDurationForActivity(intendedActivity),
+            behavior,
+            gameTime
+        );
     }
 
     /**
@@ -3743,16 +3807,14 @@ class MaidenBehavior {
         return [targetCarriageId];
     }
 
-    private canSatisfyNeed(carriage: Carriage, need: string): boolean {
-        switch (need) {
-            case 'sleep': case 'rest': return carriageHasFunction(carriage, 'sleep');
-            case 'eat': return carriageHasFunction(carriage, 'eat');
-            case 'bathe': return carriageHasFunction(carriage, 'bathe');
-            case 'pray': case 'worship': case 'confess': return carriageHasFunction(carriage, 'pray');
-            case 'socialize': return carriageHasFunction(carriage, 'socialize') && carriage.category !== 'abyss';
-            case 'solitude': return !carriageHasFunction(carriage, 'socialize') || carriage.occupants.length <= 1;
-            default: return true;
-        }
+    private canSatisfyNeed(carriage: Carriage, need: NeedKind): boolean {
+        const satisfier = NEED_CARRIAGE[need].satisfies;
+
+        if (satisfier === 'anywhere') return true;
+        // 独处在无人时连社交车厢也接受，是唯一要看占用人数的判据
+        if (satisfier === 'solitude') return !carriageHasFunction(carriage, 'socialize') || carriage.occupants.length <= 1;
+
+        return carriageHasFunction(carriage, satisfier);
     }
 
     private findCrowdedSafeCarriage(allCarriages: Map<string, Carriage>): string | null {
@@ -5639,6 +5701,18 @@ class MaidenSystem {
         return this.behavior.decideMaidenBehavior(
             maiden, currentCarriage, allCarriages, allMaidens, gameTimePassed
         );
+    }
+
+    /**
+     * 抵达目的地后接续本次移动的意图活动。
+     * 调用方必须在清除移动意图之前取出 `intendedActivity`——意图一清，它就没了。
+     */
+    arriveAtIntent(
+        behavior: BehaviorState,
+        intendedActivity: ActivityStatus,
+        gameTimePassed: number
+    ): BehaviorState {
+        return this.behavior.arriveAtIntent(behavior, intendedActivity, gameTimePassed);
     }
 
     processSocialInteractions(
