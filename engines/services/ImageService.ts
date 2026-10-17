@@ -1,19 +1,17 @@
 // ============================================
 // AI 图像服务 - Pollinations API
-// 提示词优先级：主体 > 身体 > 外貌 > 表情 > 服装 > 环境 > 风格
+// 提示词优先级（越靠前权重越高）：主体 > 身体 > 外貌 > 表情 > 孕期 > 服装 > 等级 > 环境 > 风格
 // API 文档：https://enter.pollinations.ai/api/docs
 // ============================================
 
-import { Maiden, CharacterRank, CharacterStatus, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CUP_SIZES } from '../../meta';
+import { Maiden, CharacterRank, CharacterStatus, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CUP_SIZES } from '../../meta';
 import { getCarriageTemplate, isAbyssTemplate, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../constants';
-import { PersonalityView, personalityView } from '../systems';
+import { personalityView } from '../systems';
 import { hashCode } from '../../const';
 
 // ============================================
 // 配置常量
 // ============================================
-
-const POLLINATIONS_API_KEY = 'sk_frApAL0jeDBArPbnOZDfAQtqKC5n8XuN';
 
 // 可用图像模型列表
 export const AVAILABLE_IMAGE_MODELS = {
@@ -23,7 +21,9 @@ export const AVAILABLE_IMAGE_MODELS = {
 const CONFIG = {
     // Pollinations API 网关（新版）
     pollinationsUrl: 'https://gen.pollinations.ai/image',
-    defaultModel: 'flux' as string,
+    // 该 key 随图片 URL 一起交给浏览器加载，对客户端本就是可见的，故不当作机密处理
+    apiKey: 'sk_frApAL0jeDBArPbnOZDfAQtqKC5n8XuN',
+    // 3:4，与卡片立绘区比例一致
     portrait: { width: 768, height: 1024 },
 };
 
@@ -143,7 +143,7 @@ const CLOTHING_STATE_MAP: Record<AttireState, string | null> = {
 };
 
 export class ImageService {
-    private currentModel: string = CONFIG.defaultModel;
+    private currentModel: string = AVAILABLE_IMAGE_MODELS.FLUX;
 
     // ============================================
     // 模型管理
@@ -171,7 +171,7 @@ export class ImageService {
      */
     generateCharacterImage(maiden: Maiden, carriageTemplateId?: string): { url: string; model: string } {
         return {
-            url: this.getPollinationsUrl(maiden, carriageTemplateId),
+            url: this.buildRequestUrl(maiden, carriageTemplateId),
             model: this.currentModel
         };
     }
@@ -180,18 +180,23 @@ export class ImageService {
     // Pollinations URL 生成
     // ============================================
 
-    getPollinationsUrl(maiden: Maiden, carriageTemplateId?: string): string {
+    /**
+     * 按头部注释的优先级拼装提示词并合成请求 URL。
+     *
+     * 主体拆成三段分别入列，而不是先拼成一个字符串：语源表按 `NameOrigin` 全量声明，
+     * 但存档是外部输入，各自成段才能在缺项时被空段过滤掉，不留悬空的分隔符。
+     */
+    private buildRequestUrl(maiden: Maiden, carriageTemplateId?: string): string {
         const parts: string[] = [];
-        const ethnicity = ETHNICITY_MAP[maiden.nameOrigin] || '';
-        parts.push(`(1girl:1.4), ${this.getAgeTag(maiden.age)}, ${ethnicity}`);
+        parts.push('(1girl:1.4)', this.getAgeTag(maiden.age), ETHNICITY_MAP[maiden.nameOrigin]);
         if (maiden.physical) parts.push(this.buildBodyPrompt(maiden.physical));
         parts.push(maiden.appearance ? this.buildAppearancePrompt(maiden.appearance) : maiden.description);
         const expression = this.buildExpressionPrompt(maiden);
         if (expression) parts.push(expression);
         const pregnancy = this.getPregnancyTag(maiden.physiology.pregnancy?.weekNumber ?? 0);
         if (pregnancy) parts.push(pregnancy);
-        const clothing = this.buildClothingPrompt(maiden.clothing);
-        parts.push(clothing || 'nude, bare skin');
+        // 裸体兜底由 buildClothingPrompt 负责：它返回的字符串恒非空
+        parts.push(this.buildClothingPrompt(maiden.clothing));
         const rank = RANK_VISUALS[maiden.rank];
         if (rank) parts.push(rank);
         parts.push(this.buildBackgroundPrompt(carriageTemplateId));
@@ -230,9 +235,7 @@ export class ImageService {
         else if (cupIndex >= 4) parts.push('medium-large breasts');
         else if (cupIndex <= 1) parts.push('flat chest');
 
-        // 腰臀比的分界取 0.70：实测分布 p50≈0.698、极值 0.637~0.763，
-        // 因此两侧各约占一半。原实现的上侧阈值 0.85 落在分布之外，
-        // 那一支永远不会执行（且措辞把"腰更粗"写成了"腰更细"）。
+        // 腰臀比分界取 0.70：实测分布 p50≈0.698、极值 0.637~0.763，两侧各约一半
         const whRatio = phy.waist / phy.hips;
         if (whRatio < 0.70) parts.push('narrow waist, hourglass figure');
         else parts.push('fuller waist, soft figure');
@@ -260,29 +263,32 @@ export class ImageService {
         return parts.join(', ');
     }
 
+    /**
+     * 表情修饰：极端档独占，否则「属性 + 状态」合计最多三条，都没有时才退回人格。
+     *
+     * 三条是刻意的上限：属性有六个维度，全塞进提示词会让表情盖过主体与外貌。
+     */
     private buildExpressionPrompt(maiden: Maiden): string {
         const extreme = this.getExtremeExpression(maiden);
         if (extreme) return extreme;
 
-        const effects: string[] = [];
-        effects.push(...this.getAttributeExpressions(maiden).slice(0, 2));
-
-        if (effects.length < 3) {
-            const statusEffects = maiden.status
-                .map(s => STATUS_VISUALS[s])
-                .filter(Boolean)
-                .slice(0, 3 - effects.length);
-            effects.push(...statusEffects);
+        // 属性表情在 getAttributeExpressions 里已按固定优先级排列，只取前两条
+        const effects = this.getAttributeExpressions(maiden).slice(0, 2);
+        for (const status of maiden.status) {
+            if (effects.length >= 3) break;
+            const visual = STATUS_VISUALS[status];
+            if (visual) effects.push(visual);
         }
 
         if (!effects.length) {
-            const personality = this.getPersonalityExpression(maiden.isshex);
+            const personality = this.getPersonalityExpression(maiden);
             if (personality) effects.push(personality);
         }
 
         return effects.join(', ');
     }
 
+    /** 极端档整段替换表情，不再叠加属性与状态：命中即返回，先判者优先 */
     private getExtremeExpression(maiden: Maiden): string | null {
         const { attributes: a, status } = maiden;
         if (status.includes('broken') || a.sanity < 20) {
@@ -335,14 +341,13 @@ export class ImageService {
     /**
      * 由人格得出立绘的表情修饰。
      *
-     * 只使用维度与构型，不使用光明/黑暗代理：代理未经验证门槛，据此生成
+     * 只用维度与构型，不用光明/黑暗代理：代理未经验证门槛，据此生成
      * "傲慢的冷笑""残忍的微笑"这类表情等于对个体下判断（personality.md §7.2）。
      */
-    private getPersonalityExpression(isshex: ISShexPersonality): string {
-        const view = new PersonalityView(isshex);
-        const state = view.state;
-        if (state === 'extreme') return 'vacant stare, hollow eyes';
-        if (state === 'atypical') return 'strained expression, tense';
+    private getPersonalityExpression(maiden: Maiden): string {
+        const view = personalityView(maiden);
+        // 'extreme' 档到不了这里：getExtremeExpression 已先行接管
+        if (view.state === 'atypical') return 'strained expression, tense';
 
         const domains = view.domains;
         const parts: string[] = [];
@@ -403,7 +408,11 @@ export class ImageService {
             .filter(Boolean)
             .forEach(d => parts.push(d!));
 
-        if (dressLevel === 'naked' && !parts.length) return 'nude, bare skin';
+        // 全裸必须写出裸体描述，衣物状态也无从附着在并不存在的衣服上。判据不能用
+        // `parts` 是否为空：赤脚会先塞进 'barefoot'，全裸时数组非空，立绘只剩一双鞋。
+        if (dressLevel === 'naked' || !parts.length) {
+            return ['nude, bare skin', ...parts].join(', ');
+        }
 
         const stateTag = CLOTHING_STATE_MAP[state];
         if (stateTag) parts.push(stateTag);
@@ -446,13 +455,14 @@ export class ImageService {
     }
 
     private buildUrl(parts: string[], size: { width: number; height: number }, seed: number): string {
+        // 空段一并丢弃：任何可选描述缺失，都不该在提示词里留下 ", , "
         const prompt = encodeURIComponent(parts.filter(Boolean).join(', '));
         const params = new URLSearchParams({
             width: String(size.width),
             height: String(size.height),
             seed: String(seed),
             model: this.currentModel,
-            key: POLLINATIONS_API_KEY,
+            key: CONFIG.apiKey,
             negative_prompt: 'worst quality, blurry',
             safe: 'false',
         });
