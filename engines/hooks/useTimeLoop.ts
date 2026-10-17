@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange } from '../../meta';
 import { GAME_CONFIG, TIME_CONFIG, formatGameTime, getTimePeriod, isTemplateAccessible, TimePeriod } from '../../constants';
 import { maidenSystem, carriageSystem } from '../systems';
-import { audioService } from '../services';
+import { audioService } from '../services/AudioService';
 import { getCurrentCarriageId, stepMovement, completeMovement, cancelMovement } from '../../const';
 
 // 入参契约

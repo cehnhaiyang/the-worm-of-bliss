@@ -1,9 +1,3 @@
-
-// ============================================
-// AI 服务 Schema 定义 (Qwen/Groq Optimized)
-// 使用 TypeScript 接口描述风格，LLM 理解效果更佳
-// ============================================
-
 import { CharacterStatus, RANK_ORDER } from '../../../meta';
 
 /**
@@ -15,7 +9,7 @@ import { CharacterStatus, RANK_ORDER } from '../../../meta';
  * 同时导出给 TextService 做返回值过滤：提示词里承诺的词表和实际接受的词表必须同源。
  */
 export const NARRATIVE_STATUSES: readonly CharacterStatus[] = [
-  'panicked', 'aroused', 'broken', 'dissociated', 'euphoric', 'devoted', 'complicit',
+    'panicked', 'aroused', 'broken', 'dissociated', 'euphoric', 'devoted', 'complicit',
 ];
 
 /**

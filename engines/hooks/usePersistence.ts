@@ -12,7 +12,8 @@ import {
     GameLog,
     LogType,
 } from '../../meta';
-import { persistenceService, audioService } from '../services';
+import { persistenceService } from '../services/PersistenceService';
+import { audioService } from '../services/AudioService';
 
 // ============================================
 // 入参契约

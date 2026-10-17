@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { Maiden, MaidenView, CharacterStatus } from '../../../meta';
 import { STATUS_LABELS, isAbyssTemplate } from '../../../constants';
-import { aiService } from '../../../engines';
+import { imageService } from '../../../engines';
 import { formatPreciseAge } from '../../../const';
 import { Appearance } from './Appearance';
 import { Attire } from './Attire';
@@ -111,7 +111,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
         }
 
         // 计算当前视觉状态的哈希值 (包含 ID、服装、关键状态、理智区间等)
-        const currentHash = aiService.getPortraitHash(maiden, carriageTemplateId);
+        const currentHash = imageService.generatePortraitHash(maiden, carriageTemplateId);
 
         // 只按"视觉状态是否变化"决定要不要请求。上一次请求失败不构成重发理由：
         // 之前把 loadError 也放进这个判断里，于是失败后每个 tick 都重发一次，
@@ -122,7 +122,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
         setLoading(true);
         setLoadError(false);
 
-        const { url, model } = aiService.generateCharacterImage(maiden, carriageTemplateId);
+        const { url, model } = imageService.generateCharacterImage(maiden, carriageTemplateId);
 
         // 预加载图片：生成接口只拼 URL，真正的加载与失败判定都在这里
         const img = new Image();

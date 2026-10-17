@@ -19,7 +19,8 @@ import { mergeMaiden, rollGrace, clamp } from '../../const';
 import { carriageSystem } from '../systems';
 
 // 服务层导入
-import { audioService, persistenceService } from '../services';
+import { audioService } from '../services/AudioService';
+import { persistenceService } from '../services/PersistenceService';
 
 // Hook 导入
 import { useGameLog } from './useGameLog';

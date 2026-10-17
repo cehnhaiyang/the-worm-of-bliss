@@ -1,8 +1,3 @@
-// ============================================
-// 车厢系统 - 负责网格生成与管理
-// Carriage System - Grid generation & management
-// ============================================
-
 import {
     Carriage,
     SystemState,

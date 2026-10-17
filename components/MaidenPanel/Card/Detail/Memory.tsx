@@ -7,7 +7,7 @@
 import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
 import { Maiden, MemoryNode, MemoryHistoryEntry } from '../../../../meta';
 import { formatGameTimeDisplay, isAlteredMemory } from '../../../../const';
-import { aiService } from '../../../../engines';
+import { textService } from '../../../../engines';
 import { TAMPER_PERMISSIONS } from '../../../../constants';
 
 interface MemoryProps {
@@ -187,7 +187,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
     let cancelled = false;
     setIsInitializing(true);
 
-    aiService.generateMemories(maiden, maiden.lastUpdateTime)
+    textService.generateMemories(maiden, maiden.lastUpdateTime)
       .then(chain => {
         if (cancelled) return;
         if (chain.length === 0) {
@@ -224,7 +224,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
     setNotice(null);
     try {
       // 只提交请求：插入位置由 AI 选择，合法性由链层判定，不在 UI 里拼链
-      const result = await aiService.deepenMemories(maiden, maiden.lastUpdateTime);
+      const result = await textService.deepenMemories(maiden, maiden.lastUpdateTime);
 
       // null 是请求失败，必须与"模型认为无空白可填"区分开：
       // 两者都表现为"链没有变化"，但只有一个该让玩家重试。
@@ -257,7 +257,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
     setNotice(null);
     try {
       const directive = tamperDirective.trim() || "使其变得模糊、扭曲，充满不安的杂音。";
-      const result = await aiService.tamperMemory(maiden, selectedNode, directive);
+      const result = await textService.tamperMemory(maiden, selectedNode, directive);
 
       if (!result) {
         setNotice('篡改失败：神经链接不稳定。');

@@ -5,8 +5,7 @@
 
 import React, { useState, useEffect, memo } from 'react';
 import { SoundCategory, AudioState, SaveSlotInfo } from '../../meta';
-import { audioService, persistenceService, aiService } from '../../engines/services';
-import { AVAILABLE_IMAGE_MODELS } from '../../engines/services/AIService/ImageService';
+import { audioService, persistenceService, textService, imageService, AVAILABLE_IMAGE_MODELS } from '../../engines';
 import { LLM_CONFIG } from '../../constants';
 
 // ============================================
@@ -91,8 +90,8 @@ export const Settings: React.FC<SettingsProps> = memo(({
     const [audioState, setAudioState] = useState<AudioState>(audioService.getState());
     const [saveSlots, setSaveSlots] = useState<SaveSlotInfo[]>([]);
     const [selectedSlot, setSelectedSlot] = useState<number>(1);
-    const [textModel, setTextModel] = useState(aiService.getTextModel());
-    const [imageModel, setImageModel] = useState(aiService.getImageModel());
+    const [textModel, setTextModel] = useState(textService.getModel());
+    const [imageModel, setImageModel] = useState(imageService.getModel());
 
     // 初始化加载存档信息
     useEffect(() => {
@@ -133,13 +132,13 @@ export const Settings: React.FC<SettingsProps> = memo(({
 
     const handleModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newModel = e.target.value;
-        aiService.setTextModel(newModel);
+        textService.setModel(newModel);
         setTextModel(newModel);
     };
 
     const handleImageModelChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
         const newModel = e.target.value;
-        aiService.setImageModel(newModel);
+        imageService.setModel(newModel);
         setImageModel(newModel);
     };
 

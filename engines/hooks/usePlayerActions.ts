@@ -17,7 +17,8 @@ import {
 import { clamp, getCurrentCarriageId, mergeMaiden } from '../../const';
 import { GAME_CONFIG, getCarriageTemplate, isAbyssTemplate, isTemplateAccessible } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
-import { audioService, aiService } from '../services';
+import { audioService } from '../services/AudioService';
+import { textService } from '../services/TextService';
 
 interface UsePlayerActionsParams {
   stateRef: React.RefObject<{
@@ -353,7 +354,7 @@ export const usePlayerActions = ({
       const currentCarriage = currCarriages.get(currMaster.carriageId);
 
       // 调用 AI API
-      const aiResponse: AIResponse = await aiService.generateNarrative(
+      const aiResponse: AIResponse = await textService.generateNarrative(
         input,
         focusedMaiden,
         currSystem,
@@ -383,7 +384,7 @@ export const usePlayerActions = ({
             break;
           case 'genesis':
             // 创世纪耗时数秒，期间该少女仍被时间循环推进，因此写回只按 id 合并记忆字段
-            aiService.generateDeaconessGenesis(effect.maiden, currSystem.gameTimePassed).then(nodes => {
+            textService.generateDeaconessGenesis(effect.maiden, currSystem.gameTimePassed).then(nodes => {
               if (nodes.length === 0) {
                 addLog('system', `>>> 意识重构失败: ${effect.maiden.name} 的旧档案仍被封存。`, 'SYSTEM');
                 return;
