@@ -52,6 +52,7 @@ import {
     PregnancyState,
     ProxyId,
     RawInsertion,
+    RawDeadNode,
     RawMemoryNode,
     RelationType,
     Relationship,
@@ -217,17 +218,31 @@ class MaidenMemory {
     }
 
     /**
-     * 链尾不变量：最后一个节点是"登车瞬间"，不可编辑。
-     * 该不变量只在本模块维护，外部不得自行标记死节点——否则链尾会与 type/isImmutable 脱节。
+     * 链的不变量：链尾永远不可编辑；已存在的死节点永远保持不可编辑。
+     *
+     * 只有这一条规则，同时覆盖两种链：
+     * - 初始链/深潜链：只有链尾（登车瞬间）是死节点，其余为 original；
+     * - 创世纪链：每一节都是"新存在的公理"，全部已是死节点。
+     *
+     * v1 写死了"非链尾的死节点一律降级为 original"。创世纪之后只要再植入一段记忆，
+     * 其余公理就被降级成可篡改的 original——提示词向模型承诺的"这些记忆不可篡改"
+     * 在第一次植入后就不成立了，而代码里看不出任何不一致。
+     * 因此 `isImmutable` 是权威，链尾只负责"补上"不可变标记，从不撤销它。
      */
     private syncTail(chain: MemoryNode[]): MemoryNode[] {
         return chain.map((node, index) => {
             const isTail = index === chain.length - 1;
-            const type: MemoryNode['type'] = isTail ? 'dead_node' : node.type === 'dead_node' ? 'original' : node.type;
-            const category: MemoryCategory = isTail ? 'train' : node.category;
-            const isImmutable = isTail ? true : undefined;
-            if (node.type === type && node.category === category && node.isImmutable === isImmutable) return node;
-            return { ...node, type, category, isImmutable };
+            const isImmutable = node.isImmutable === true || isTail;
+            // 新晋升为链尾的节点就是登车瞬间；已存在的死节点保留自己的类别
+            const isNewTail = isTail && node.type !== 'dead_node';
+            const type: MemoryNode['type'] = isImmutable
+                ? 'dead_node'
+                : node.type === 'dead_node' ? 'original' : node.type;
+            const category: MemoryCategory = isNewTail ? 'train' : node.category;
+            const immutableFlag = isImmutable ? true : undefined;
+
+            if (node.type === type && node.category === category && node.isImmutable === immutableFlag) return node;
+            return { ...node, type, category, isImmutable: immutableFlag };
         });
     }
 
@@ -334,6 +349,32 @@ class MaidenMemory {
         }
 
         return summary;
+    }
+
+    /**
+     * 构造执事创世纪链。
+     *
+     * 与初始链的区别在于"不可变"的含义：初始链只有链尾（登车瞬间）不可变，
+     * 而创世纪链的每一节都是她新存在的公理，整条链都不可篡改。
+     * 这条差异必须留在链层——`isImmutable` 的唯一维护者是本模块，
+     * 让服务层自己拼节点会造出"整条链都是不可变节点"却不经过任何校验的链，
+     * 之后 `insertNode` 找不到唯一的链尾，落点就变成了猜。
+     */
+    buildGenesisChain(raw: RawDeadNode[], timestamp: number): MemoryNode[] {
+        return raw.map((node, index) => ({
+            id: generateId('node_dead'),
+            title: asText(node?.title, `信条 ${index + 1}`),
+            objectiveTruth: '这是我意志的直接投射，是新世界的基石。',
+            subjectiveNarrative: asText(node?.content, '（内容缺失）'),
+            selfOpinion: '这是绝对的真理。',
+            timeLabel: asText(node?.timeLabel, '重生时刻'),
+            depth: 1,
+            type: 'dead_node',
+            isImmutable: true,
+            corruptionLevel: 0,
+            category: 'master',
+            timestamp,
+        }));
     }
 
     /**
@@ -4589,7 +4630,7 @@ const CHARACTER_STATUS_NAMES: Record<CharacterStatus, string> = {
  * 因此本类不持有任何需要与存档同步的独立状态。
  */
 class MaidenSystem {
-    private generator = maidenGenerator;
+    readonly generator = maidenGenerator;
     private behavior = maidenBehavior;
 
     readonly socialization = maidenSocialization;

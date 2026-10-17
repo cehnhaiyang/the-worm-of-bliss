@@ -170,6 +170,8 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
 
   // 初始化：懒生成。记忆链只在玩家第一次打开本面板时生成，
   // 此处只需防 Strict Mode 的重入与"生成失败后反复重试"。
+  // 依赖里必须带上 activeChain.length 与 isDeaconess：否则生成成功的那一刻
+  // 组件不会重跑，而这条 effect 又只认 maiden.id，切换少女后旧 id 会一直挡住新目标。
   useEffect(() => {
     if (isDeaconess) return;
     if (activeChain.length > 0) return;
@@ -201,7 +203,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
       });
 
     return () => { cancelled = true; };
-  }, [maiden.id]);
+  }, [maiden.id, maiden.lastUpdateTime, activeChain.length, isDeaconess, onSetChain]);
 
   // 滚轮横向滚动
   const handleWheel = (e: React.WheelEvent) => {
@@ -216,8 +218,16 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
     setNotice(null);
     try {
       // 只提交请求：插入位置由 AI 选择，合法性由链层判定，不在 UI 里拼链
-      const { chain, rejections } = await aiService.deepenMemories(maiden, maiden.lastUpdateTime);
+      const result = await aiService.deepenMemories(maiden, maiden.lastUpdateTime);
 
+      // null 是请求失败，必须与"模型认为无空白可填"区分开：
+      // 两者都表现为"链没有变化"，但只有一个该让玩家重试。
+      if (!result) {
+        setNotice('追忆中断：神经链接不稳定。');
+        return;
+      }
+
+      const { chain, rejections } = result;
       const inserted = chain.length - activeChain.length;
       if (inserted > 0) {
         onSetChain(maiden.id, chain);

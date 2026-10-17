@@ -3,36 +3,46 @@
 // 原则：提供上下文，定义目标，不限制方法
 // ============================================
 
-import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData } from '../../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, WORLD_LORE, SIGNATURE_STYLES, PERSONALITY_STATE_LABELS } from '../../../constants';
+import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData, ItemDef } from '../../../meta';
+import { ATTIRE_STATE_LABELS, CARRIAGE_TYPE_INFO, ABYSS_TYPES, TIME_CONFIG, WORLD_LORE, SIGNATURE_STYLES, PERSONALITY_STATE_LABELS } from '../../../constants';
 import { maidenSystem, personalityView } from '../../systems';
 
 // ============================================
 // Helper Functions
 // ============================================
 
-/** 将服装状态序列化为文本描述 */
+/**
+ * 将服装状态序列化为文本描述。
+ *
+ * 层级与 `Attire` 面板保持一致：模型被告知"最后一个记忆节点必须反映她登车时的着装"，
+ * 因此凡是界面会显示的衣物都必须出现在这里。v1 漏了手套、内衬与内裤，
+ * 又把胸衣统一写成"内衣"——模型据此写出的登车瞬间与卡片上看到的着装对不上。
+ */
 function serializeClothingState(clothing: ClothingState): string {
   const parts: string[] = [];
   const { outerwear, undergarment, intimate, accessories, state } = clothing;
 
-  // 外层
-  if (outerwear.top.type.id !== 'none') parts.push(`${outerwear.top.color?.name || ''}${outerwear.top.type.name}`);
-  if (outerwear.bottom.type.id !== 'none') parts.push(`${outerwear.bottom.color?.name || ''}${outerwear.bottom.type.name}`);
-  if (outerwear.shoes.type.id !== 'none') parts.push(`${outerwear.shoes.color?.name || ''}${outerwear.shoes.type.name}`);
+  const name = (item: { type: ItemDef; color?: ItemDef }) =>
+    item.type.id === 'none' ? '' : `${item.color?.name ?? ''}${item.type.name}`;
 
-  // 内层 (简单描述)
-  const inner: string[] = [];
-  if (undergarment.stockings.type.id !== 'none') inner.push(undergarment.stockings.type.name);
-  if (intimate.bra.type.id !== 'none') inner.push('内衣');
-  if (inner.length > 0) parts.push(`(内着: ${inner.join(', ')})`);
+  // 外层
+  const outer = [outerwear.top, outerwear.bottom, outerwear.shoes, outerwear.gloves]
+    .map(name)
+    .filter(Boolean);
+  parts.push(...outer);
+
+  // 内层
+  const inner = [undergarment.stockings, undergarment.undershirt, intimate.bra, intimate.panties]
+    .map(name)
+    .filter(Boolean);
+  if (inner.length > 0) parts.push(`(内着: ${inner.join('、')})`);
 
   // 饰品
-  const accs = accessories.map(a => a.type.name);
-  if (accs.length > 0) parts.push(`饰品: ${accs.join(', ')}`);
+  const accs = accessories.filter(a => a.isVisible !== false).map(a => a.type.name);
+  if (accs.length > 0) parts.push(`饰品: ${accs.join('、')}`);
 
   // 状态
-  if (state !== 'intact') parts.push(`[状态: ${state}]`);
+  if (state !== 'intact') parts.push(`[状态: ${ATTIRE_STATE_LABELS[state]}]`);
 
   return parts.length > 0 ? parts.join('，') : '裸露';
 }
@@ -212,8 +222,12 @@ export function buildMemoryGenerationPrompt(
 ): string {
   const personality = serializePersonality(maiden);
 
-  // 初始记忆链
-  const arrivalDate = new Date(maiden.arrivalTimestamp).toLocaleDateString();
+  // 初始记忆链。
+  // 登车时刻用"距今多少天"表达，而不是换算成日历日期：`arrivalTimestamp` 是游戏内时间，
+  // 且登车发生在开局之前（值为负），交给 Date 渲染只会得到 1969 年的假日期。
+  const daysOnTrain = Math.max(0, Math.floor(
+    (maiden.lastUpdateTime - maiden.arrivalTimestamp) / TIME_CONFIG.MS_PER_DAY
+  ));
   const initialAttire = serializeClothingState(maiden.initialClothing);
   const appearance = serializeAppearance(maiden.appearance);
 
@@ -228,7 +242,7 @@ ${personality}
 当前年龄: ${maiden.age}
 
 [登车档案 (Boarding Profile)]
-登车日期: ${arrivalDate} (当时年龄: ${maiden.boardingAge})
+登车时点: 距今约 ${daysOnTrain} 天前 (当时年龄: ${maiden.boardingAge})
 初始外貌: ${appearance}
 初始着装 (登车时): ${initialAttire}
 (注意: 最后一个记忆节点必须反映她登车时的状态，包括上述着装。)

@@ -4,6 +4,29 @@ import { AudioState, ActiveSound, SoundGeneratorFn } from '../../../meta';
 import * as generators from './generators';
 
 // ============================================
+// 事件音效表
+// ============================================
+
+/**
+ * 事件名 → 生成器。
+ *
+ * 唯一权威：调用方（含 AI 返回的 soundEffect）只能用这里的键。
+ * v1 有两处脱节：`playEvent` 的映射里缺 `abyss_vision` 与 `hub_anomaly`，
+ * 而这两个名字确实被调用方在用——事件发生了，音效却静默消失；
+ * 同时提示词又向模型承诺了 scream/moan/whisper/heartbeat 这些根本没有生成器的音效。
+ * 现在表里覆盖全部实际调用名，未知名字打警告而不是静默丢弃。
+ * 导出以便直接断言"每个被调用的事件名都有生成器"。
+ */
+export const EVENT_SOUND_GENERATORS: Record<string, string> = {
+  'grace': 'generateGraceSound',
+  'abyss': 'generateAbyssEventSound',
+  'abyss_vision': 'generateAbyssEventSound',
+  'resonance': 'generateAbyssEventSound',
+  'hub_shuffle': 'generateHubShuffleSound',
+  'hub_anomaly': 'generateHubShuffleSound',
+};
+
+// ============================================
 // 音频服务类
 // ============================================
 
@@ -209,14 +232,14 @@ class AudioService {
   }
 
   playEvent(type: string): void {
-    const map: Record<string, string> = {
-      'grace': 'generateGraceSound',
-      'abyss': 'generateAbyssEventSound',
-      'hub_shuffle': 'generateHubShuffleSound',
-      'resonance': 'generateAbyssEventSound',
-    };
-    const gen = map[type];
-    if (gen) this.play(gen, SoundCategory.EVENT, { volume: 0.8 });
+    const gen = EVENT_SOUND_GENERATORS[type];
+    if (!gen) {
+      // 不静默：v1 在这里直接返回，调用方写错音效名后既无声也无提示，
+      // 只能靠人耳发现"这个事件没有音效"。
+      console.warn(`[AudioService] 未知事件音效: ${type}`);
+      return;
+    }
+    this.play(gen, SoundCategory.EVENT, { volume: 0.8 });
   }
 
   // ============================================

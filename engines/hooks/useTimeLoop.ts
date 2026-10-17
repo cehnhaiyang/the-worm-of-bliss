@@ -107,11 +107,12 @@ export const useTimeLoop = ({
         addLog(anomaly.logType, anomaly.description, 'SYSTEM', 'SYSTEM');
         for (const effect of anomaly.effects) {
           if (effect.type === 'system') {
-            carriageSystem.applySystemEffect(effect.key, effect.value, {
+            const sounds = carriageSystem.applySystemEffect(effect.key, effect.value, {
               updateSystemState: setSystemState,
               updateCarriages: setCarriages,
               addLog,
             });
+            for (const sound of sounds) audioService.playEvent(sound);
           }
         }
       }

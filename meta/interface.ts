@@ -482,6 +482,13 @@ export interface RawMemoryNode {
   category?: unknown;
 }
 
+/** 创世纪返回的原始信条：只带标题、内容与时间标签，其余字段由记忆系统给定 */
+export interface RawDeadNode {
+  title?: unknown;
+  content?: unknown;
+  timeLabel?: unknown;
+}
+
 /** 一次插叙请求。层级（depth）不在其中：新节点层级由锚点推导 */
 export interface RawInsertion {
   insertAfterNodeId: string;
@@ -1028,7 +1035,6 @@ export interface AIResponse {
     targetMemoryId?: string;
   };
   narcissusAction?: 'initiate' | 'leave' | 'stay' | 'return';
-  visualPromptModifier?: string;
   abyssEffect?: string;
   soundEffect?: string;
 }

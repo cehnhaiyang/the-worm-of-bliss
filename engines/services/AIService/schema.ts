@@ -4,6 +4,28 @@
 // 使用 TypeScript 接口描述风格，LLM 理解效果更佳
 // ============================================
 
+import { CharacterStatus, RANK_ORDER } from '../../../meta';
+
+/**
+ * 叙事可增删的状态标签。
+ *
+ * 由 `CharacterStatus` 派生而非手写字面量：v1 这里写的是 `fearful`，
+ * 而它属于 MoodState，实体上并不存在这个状态——模型照做之后，
+ * 状态标签变成一个既不渲染也无语义的字符串。词表只能有一份，就是类型本身。
+ * 同时导出给 TextService 做返回值过滤：提示词里承诺的词表和实际接受的词表必须同源。
+ */
+export const NARRATIVE_STATUSES: readonly CharacterStatus[] = [
+  'panicked', 'aroused', 'broken', 'dissociated', 'euphoric', 'devoted', 'complicit',
+];
+
+/**
+ * 模型可请求的事件音效。
+ *
+ * 只列 `AudioService.playEvent` 真正实现了的声音：v1 还写了 scream/moan/whisper/
+ * heartbeat，而音频层没有对应生成器，模型请求后静默无声，且不报错。
+ */
+export const NARRATIVE_SOUND_EFFECTS = ['grace', 'abyss', 'resonance', 'hub_shuffle'] as const;
+
 // ============================================
 // 0. 全局约束 (Global Constraints)
 // ============================================
@@ -35,9 +57,9 @@ export const responseSchemaDesc = `
     "devotion": "number (虔诚变化. Integer. NO PLUS SIGN)",
     "hunger": "number (饥饿变化)",
     "fatigue": "number (疲劳变化)",
-    "addStatus": ["string (fearful/aroused/broken/dissociated/euphoric/devoted/complicit)"],
-    "removeStatus": ["string"],
-    "rankChange": "string (unranked/copper/silver/gold/obsidian)",
+    "addStatus": ["string (仅限: ${NARRATIVE_STATUSES.join(' / ')})"],
+    "removeStatus": ["string (仅限与 addStatus 相同的词表)"],
+    "rankChange": "string (仅限: ${Object.keys(RANK_ORDER).join(' / ')})",
     "fertilityChange": "number (NO PLUS SIGN)",
     "pregnancyProgress": "number"
   },
@@ -53,9 +75,8 @@ export const responseSchemaDesc = `
     "targetMemoryId": "string (仅 tamper 使用：要重写的节点 ID)"
   },
   "narcissusAction": "string (initiate | leave | stay | return)",
-  "visualPromptModifier": "string (英文视觉修饰词，如 'crying, trembling')",
   "abyssEffect": "string (深渊效应描述)",
-  "soundEffect": "string (grace | abyss | scream | moan | resonance | whisper | heartbeat)"
+  "soundEffect": "string (仅限: ${NARRATIVE_SOUND_EFFECTS.join(' / ')})"
 }
 `;
 

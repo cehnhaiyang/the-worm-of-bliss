@@ -19,7 +19,6 @@ import {
     ABYSS_TIERS,
     GAME_CONFIG,
 } from '../../constants';
-import { audioService } from '../services';
 
 
 /**
@@ -476,11 +475,24 @@ class CarriageSystem {
     // 系统效果应用 (System Effect Application)
     // ============================================
 
+    /**
+     * 应用一条系统效果。
+     *
+     * 返回需要播放的音效名，由调用方交给音频服务——系统层不得依赖服务层，
+     * 否则 `systems → services → systems` 成环，模块初始化顺序一变就取到
+     * 尚未定义的单例。音效是副作用，本来就该由驱动方播放。
+     *
+     * 另外：数值更新与副作用必须分开。`updateSystemState` 的更新函数会被
+     * React 重放（StrictMode 下的 eagerState 试算与双调用），把 addLog 与
+     * 音频播放写在里面会让同一事件重复播报、重复发声。
+     */
     applySystemEffect(
         key: string,
         value: any,
         updaters: StateUpdaters
-    ): void {
+    ): string[] {
+        const sounds: string[] = [];
+
         updaters.updateSystemState(prev => {
             const newState = { ...prev };
 
@@ -492,8 +504,6 @@ class CarriageSystem {
             // 处理共振激增 (resonanceSurge)
             if (key === 'resonanceSurge' && value === true) {
                 newState.resonanceFrequency = 35;
-                updaters.addLog('system', '>>> 共振激增 >>> 频率已自动重置为安全水平 (35Hz)', 'SYSTEM');
-                audioService.playEvent('resonance');
             }
 
             // 处理枢纽重组带来的熵值减少
@@ -504,6 +514,11 @@ class CarriageSystem {
             return newState;
         });
 
+        if (key === 'resonanceSurge' && value === true) {
+            sounds.push('resonance');
+            updaters.addLog('system', '>>> 共振激增 >>> 频率已自动重置为安全水平 (35Hz)', 'SYSTEM');
+        }
+
         // 处理枢纽重组 (Hub Shuffle)
         if (key === 'hubShuffle' && value === true) {
             updaters.updateCarriages(prev => {
@@ -511,9 +526,11 @@ class CarriageSystem {
                 this.shuffle(newMap);
                 return newMap;
             });
-            audioService.playEvent('hub_shuffle');
+            sounds.push('hub_shuffle');
             updaters.addLog('system', '>>> 枢纽异常 >>> 熵值过载引发空间强制重组', 'SYSTEM');
         }
+
+        return sounds;
     }
 }
 

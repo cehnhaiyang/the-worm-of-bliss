@@ -60,11 +60,12 @@ class AIService {
   /**
    * 记忆深潜/扩充：AI 自主决定插入点。
    * 返回完整新链与被拒绝的插叙；链的合法性由 MaidenMemory 判定，调用方不再自己拼链。
+   * `null` 表示请求失败，与"没有可挖的内容"（空拒绝列表 + 原链）严格区分。
    */
   async deepenMemories(
     maiden: Maiden,
     gameTimePassed: number
-  ): Promise<{ chain: MemoryNode[]; rejections: ChainRejection[] }> {
+  ): Promise<{ chain: MemoryNode[]; rejections: ChainRejection[] } | null> {
     return this.textService.deepenMemories(maiden, gameTimePassed);
   }
 
