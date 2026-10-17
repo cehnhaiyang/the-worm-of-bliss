@@ -67,60 +67,60 @@ const PREGNANCY_VISUALS: Record<number, string> = {
 // 写成 Partial 时漏掉的语源会静默丢掉族群描述，提示词里就只剩一个无名少女
 const ETHNICITY_MAP: Record<NameOrigin, string> = {
   // 东亚
-  chinese: 'East Asian woman, delicate porcelain skin, elegant features',
-  japanese: 'Japanese woman, soft facial features, anime-esque aesthetic',
-  korean: 'Korean woman, flawless glass skin, trendy makeup',
-  vietnamese: 'Southeast Asian woman, elegant and slender',
+  chinese: 'East Asian maiden, delicate porcelain skin, elegant features',
+  japanese: 'Japanese maiden, soft facial features, anime-esque aesthetic',
+  korean: 'Korean maiden, flawless glass skin, trendy makeup',
+  vietnamese: 'Southeast Asian maiden, elegant and slender',
   // 英语文化圈
-  english: 'British Caucasian woman, pale fair skin, aristocratic features',
-  american: 'Caucasian woman, sun-kissed skin',
-  irish: 'Irish woman, pale skin, light freckles',
-  scottish: 'Scottish woman, pale skin, sharp defined features',
+  english: 'British Caucasian maiden, pale fair skin, aristocratic features',
+  american: 'Caucasian maiden, sun-kissed skin',
+  irish: 'Irish maiden, pale skin, light freckles',
+  scottish: 'Scottish maiden, pale skin, sharp defined features',
   // 罗曼语族
-  french: 'French woman, sophisticated chic look',
-  spanish: 'Spanish woman, olive skin, dark wavy hair',
-  italian: 'Italian woman, warm olive skin, expressive features',
-  portuguese: 'Portuguese woman, olive skin, dark eyes',
-  romanian: 'Romanian woman, olive complexion, striking features',
+  french: 'French maiden, sophisticated chic look',
+  spanish: 'Spanish maiden, olive skin, dark wavy hair',
+  italian: 'Italian maiden, warm olive skin, expressive features',
+  portuguese: 'Portuguese maiden, olive skin, dark eyes',
+  romanian: 'Romanian maiden, olive complexion, striking features',
   // 日耳曼/北欧
-  german: 'German woman, strong facial structure',
-  dutch: 'Dutch woman, fair skin, light brown hair',
-  swedish: 'Swedish woman, blonde hair, pale blue eyes',
-  norwegian: 'Norwegian woman, fair skin, light hair',
-  danish: 'Danish woman, fair complexion, soft features',
-  finnish: 'Finnish woman, pale skin, light eyes, high cheekbones',
-  icelandic: 'Icelandic woman, very pale skin, light hair',
+  german: 'German maiden, strong facial structure',
+  dutch: 'Dutch maiden, fair skin, light brown hair',
+  swedish: 'Swedish maiden, blonde hair, pale blue eyes',
+  norwegian: 'Norwegian maiden, fair skin, light hair',
+  danish: 'Danish maiden, fair complexion, soft features',
+  finnish: 'Finnish maiden, pale skin, light eyes, high cheekbones',
+  icelandic: 'Icelandic maiden, very pale skin, light hair',
   // 斯拉夫/东欧
-  russian: 'Russian woman, cold Slavic beauty, pale skin',
-  ukrainian: 'Ukrainian woman, fair skin, Slavic features',
-  polish: 'Polish woman, fair skin, light eyes',
-  czech: 'Czech woman, fair skin, delicate features',
-  hungarian: 'Hungarian woman, dark hair, olive complexion',
-  serbian: 'Serbian woman, dark hair, strong features',
-  croatian: 'Croatian woman, olive skin, dark hair',
-  bulgarian: 'Bulgarian woman, dark hair, olive complexion',
+  russian: 'Russian maiden, cold Slavic beauty, pale skin',
+  ukrainian: 'Ukrainian maiden, fair skin, Slavic features',
+  polish: 'Polish maiden, fair skin, light eyes',
+  czech: 'Czech maiden, fair skin, delicate features',
+  hungarian: 'Hungarian maiden, dark hair, olive complexion',
+  serbian: 'Serbian maiden, dark hair, strong features',
+  croatian: 'Croatian maiden, olive skin, dark hair',
+  bulgarian: 'Bulgarian maiden, dark hair, olive complexion',
   // 中东/地中海
-  greek: 'Greek woman, olive skin, dark curly hair',
-  turkish: 'Turkish woman, olive skin, dark expressive eyes',
-  arabic: 'Arab woman, olive skin, dark eyes, elegant features',
-  persian: 'Persian woman, olive skin, thick dark hair, striking eyes',
-  hebrew: 'Middle Eastern woman, olive skin, dark wavy hair',
+  greek: 'Greek maiden, olive skin, dark curly hair',
+  turkish: 'Turkish maiden, olive skin, dark expressive eyes',
+  arabic: 'Arab maiden, olive skin, dark eyes, elegant features',
+  persian: 'Persian maiden, olive skin, thick dark hair, striking eyes',
+  hebrew: 'Middle Eastern maiden, olive skin, dark wavy hair',
   // 南亚/东南亚
-  indian: 'Indian woman, rich tan skin, sharp eyes',
-  thai: 'Thai woman, warm tan skin, delicate features',
-  indonesian: 'Southeast Asian woman, warm tan skin, dark hair',
-  filipino: 'Filipina woman, warm tan skin, dark hair',
+  indian: 'Indian maiden, rich tan skin, sharp eyes',
+  thai: 'Thai maiden, warm tan skin, delicate features',
+  indonesian: 'Southeast Asian maiden, warm tan skin, dark hair',
+  filipino: 'Filipina maiden, warm tan skin, dark hair',
   // 拉美
-  brazilian: 'Brazilian woman, mixed heritage, sun-kissed skin',
-  mexican: 'Mexican woman, warm olive skin tone',
-  argentinian: 'Argentinian woman, olive skin, European features',
+  brazilian: 'Brazilian maiden, mixed heritage, sun-kissed skin',
+  mexican: 'Mexican maiden, warm olive skin tone',
+  argentinian: 'Argentinian maiden, olive skin, European features',
   // 非洲
-  nigerian: 'Nigerian woman, dark ebony skin, striking features',
-  ethiopian: 'Ethiopian woman, dark skin, fine features, high cheekbones',
-  egyptian: 'Egyptian woman, olive skin, cat-like eyes',
-  southafrican: 'South African woman, warm brown skin, striking features',
+  nigerian: 'Nigerian maiden, dark ebony skin, striking features',
+  ethiopian: 'Ethiopian maiden, dark skin, fine features, high cheekbones',
+  egyptian: 'Egyptian maiden, olive skin, cat-like eyes',
+  southafrican: 'South African maiden, warm brown skin, striking features',
   // 神话语源
-  mythical: 'ethereal woman, otherworldly beauty, faintly luminous skin',
+  mythical: 'ethereal maiden, otherworldly beauty, faintly luminous skin',
 };
 
 // 服装状态映射
@@ -281,7 +281,9 @@ export class ImageService {
    * "young girl" 之类的未成年措辞分支——那种分支只会让下限失效时无人察觉。
    */
   private getAgeTag(age: number): string {
-    return age <= 25 ? `young adult woman, ${age} years old` : `mature woman, ${age} years old`;
+    if (age <= 16) return `young girl, ${age} years old`;
+    if (age <= 19) return `teenage girl, ${age} years old`;
+    return `young maiden, ${age} years old`;
   }
 
   private buildBodyPrompt(phy: PhysicalStats): string {
