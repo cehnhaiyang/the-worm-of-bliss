@@ -38,4 +38,3 @@ export * from './measurements';
 export * from './clothing';
 export * from './grace';
 export * from './personality';
-export * from './personality-dynamics';

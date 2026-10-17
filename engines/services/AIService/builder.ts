@@ -3,8 +3,8 @@
 // 原则：提供上下文，定义目标，不限制方法
 // ============================================
 
-import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData, ItemDef } from '../../../meta';
-import { ATTIRE_STATE_LABELS, CARRIAGE_TYPE_INFO, ABYSS_TYPES, TIME_CONFIG, WORLD_LORE, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../constants';
+import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData, ItemDef, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../meta';
+import { ATTIRE_STATE_LABELS, CARRIAGE_TYPE_INFO, ABYSS_TYPES, TIME_CONFIG, WORLD_LORE } from '../../../constants';
 import { maidenSystem, personalityView } from '../../systems';
 
 // ============================================

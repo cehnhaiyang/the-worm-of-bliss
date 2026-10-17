@@ -1,4 +1,4 @@
-import { CarriageType, EventType, ActivityStatus } from './type';
+import { CarriageType, EventType, ActivityStatus, PersonalityState } from './type';
 import {
   Carriage,
   CarriageFunction,
@@ -13,7 +13,12 @@ import {
   EventTimestampData,
   Maiden,
   CharacterAttributes,
-  MemoryNode
+  MemoryNode,
+  HexacoFacets,
+  HexacoProfile,
+  OctantId,
+  SignatureId,
+  BehaviorWeights
 } from './interface';
 import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from '../constants';
 
@@ -646,3 +651,115 @@ export function setRelationship(maiden: Maiden, rel: Relationship): Maiden {
 export function getAllRelationships(maiden: Maiden): Relationship[] {
   return [...(maiden.relationships || [])];
 }
+
+// ============================================
+// 11. 人格派生（权威为 HexacoFacets）
+// ============================================
+
+/**
+ * 维度分数：仅在各维度子维度齐备时取均值再重标准化（personality.md §2.6 末段，标为近似）
+ */
+export const DOMAIN_FACETS: Record<keyof HexacoProfile, (keyof HexacoFacets)[]> = {
+  H: ['sincerity', 'fairness', 'greedAvoidance', 'modesty'],
+  E: ['fearfulness', 'anxiety', 'dependence', 'sentimentality'],
+  X: ['socialSelfEsteem', 'socialBoldness', 'sociability', 'liveliness'],
+  A: ['forgivingness', 'gentleness', 'flexibility', 'patience'],
+  C: ['organization', 'diligence', 'perfectionism', 'prudence'],
+  O: ['aestheticAppreciation', 'inquisitiveness', 'creativity', 'unconventionality'],
+};
+
+/** 子维度间平均符号相关（§6.3 示例采用 .35；仅用于维度折算的 sd_c 近似） */
+const DOMAIN_INTERCORRELATION = 0.35;
+
+/**
+ * 合成的重标准化算子 z̃（§2.6）。
+ *
+ * k 个不完全相关的 z 取平均后 SD 会明显小于 1（k=4、r̄=.35 时约 0.72），
+ * 不重标准化就套用分档会让所有合成分数挤在中间档、极端档永远触发不了。
+ * `meanSignedCorrelation` 即 r̄ₛ，缺完整相关矩阵时的近似。
+ */
+export function restandardize(components: number[], meanSignedCorrelation: number): number {
+  const k = components.length;
+  if (k === 0) return 0;
+  const mean = components.reduce((sum, z) => sum + z, 0) / k;
+  const sd = Math.sqrt((1 + (k - 1) * meanSignedCorrelation) / k);
+  return sd > 0 ? mean / sd : 0;
+}
+
+/** 由子维度折算六个维度分数 */
+export function deriveDomains(facets: HexacoFacets): HexacoProfile {
+  const domains = {} as HexacoProfile;
+  for (const key of Object.keys(DOMAIN_FACETS) as (keyof HexacoProfile)[]) {
+    const values = DOMAIN_FACETS[key].map(f => facets[f]);
+    domains[key] = Math.round(restandardize(values, DOMAIN_INTERCORRELATION) * 100) / 100;
+  }
+  return domains;
+}
+
+/**
+ * 把 z 线性映射到 0–1（`(z + 3) / 6`，±3σ 覆盖全量程），
+ * 使下游既有的 `> 0.5` 类比较保持含义（0.5 即人群均值）。
+ */
+function normalized(z: number): number {
+  return Math.max(0, Math.min(1, (z + 3) / 6));
+}
+
+/** 由子维度派生行为权重 */
+export function deriveBehaviorWeights(facets: HexacoFacets): BehaviorWeights {
+  const {
+    sociability, dependence, socialBoldness, fearfulness, prudence,
+    anxiety, patience, sentimentality, unconventionality, liveliness,
+    socialSelfEsteem, gentleness, organization, diligence, modesty, sincerity,
+  } = facets;
+
+  return {
+    socialSeek: normalized((sociability + dependence * 0.5) / 1.5),
+    solitudeSeek: normalized((-socialBoldness - dependence * 0.5) / 1.5),
+    riskTolerance: normalized((-fearfulness + socialBoldness - prudence) / 3),
+    // 服从性：宜人-诚实-审慎的组合，输出为相对均值的 ±50 修正量
+    obedienceBase: Math.round(normalized((patience + sincerity + prudence) / 3) * 100 - 50),
+    stressResistance: normalized((-anxiety + organization + diligence + patience) / 4),
+    lustSensitivity: normalized((sentimentality - prudence + liveliness) / 3),
+    devotionTendency: normalized((sincerity + modesty + gentleness - unconventionality) / 4),
+    aggressiveness: normalized((-patience - sincerity + socialBoldness) / 3),
+    empathy: normalized((sentimentality + gentleness) / 2),
+    impulsivity: normalized((-prudence + liveliness + socialSelfEsteem) / 3),
+  };
+}
+
+/** 档位的中文描述，用于日志与卡片（§6.2：报告区间与不确定性，不下结论） */
+export const PERSONALITY_STATE_LABELS: Record<PersonalityState, string> = {
+  typical: '常态范围',
+  stretched: '拉伸',
+  atypical: '非典型',
+  extreme: '极端偏离',
+};
+
+/**
+ * 八分构型速记名（§3.4.1）。
+ *
+ * 与 `PERSONALITY_STATE_LABELS` 同理，是构型词汇的一部分而非配色：卡片、系统层
+ * 与提示词三处都要显示同一个名字，各存一份必然漂移。颜色只属于 UI，留在组件里。
+ */
+export const OCTANT_LABELS: Record<OctantId, string> = {
+  PPP: '建设型引领者',
+  PPN: '策略型竞争者',
+  PNP: '守护型维系者',
+  PNN: '审慎型独行者',
+  NPP: '热忱型探索者',
+  NPN: '冲动型挑战者',
+  NNP: '敏感型照护者',
+  NNN: '疏离型防御者',
+};
+
+/** 子维度签名速记名（§3.4.2） */
+export const SIGNATURE_LABELS: Record<SignatureId, string> = {
+  benevolent_strategist: '仁慈的策略者',
+  vulnerable_superiority: '易受伤的优越感',
+  chaotic_innovator: '混乱的创新者',
+  calm_executor: '冷静的执行者',
+  needed_helper: '需要被需要的助人者',
+  rule_enforcer: '规则的执法者',
+  steady_caregiver: '稳健的照护者',
+  quiet_principled: '沉静的原则者',
+};

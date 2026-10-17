@@ -10,6 +10,7 @@ import {
     AttireState,
     AttributeKey,
     BehaviorState,
+    BehaviorWeights,
     Carriage,
     CarriageType,
     ChainRejection,
@@ -40,7 +41,9 @@ import {
     NarcissusEligibility,
     NarcissusStage,
     NarcissusState,
+    OCTANT_LABELS,
     OctantAffinity,
+    OctantId,
     PersonalityDynamics,
     PersonalityProfile,
     PersonalityState,
@@ -57,7 +60,9 @@ import {
     RelationType,
     Relationship,
     RelationshipNetworkData,
+    SIGNATURE_LABELS,
     SignatureMatch,
+    SignatureId,
     SituationType,
     SocialContext,
     SocialInteractionType,
@@ -69,6 +74,9 @@ import {
     clamp,
     createUnifiedMovementState,
     deepCopy,
+    deriveBehaviorWeights,
+    deriveDomains,
+    DOMAIN_FACETS,
     findNearestCarriageByFunction,
     findNearestCarriageByType,
     formatPreciseAge,
@@ -84,6 +92,7 @@ import {
     randomElement,
     randomFloat,
     randomInt,
+    restandardize,
     setRelationship,
     startMovement,
     weightedRandom,
@@ -127,7 +136,6 @@ import {
     NAKED_UNDERGARMENT_LAYER,
     NEED_THRESHOLDS,
     NEGATIVE_TRAITS,
-    OCTANT_LABELS,
     PANTY_COLORS,
     PANTY_MATERIALS,
     PANTY_TYPES,
@@ -136,7 +144,6 @@ import {
     SHOE_COLORS,
     SHOE_MATERIALS,
     SHOE_TYPES,
-    SIGNATURE_LABELS,
     SKIN_TEXTURES,
     SKIN_TONES,
     STOCKING_COLORS,
@@ -153,23 +160,8 @@ import {
     UNDERSHIRT_MATERIALS,
     UNDERSHIRT_TYPES,
     calculateDressLevel,
-    accumulateLoad,
-    applyTraitDrift,
-    computeDeviationSquared,
-    computeDiscrepancyLoad,
-    deriveBehaviorWeights,
-    deriveDomains,
-    deriveMetaTraits,
-    deriveOctantAffinities,
-    deriveProxies,
-    deriveSignatureMatches,
-    expressDomains,
     isBondageAccessory,
     isCarryableItem,
-    normalizeFacets,
-    stateFromDeviation,
-    traitActivationGain,
-    type BehaviorWeights,
 } from '../../constants';
 
 const MEMORY_CATEGORIES: readonly MemoryCategory[] = [
@@ -2238,6 +2230,339 @@ class MaidenRandomEvent {
     }
 }
 
+/** 情境对特质 j 的线索相关度 r_jt ∈ [0,1]，0.5 为中性 */
+type CueRelevance = Partial<Record<keyof HexacoFacets, number>>;
+
+/** 情境对特质 j 所要求/期待的表达水平 n_jt（z 分） */
+type SituationalNorm = Partial<Record<keyof HexacoFacets, number>>;
+
+/** 特质激活增益 κ_j 默认 0.5（§附录 B） */
+const TRAIT_ACTIVATION_GAIN = 0.5;
+
+/** 个人内 SD σ_w 默认 0.7（§附录 B） */
+const WITHIN_PERSON_SD = 0.7;
+
+/** 一游戏年按 365 天计，用于把按年给出的漂移率换算到按天的调用 */
+const DAYS_PER_YEAR = 365;
+
+/**
+ * 情境特征 → 被激活的子维度（§4.1）。
+ *
+ * 情境分类取自 DIAMONDS 八维模型的假设映射。与 v1 的差别在于：这里给出的是
+ * **线索相关度** r（该情境是否与这个特质有关），而不是"特质越极端反应越大"——
+ * 后者与线索无关，是 v1 "情境-特质激活"表的误用。
+ */
+const SITUATION_CUE_RELEVANCE: Record<SituationType, CueRelevance> = {
+    // Duty 责任/任务
+    task: { diligence: 0.9, organization: 0.85, prudence: 0.85, fairness: 0.7 },
+    // Intellect 智性
+    ambiguous: { inquisitiveness: 0.85, creativity: 0.8, aestheticAppreciation: 0.7 },
+    // Adversity 逆境/威胁
+    threat: { anxiety: 0.85, fearfulness: 0.8, patience: 0.7 },
+    // pOsitivity 愉悦
+    opportunity: { liveliness: 0.8, sociability: 0.8 },
+    // Negativity 冲突/负面 + Sociality 社交
+    competition: { patience: 0.8, forgivingness: 0.75, gentleness: 0.7, socialBoldness: 0.7 },
+    // Mating 亲密/吸引
+    intimate: { socialBoldness: 0.8, socialSelfEsteem: 0.8, sentimentality: 0.85 },
+};
+
+/** 情境对表达水平的期待 n_jt：以"该情境是否要求高于常态"给出（z 分） */
+const SITUATION_NORM_PRESSURE: Record<SituationType, SituationalNorm> = {
+    task: { diligence: 1.0, organization: 1.0, prudence: 0.7, liveliness: -0.5 },
+    ambiguous: { unconventionality: 0.5, organization: -0.4 },
+    threat: { anxiety: -0.3, patience: 0.5, fearfulness: -0.5 },
+    opportunity: { liveliness: 0.5, sociability: 0.6 },
+    competition: { socialBoldness: 0.8, gentleness: -0.5, patience: 0.5 },
+    intimate: { sentimentality: 0.6, gentleness: 0.6, socialBoldness: 0.3 },
+};
+
+/** 标准正态取样（Box-Muller），供状态表达的 ε_jt 使用 */
+function sampleStandardNormal(): number {
+    const u1 = Math.max(Number.EPSILON, Math.random());
+    const u2 = Math.random();
+    return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+}
+
+/** 情境在某个维度上的线索相关度：取该维度内子维度线索的均值 */
+function domainCueRelevance(situation: SituationType, domain: keyof HexacoProfile): number {
+    const cues = SITUATION_CUE_RELEVANCE[situation];
+    const keys = DOMAIN_FACETS[domain];
+    return keys.reduce((sum, key) => sum + (cues[key] ?? 0.5), 0) / keys.length;
+}
+
+/** 情境对某个维度的期待水平：取该维度内子维度规范的均值 */
+function domainNormPressure(situation: SituationType, domain: keyof HexacoProfile): number {
+    const norms = SITUATION_NORM_PRESSURE[situation];
+    const keys = DOMAIN_FACETS[domain];
+    return keys.reduce((sum, key) => sum + (norms[key] ?? 0), 0) / keys.length;
+}
+
+/**
+ * 负荷递推参数（§附录 B，全部为 [D] 默认值）。
+ *
+ * 与 v1 的"特质疲劳"的关键区别：不再假设某种可耗尽的资源（自我损耗模型的
+ * 实验证据存在重大复现争议），而是把负荷定义为"持续、被监控、非自选的背离"
+ * 所带来**主观负担**；背离若服务于个人自选的核心项目则折扣，由恢复性生态位降低。
+ */
+const LOAD_PARAMS = {
+    /** ρ 负荷的日际保持 */
+    retention: 0.7,
+    /** λ 恢复效率 */
+    recoveryEfficiency: 0.6,
+    /** φ 自选目标的负荷折扣 */
+    chosenDiscount: 0.4,
+} as const;
+
+/**
+ * D² 的档位判据：多元正态近似下 D² ~ χ²_p，阈值取卡方分位（§4.3.1）。
+ *
+ * 这里用 p = 6（维度数）的分位值：80% = 8.56、95% = 12.59、99% = 16.81。
+ */
+const DEVIATION_BANDS: { state: PersonalityState; max: number }[] = [
+    { state: 'typical', max: 8.56 },
+    { state: 'stretched', max: 12.59 },
+    { state: 'atypical', max: 16.81 },
+    { state: 'extreme', max: Infinity },
+];
+
+/**
+ * 特质漂移参数（§4.4）。
+ *
+ * 量级受研究约束：特质变化缓慢而小，变化最活跃的年段每十年约 0.1–0.3 SD；
+ * 遗传度约 40%，意味着变化是在"设定点"附近移动而非重写。干预类效应在
+ * 数周到数月内约 0.3–0.4 SD。以下数值按"每年"给出，直接对应这些结论。
+ */
+const DRIFT_PARAMS = {
+    /** 年龄漂移（z/年）。十年前进 0.1–0.3 SD，取中值即 0.02/年 */
+    ageDriftPerYear: 0.02,
+    /** 单次生活事件的最大漂移（z），对应"多数事件影响小到中且不持久" */
+    eventDriftMax: 0.25,
+    /** 主动练习/目标驱动的最大漂移（z） */
+    volitionalDriftMax: 0.3,
+    /**
+     * 向均值回归的比例（每年）。相互强化原则会放大偏离，需要一项与之平衡的稳定项；
+     * 它必须按时间线性缩放，否则长时间跨度下会把特质瞬间压回 0。
+     */
+    regressionToMeanPerYear: 0.02,
+    /** 特质水平的硬边界（z）：超出此范围已不属于人群分布，属模型外 */
+    clamp: 3.5,
+} as const;
+
+/** 年龄漂移方向：成熟原则（§4.4）——成年期趋向更情绪稳定、更宜人、更尽责 */
+const AGE_DRIFT_DIRECTION: Partial<Record<keyof HexacoFacets, number>> = {
+    anxiety: -1, fearfulness: -0.5,
+    patience: 1, flexibility: 1, gentleness: 1, forgivingness: 0.8,
+    organization: 0.7, diligence: 0.7, prudence: 0.6,
+    sincerity: 0.4, fairness: 0.4, modesty: 0.3,
+};
+
+// ============================================================================
+// 元因子（§3.3.2）
+// ============================================================================
+
+/**
+ * 三个元因子的成分与符号。三个集合**互不重叠**，保证公式层面可区分。
+ *
+ * 刻意排除：C.PER（与焦虑相关，载荷不稳）、E.FEA（与情绪稳定关系不稳）、
+ * E.DEP（含依恋成分，方向含混）、E 整域（v1 的错误是把焦虑与依赖也算作"亲社会"）、
+ * X.SSE（已归入 α 的低退缩）。
+ */
+const META_COMPONENTS = {
+    alpha: {
+        positive: ['patience', 'flexibility', 'organization', 'diligence', 'prudence', 'socialSelfEsteem'],
+        negative: ['anxiety'],
+    },
+    beta: {
+        positive: ['socialBoldness', 'liveliness', 'sociability', 'aestheticAppreciation', 'inquisitiveness', 'creativity', 'unconventionality'],
+        negative: [],
+    },
+    gamma: {
+        positive: ['sincerity', 'fairness', 'greedAvoidance', 'modesty', 'forgivingness', 'gentleness', 'sentimentality', 'altruism'],
+        negative: [],
+    },
+} as const satisfies Record<keyof MetaTraits, { positive: readonly (keyof HexacoFacets)[]; negative: readonly (keyof HexacoFacets)[] }>;
+
+/**
+ * 各元因子的预期平均符号相关（§3.3.2 标 [D]）。
+ * 三个因子分数之间仍预期中等相关，不假定正交。
+ */
+const META_INTERCORRELATION: Record<keyof MetaTraits, number> = {
+    alpha: 0.20,
+    beta: 0.15,
+    gamma: 0.30,
+};
+
+function metaComponents(facets: HexacoFacets, key: keyof MetaTraits): number[] {
+    const spec = META_COMPONENTS[key];
+    return [
+        ...spec.positive.map(f => facets[f]),
+        ...spec.negative.map(f => -facets[f]),
+    ];
+}
+
+/** 计算三个元因子（单位权重 → 重标准化，§2.6） */
+function deriveMetaTraits(facets: HexacoFacets): MetaTraits {
+    const meta = {} as MetaTraits;
+    for (const key of Object.keys(META_COMPONENTS) as (keyof MetaTraits)[]) {
+        meta[key] = Math.round(restandardize(metaComponents(facets, key), META_INTERCORRELATION[key]) * 100) / 100;
+    }
+    return meta;
+}
+
+// ============================================================================
+// 构型（§3.4）
+// ============================================================================
+
+/** 八分构型的原型向量 p_k ∈ {±1}³ */
+const OCTANT_PROTOTYPES: Record<OctantId, [number, number, number]> = {
+    PPP: [1, 1, 1], PPN: [1, 1, -1], PNP: [1, -1, 1], PNN: [1, -1, -1],
+    NPP: [-1, 1, 1], NPN: [-1, 1, -1], NNP: [-1, -1, 1], NNN: [-1, -1, -1],
+};
+
+/** 软隶属带宽 τ（§附录 B，默认 1.0） */
+const OCTANT_BANDWIDTH = 1.0;
+
+/**
+ * 软隶属度（§3.4.1）：`w_k = exp(−‖m − p_k‖² / 2τ²)`，归一化。
+ *
+ * 用软隶属而非硬分类，是因为一个人可以同时部分匹配多个构型——
+ * β≈0 时"+ − +"与"+ + +"本就该接近并列。
+ */
+function deriveOctantAffinities(meta: MetaTraits): OctantAffinity[] {
+    const m = [meta.alpha, meta.beta, meta.gamma];
+    const raw = (Object.keys(OCTANT_PROTOTYPES) as OctantId[]).map(octant => {
+        const p = OCTANT_PROTOTYPES[octant];
+        const distanceSquared = m.reduce((sum, value, i) => sum + (value - p[i]) ** 2, 0);
+        return { octant, weight: Math.exp(-distanceSquared / (2 * OCTANT_BANDWIDTH ** 2)) };
+    });
+
+    const total = raw.reduce((sum, r) => sum + r.weight, 0);
+    return raw
+        .map(r => ({ octant: r.octant, membership: total > 0 ? r.weight / total : 0 }))
+        .sort((a, b) => b.membership - a.membership);
+}
+
+/**
+ * 子维度签名的判据（§3.4.2）。
+ *
+ * 签名的价值在于刻画"矛盾的人"：角色的矛盾感应来自子维度分离
+ * （如 H.FAI 高而 H.SIN 低），而不是随意的人设冲突。
+ */
+type SignatureCondition = { facet: keyof HexacoFacets; min?: number; max?: number };
+
+const SIGNATURE_CONDITIONS: Record<SignatureId, SignatureCondition[]> = {
+    benevolent_strategist: [
+        { facet: 'prudence', min: 0.5 }, { facet: 'sincerity', max: -0.5 },
+        { facet: 'gentleness', min: 0.5 }, { facet: 'altruism', min: 0.5 },
+    ],
+    vulnerable_superiority: [
+        { facet: 'modesty', max: -0.5 }, { facet: 'anxiety', min: 0.5 },
+        { facet: 'socialSelfEsteem', max: -0.5 }, { facet: 'patience', max: -0.5 },
+    ],
+    chaotic_innovator: [
+        { facet: 'creativity', min: 1.0 }, { facet: 'liveliness', min: 0.5 },
+        { facet: 'organization', max: -0.5 }, { facet: 'prudence', max: -0.5 },
+    ],
+    calm_executor: [
+        { facet: 'diligence', min: 0.5 }, { facet: 'organization', min: 0.5 },
+        { facet: 'sentimentality', max: -0.5 }, { facet: 'gentleness', max: -0.5 },
+    ],
+    needed_helper: [
+        { facet: 'altruism', min: 1.0 }, { facet: 'gentleness', min: 0.5 },
+        { facet: 'dependence', min: 0.5 }, { facet: 'modesty', max: -0.5 },
+    ],
+    rule_enforcer: [
+        { facet: 'fairness', min: 1.0 }, { facet: 'forgivingness', max: -0.5 },
+        { facet: 'gentleness', max: -0.5 }, { facet: 'sentimentality', max: -0.5 },
+    ],
+    steady_caregiver: [
+        { facet: 'altruism', min: 0.5 }, { facet: 'sentimentality', min: 0.5 },
+        { facet: 'anxiety', max: -0.5 }, { facet: 'diligence', min: 0.5 },
+    ],
+    quiet_principled: [
+        { facet: 'fairness', min: 1.0 }, { facet: 'modesty', min: 0.5 },
+        { facet: 'socialBoldness', max: -0.5 },
+    ],
+};
+
+function conditionMet(condition: SignatureCondition, facets: HexacoFacets): boolean {
+    const value = facets[condition.facet];
+    if (condition.min !== undefined && value < condition.min) return false;
+    if (condition.max !== undefined && value > condition.max) return false;
+    return true;
+}
+
+/** 签名匹配度（§3.4.2）：match = 满足条件数 / 条件总数；仅返回 match > 0 的项，按匹配度降序 */
+function deriveSignatureMatches(facets: HexacoFacets): SignatureMatch[] {
+    return (Object.keys(SIGNATURE_CONDITIONS) as SignatureId[])
+        .map(signature => {
+            const conditions = SIGNATURE_CONDITIONS[signature];
+            const met = conditions.filter(c => conditionMet(c, facets)).length;
+            return { signature, match: met / conditions.length };
+        })
+        .filter(m => m.match > 0)
+        .sort((a, b) => b.match - a.match);
+}
+
+// ============================================================================
+// 代理指标（§3.4.3）
+// ============================================================================
+
+/**
+ * 光明/黑暗构念的近似代理成分（单位权重，符号内建）。
+ *
+ * 使用限制（§3.4.3、§7.2）：这些代理**未**通过验证门槛（与专用量表 r ≥ .50），
+ * 因此不对个体作诊断式判断，也不输出风险等级；Sad_proxy 置信最低。
+ */
+const PROXY_COMPONENTS: Record<ProxyId, { positive: (keyof HexacoFacets)[]; negative: (keyof HexacoFacets)[] }> = {
+    machiavellianism: { positive: ['prudence'], negative: ['sincerity', 'fairness', 'greedAvoidance', 'sentimentality'] },
+    narcissism: { positive: ['socialBoldness', 'socialSelfEsteem'], negative: ['modesty', 'flexibility'] },
+    psychopathy: { positive: [], negative: ['fearfulness', 'sentimentality', 'fairness', 'prudence', 'gentleness'] },
+    sadism: { positive: ['socialBoldness'], negative: ['gentleness', 'sentimentality'] },
+    kantianism: { positive: ['sincerity', 'fairness', 'greedAvoidance'], negative: [] },
+    humanism: { positive: ['gentleness', 'sentimentality', 'altruism', 'inquisitiveness'], negative: [] },
+    faithInHumanity: { positive: ['forgivingness', 'flexibility'], negative: ['anxiety'] },
+};
+
+/**
+ * 各代理合成时的平均符号相关 r̄ₛ。
+ *
+ * §6.3 的示例对操纵倾向取 .25、康德主义取 .35；其余构念文档未给值，
+ * 取两者之间。该参数只影响 z̃ 的缩放，不改变符号与排序。
+ */
+const PROXY_INTERCORRELATION: Record<ProxyId, number> = {
+    machiavellianism: 0.25,
+    narcissism: 0.30,
+    psychopathy: 0.30,
+    sadism: 0.30,
+    kantianism: 0.35,
+    humanism: 0.30,
+    faithInHumanity: 0.30,
+};
+
+/** 计算全部代理指标（z 分） */
+function deriveProxies(facets: HexacoFacets): Record<ProxyId, number> {
+    const proxies = {} as Record<ProxyId, number>;
+    for (const key of Object.keys(PROXY_COMPONENTS) as ProxyId[]) {
+        const spec = PROXY_COMPONENTS[key];
+        const components = [
+            ...spec.positive.map(f => facets[f]),
+            ...spec.negative.map(f => -facets[f]),
+        ];
+        proxies[key] = Math.round(restandardize(components, PROXY_INTERCORRELATION[key]) * 100) / 100;
+    }
+    return proxies;
+}
+
+/** 由 D² 分档得到人格状态（§4.3.1） */
+function stateFromDeviation(deviationSquared: number): PersonalityState {
+    for (const band of DEVIATION_BANDS) {
+        if (deviationSquared <= band.max) return band.state;
+    }
+    return 'extreme';
+}
+
 /**
  * 人格读取门面：把派生值集中到一处算出。
  *
@@ -2363,6 +2688,54 @@ function generateHexacoFacets(): HexacoFacets {
         unconventionality: sampleFacetZ(O),
         altruism: sampleNormalZ(),
     };
+}
+
+/** 全部子维度键名，顺序与 HexacoFacets 声明一致 */
+const FACET_KEYS = [
+    'sincerity', 'fairness', 'greedAvoidance', 'modesty',
+    'fearfulness', 'anxiety', 'dependence', 'sentimentality',
+    'socialSelfEsteem', 'socialBoldness', 'sociability', 'liveliness',
+    'forgivingness', 'gentleness', 'flexibility', 'patience',
+    'organization', 'diligence', 'perfectionism', 'prudence',
+    'aestheticAppreciation', 'inquisitiveness', 'creativity', 'unconventionality',
+    'altruism',
+] as const satisfies readonly (keyof HexacoFacets)[];
+
+/**
+ * 把任意来源的人格数据规范化为当前模型的 z 分。
+ *
+ * 这是**唯一**的读档人格入口。两种输入形状：
+ * - 现行形状：有 `dynamics`，直接取 `facets`；
+ * - v1 形状：有 `hexaco` 而无 `dynamics`，量纲是「M=50, SD=10」的 0–100 分，
+ *   需按 `z = (score − 50) / 10` 换算（否则数值会被放大十倍）。
+ *
+ * v1 的 `metaTraits`/`darkTetrad`/`lightTriad`/`archetype`/`currentState` 等派生副本
+ * 一律丢弃：它们读取时由 `facets` 重算，保留会让两套数字并存并互相漂移。
+ *
+ * 判定依据是字段形状而非存档版本号，因此可重复调用（幂等）。
+ * 缺失的子维度按人群中位（z = 0）补足，利他即属此类——它是 v2 新增的间质子维度。
+ */
+function normalizeFacets(raw: unknown): HexacoFacets {
+    const source = (raw ?? {}) as {
+        facets?: Record<string, unknown>;
+        hexaco?: unknown;
+        dynamics?: unknown;
+    };
+
+    const rawFacets = source.facets ?? {};
+    // v1 无 dynamics，且分数在 0–100 量表上
+    const isLegacyScale = !source.dynamics && source.hexaco != null;
+    const convert = (score: unknown): number => {
+        if (typeof score !== 'number' || !Number.isFinite(score)) return 0;
+        const z = isLegacyScale ? (score - 50) / 10 : score;
+        return Math.round(z * 1000) / 1000;
+    };
+
+    const facets = {} as HexacoFacets;
+    for (const key of FACET_KEYS) {
+        facets[key] = convert(rawFacets[key]);
+    }
+    return facets;
 }
 
 /**
@@ -2935,7 +3308,8 @@ class MaidenBehavior {
      * 任何情境下都被放大，这不是特质激活。
      */
     private getTraitActivationMultiplier(situation: SituationType): number {
-        return traitActivationGain(situation, SITUATION_TRAIT_ACTIVATION[situation].primary);
+        const domain = SITUATION_TRAIT_ACTIVATION[situation].primary;
+        return 1 + TRAIT_ACTIVATION_GAIN * (domainCueRelevance(situation, domain) - 0.5);
     }
 
     // 计算需求优先级（基于IS-SHEX人格与当前情境）
@@ -4962,6 +5336,135 @@ class MaidenSystem {
     }
 
     /**
+     * 计算一次情境下的**维度**状态表达（§4.1），供状态偏离 D² 使用。
+     *
+     * 刻意与子维度级表达分开：D² 的卡方判据是针对 p = 6 个维度给出的
+     * （§4.3.1 的分档表按 p = 6 与 p = 4 列出 80/95/99 分位）。若在 25 个子维度上
+     * 累加，χ²₂₅ 的期望值就是 25，远超"常态范围"的 8.56，所有实体都会常驻极端档。
+     *
+     * 这里的线索与规范由子维度表按维度取均值得到，不另建一张表——两张表必然漂移。
+     */
+    private _expressDomains(
+        facets: HexacoFacets,
+        situation: SituationType,
+        situationalStrength: number
+    ): HexacoProfile {
+        const strength = Math.max(0, Math.min(1, situationalStrength));
+        const theta = deriveDomains(facets);
+        const expressed = {} as HexacoProfile;
+
+        for (const key of Object.keys(DOMAIN_FACETS) as (keyof HexacoProfile)[]) {
+            const relevance = domainCueRelevance(situation, key);
+            const gain = 1 + TRAIT_ACTIVATION_GAIN * (relevance - 0.5);
+            const expected = (1 - strength) * gain * theta[key] + strength * domainNormPressure(situation, key);
+            // withNoise 参数只在需要模拟个体内波动的调用点才为 true，此处固定取期望值
+            expressed[key] = expected;
+        }
+
+        return expressed;
+    }
+
+    /**
+     * 单次背离负荷 L（§4.2）。
+     *
+     * `L = ς · [Σ r·d / Σ r] · (1 − φ·Chosen)`，d_j = |n_j − θ_j|。
+     * 用线索相关度加权，是因为与本人特质无关的规范并不构成背离。
+     */
+    private _computeDiscrepancyLoad(
+        facets: HexacoFacets,
+        situation: SituationType,
+        situationalStrength: number
+    ): number {
+        const strength = Math.max(0, Math.min(1, situationalStrength));
+        const cues = SITUATION_CUE_RELEVANCE[situation];
+        const norms = SITUATION_NORM_PRESSURE[situation];
+
+        let weightedSum = 0;
+        let weightTotal = 0;
+
+        for (const key of Object.keys(facets) as (keyof HexacoFacets)[]) {
+            const relevance = cues[key] ?? 0;
+            if (relevance <= 0) continue;
+            const deviation = Math.abs((norms[key] ?? 0) - facets[key]);
+            weightedSum += relevance * deviation;
+            weightTotal += relevance;
+        }
+
+        if (weightTotal === 0) return 0;
+        // 非自选场景（chosen = 0）下不折扣：调用点从不提供自选核心项目的语境
+        return strength * (weightedSum / weightTotal);
+    }
+
+    /**
+     * 负荷递推 `F_t = max(0, ρ·F_{t−1} + L_t − λ·N_t)`（§4.2）。
+     *
+     * 时间基是**游戏日**（ρ 的定义即"日际保持"），而调用方按帧推进，因此这里显式
+     * 接收经过的天数并统一缩放三项。只缩放 L 会让 λ·N 以整日量级逐帧扣减，
+     * 单帧净变化恒为负，`max(0, …)` 便把 F 永久钉在 0——P2 静默失效。
+     *
+     * 缩放方式是"保留按 ρ^Δ 指数衰减、负荷按 Δ 线性累加"。Δ = 1 天时与规范递推
+     * 逐位相等；亚日步进则是把日粒度递推拆细，稳态 F* = (L − λ·N)·Δ / (1 − ρ^Δ)
+     * 随 Δ 变化，Δ→0 时收敛到 (L − λ·N) / (−ln ρ)（Δ=1 时为 2.93，极限为 2.47）。
+     * 这一离散化差异是规范只定义日粒度递推的必然结果，且 ρ 本身是 [D] 未校准默认值，
+     * 故不做补偿；需要严格对齐规范时按整天调用即可。
+     */
+    private _accumulateLoad(
+        previousLoad: number,
+        load: number,
+        restorativeAccess: number,
+        elapsedDays: number
+    ): number {
+        if (elapsedDays <= 0) return previousLoad;
+        const recovery = LOAD_PARAMS.recoveryEfficiency * Math.max(0, Math.min(1, restorativeAccess));
+        const retention = Math.pow(LOAD_PARAMS.retention, elapsedDays);
+        return Math.max(0, retention * previousLoad + (load - recovery) * elapsedDays);
+    }
+
+    /**
+     * 状态偏离 D²（§4.3.1）：以**个人自己的分布**为参照。
+     *
+     * `D² = Σ_j ((x_j − θ_j) / σ_w,j)²`，在**维度**层求和使 D² ~ χ²₆，
+     * 与 §4.3.1 的分档分位（8.56 / 12.59 / 16.81）对应。
+     *
+     * v1 用 α 的绝对阈值划分状态。α 是由特质算出的静态量，不可能在压力中"崩溃"，
+     * 因此状态必须由"此刻相对个人基线的偏离"给出，而不是由 θ 的档位给出。
+     */
+    private _computeDeviationSquared(expressed: HexacoProfile, theta: HexacoProfile): number {
+        let total = 0;
+        for (const key of Object.keys(DOMAIN_FACETS) as (keyof HexacoProfile)[]) {
+            const delta = (expressed[key] - theta[key]) / WITHIN_PERSON_SD;
+            total += delta * delta;
+        }
+        return Math.round(total * 100) / 100;
+    }
+
+    /**
+     * 长期特质漂移（§4.4 P4）：`θ(τ+1) = θ(τ) + a(age) + Σψ·E + ν·V + e`。
+     *
+     * 由于 facets 是唯一权威、其余派生值读取时重算，写回 θ 之后整条链
+     * （维度 → 元因子 → 构型 → 代理 → 行为权重）会自动一致——这正是
+     * "派生值不持久化"要买到的东西。
+     */
+    private _applyTraitDrift(facets: HexacoFacets, elapsedDays: number): HexacoFacets {
+        const drifted = {} as HexacoFacets;
+        const elapsedYears = elapsedDays / DAYS_PER_YEAR;
+
+        for (const key of Object.keys(facets) as (keyof HexacoFacets)[]) {
+            const current = facets[key];
+            const ageDrift = (AGE_DRIFT_DIRECTION[key] ?? 0) * DRIFT_PARAMS.ageDriftPerYear * elapsedYears;
+            // 向均值回归同样按年缩放，否则长时间跨度下会一次性抹平特质
+            const regression = -current * DRIFT_PARAMS.regressionToMeanPerYear * elapsedYears;
+            const drift = ageDrift + regression;
+
+            // 不在此处做小数位取整：单帧漂移量约 1e-6，取整会把每一帧都抹回原值，
+            // 于是漂移永远累积不起来（P4 静默失效）。显示时才取整。
+            drifted[key] = Math.max(-DRIFT_PARAMS.clamp, Math.min(DRIFT_PARAMS.clamp, current + drift));
+        }
+
+        return drifted;
+    }
+
+    /**
      * 推进过程平面：背离负荷（P2）、状态偏离（P3）、长期漂移（P4）。
      *
      * 唯一的写入点：`dynamics` 只在这里被改写，其余读取派生值的调用点走
@@ -4986,12 +5489,12 @@ class MaidenSystem {
         if (elapsedDays <= 0) return maiden.isshex;
 
         // P1：本时点的状态表达与情境期待
-        const expressedDomains = expressDomains(maiden.isshex.facets, situation, strength, false);
+        const expressedDomains = this._expressDomains(maiden.isshex.facets, situation, strength);
         const thetaDomains = view.domains;
 
         // P2：背离负荷。被监视的公开场合、且非自选时负荷最高
-        const load = computeDiscrepancyLoad(maiden.isshex.facets, situation, strength);
-        const restored = accumulateLoad(
+        const load = this._computeDiscrepancyLoad(maiden.isshex.facets, situation, strength);
+        const restored = this._accumulateLoad(
             view.dynamics.discrepancyLoad,
             load,
             RESTORATIVE_ACCESS[maiden.behavior.currentActivity] ?? 0.2,
@@ -5000,10 +5503,10 @@ class MaidenSystem {
 
         // P3：状态偏离相对个人基线分档；压力放大威胁评价（§4.3.2 的 η 项）
         const threatBias = 1 + PERSONALITY_MODS.THREAT_APPRAISAL_ETA * maiden.isshex.facets.anxiety;
-        const deviationSquared = computeDeviationSquared(expressedDomains, thetaDomains) * Math.max(0, threatBias);
+        const deviationSquared = this._computeDeviationSquared(expressedDomains, thetaDomains) * Math.max(0, threatBias);
 
         // P4：长期漂移
-        const facets = applyTraitDrift(maiden.isshex.facets, elapsedDays);
+        const facets = this._applyTraitDrift(maiden.isshex.facets, elapsedDays);
 
         return {
             facets,

@@ -322,7 +322,7 @@ export interface PersonalityDynamics {
  *
  * 八层派生值（维度、元因子、构型、签名、代理、行为权重）在 v1 中各存一份并写入存档，
  * 却没有一处维护它们与 facets 的一致性。此处改为：**只有 facets 与 dynamics 是存储的**，
- * 其余全部由 `constants/personality-dynamics.ts` 的纯函数在读取时算出。
+ * 其余全部由 `meta/utils.ts` 与 `PersonalityView` 的纯函数在读取时算出。
  */
 export interface ISShexPersonality {
   facets: HexacoFacets;
@@ -330,19 +330,21 @@ export interface ISShexPersonality {
 }
 
 /**
- * 行为驱动权重矩阵（修正系数，值域 0–2 建议）
+ * 行为驱动权重：由子维度派生，值域 0–1（obedienceBase 为 −50–50 的修正量）。
+ *
+ * 派生而非存储，与其余人格派生值同理（见 `ISShexPersonality`）。
  */
-export interface PersonalityWeight {
-  socialSeek: number;       // 社交诉求修正
-  solitudeSeek: number;     // 独处诉求修正
-  riskTolerance: number;    // 风险承受阈值
-  obedienceBase: number;    // 基础服从性修正
-  stressResistance: number; // 压力抗性
-  lustSensitivity: number;  // 欲求敏感度
-  devotionTendency: number; // 信仰皈依倾向
-  aggressiveness: number;   // 攻击性阈值
-  empathy: number;          // 共情共鸣修正
-  impulsivity: number;      // 冲动阈值
+export interface BehaviorWeights {
+  socialSeek: number;
+  solitudeSeek: number;
+  riskTolerance: number;
+  obedienceBase: number;
+  stressResistance: number;
+  lustSensitivity: number;
+  devotionTendency: number;
+  aggressiveness: number;
+  empathy: number;
+  impulsivity: number;
 }
 
 // ============================================================================

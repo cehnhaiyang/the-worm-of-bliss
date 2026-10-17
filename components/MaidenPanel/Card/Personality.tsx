@@ -1,7 +1,30 @@
 import { memo } from 'react';
-import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState } from '../../../meta';
-import { OCTANT_LABELS, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS, toDisplayScore, gradeOf } from '../../../constants';
+import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState, OCTANT_LABELS, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../meta';
 import { PersonalityView } from '../../../engines/systems';
+
+/** 五点分档边界（§2.3），对称且每端人群占比一致 */
+const GRADE_BOUNDARIES = [
+    { grade: '极低', min: -Infinity, max: -1.5 },
+    { grade: '偏低', min: -1.5, max: -0.5 },
+    { grade: '中间', min: -0.5, max: 0.5 },
+    { grade: '偏高', min: 0.5, max: 1.5 },
+    { grade: '极高', min: 1.5, max: Infinity },
+] as const;
+
+type Grade = (typeof GRADE_BOUNDARIES)[number]['grade'];
+
+/** 分档语言模板（§2.3）：描述倾向，不贴标签 */
+function gradeOf(z: number): Grade {
+    for (const band of GRADE_BOUNDARIES) {
+        if (z >= band.min && z < band.max) return band.grade;
+    }
+    return '中间';
+}
+
+/** 把 z 映射到 0–100 供既有 UI 条使用；这是展示变换，不是模型的内部单位 */
+function toDisplayScore(z: number): number {
+    return Math.max(0, Math.min(100, 50 + z * 10));
+}
 
 /**
  * 构型与签名的配色。
