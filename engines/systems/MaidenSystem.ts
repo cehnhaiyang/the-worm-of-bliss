@@ -1,8 +1,3 @@
-/**
- * 少女系统：记忆、关系、社交、情绪、着装、妊娠、随机事件与行为决策的唯一实现。
- * 对外只暴露 `maidenSystem` 一个对象；本文件内的类、单例与常量为实现细节。
- */
-
 import {
     AccessoryItem,
     ActivityStatus,
@@ -3256,6 +3251,13 @@ const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {    // 圣�
     'NURSERY': 'intimate',
     'ALTAR': 'task',
     'CAULDRON': 'threat',
+    'DORMITORY': 'intimate',
+    'BANQUET': 'task',
+    'BABEL_FOUNDRY': 'task',
+    'MARIONETTE_ATELIER': 'task',
+    'LOOM_OF_ATONEMENT': 'task',
+    'AUCTION_OF_GRACE': 'competition',
+    'RELIQUARY_OF_MOLTING': 'ambiguous',
     // 深渊
     'SILENT_SALON': 'ambiguous',
     'ORACLE_WHISPER': 'ambiguous',
@@ -3269,6 +3271,15 @@ const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {    // 圣�
     'SYMBIOTIC_GALLERY': 'threat',
     'VOID_WINDOW': 'threat',
     'ENTROPY_CLOCK': 'threat',
+    'SUBMERGED_OPERA': 'threat',
+    'BRAILLE_CORRIDOR': 'ambiguous',
+    'INVERTED_COURTYARD': 'threat',
+    'QUANTUM_AMPHITHEATRE': 'threat',
+    'RETROGRADE_TEA_PARTY': 'threat',
+    'STATION_OF_UNBIRTH': 'threat',
+    'NON_EUCLIDEAN_SHRINE': 'threat',
+    'LIBRARY_OF_PERMUTATIONS': 'threat',
+    'NEBULA_WOMB': 'threat',
 };
 
 /**
@@ -3290,6 +3301,13 @@ const SITUATION_STRENGTH: Record<CarriageType, number> = {
     'ATRIUM': 0.25,
     'GARDEN': 0.2,
     'ARCHIVE': 0.2,
+    'DORMITORY': 0.2,
+    'BANQUET': 0.6,
+    'BABEL_FOUNDRY': 0.6,
+    'MARIONETTE_ATELIER': 0.65,
+    'LOOM_OF_ATONEMENT': 0.5,
+    'AUCTION_OF_GRACE': 0.55,
+    'RELIQUARY_OF_MOLTING': 0.45,
     // 深渊：规范失效，但后果严重——取中等强度
     'CAULDRON': 0.7,
     'ESCHER_STAIRS': 0.6,
@@ -3304,6 +3322,15 @@ const SITUATION_STRENGTH: Record<CarriageType, number> = {
     'SILENT_SALON': 0.4,
     'ORACLE_WHISPER': 0.45,
     'NEGATIVE_GALLERY': 0.35,
+    'SUBMERGED_OPERA': 0.55,
+    'BRAILLE_CORRIDOR': 0.45,
+    'INVERTED_COURTYARD': 0.5,
+    'QUANTUM_AMPHITHEATRE': 0.65,
+    'RETROGRADE_TEA_PARTY': 0.6,
+    'STATION_OF_UNBIRTH': 0.5,
+    'NON_EUCLIDEAN_SHRINE': 0.7,
+    'LIBRARY_OF_PERMUTATIONS': 0.6,
+    'NEBULA_WOMB': 0.55,
 };
 
 /** 各活动提供的恢复性生态位可及度 N ∈ [0,1]（§4.2），未列出的活动取低位 */

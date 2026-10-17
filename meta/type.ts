@@ -172,43 +172,70 @@ export type MovementState =
  */
 export type CarriageType =
   // ========== 圣所 (Sanctuary) ==========
-  | 'POOLS'               // 浴池
-  | 'ATRIUM'              // 中庭
-  | 'VEIL'                // 帷幕区
-  | 'CONFESSIONAL'        // 告解室
-  | 'ARCHIVE'             // 档案馆
-  | 'MUSE_THEATRE'        // 缪斯剧院
-  | 'SCALES_CONSERVATORY' // 天平温室
-  | 'GARDEN'              // 花园
-  | 'NURSERY'             // 育婴室
-  | 'ALTAR'               // 祭坛
-  | 'CAULDRON'            // 大釜
+  // 社会性剥离
+  | 'POOLS'                    // 月光浴池
+  | 'ATRIUM'                   // 中庭
+  | 'VEIL'                     // 薄纱车厢
+  | 'DORMITORY'                // 无门寝殿
+  | 'BANQUET'                  // 共感餐桌
+  // 个体性瓦解
+  | 'CONFESSIONAL'             // 忏情室
+  | 'ARCHIVE'                  // 回声档案馆
+  | 'MUSE_THEATRE'             // 苦痛缪斯剧场
+  | 'BABEL_FOUNDRY'            // 巴别重铸室
+  | 'MARIONETTE_ATELIER'       // 木偶工坊
+  // 价值观重塑
+  | 'SCALES_CONSERVATORY'      // 天秤温室
+  | 'GARDEN'                   // 永绽花园
+  | 'LOOM_OF_ATONEMENT'        // 赎罪织机
+  | 'AUCTION_OF_GRACE'         // 恩宠拍卖行
+  // 循环
+  | 'NURSERY'                  // 育婴室
+  | 'ALTAR'                    // 祭坛
+  | 'CAULDRON'                 // 熔炉
+  | 'RELIQUARY_OF_MOLTING'     // 蜕壳陈列馆
   // ========== 深渊 (Abyss) ==========
-  | 'SILENT_SALON'        // 寂静沙龙
-  | 'ORACLE_WHISPER'      // 神谕低语区
-  | 'NEGATIVE_GALLERY'    // 负片画廊
-  | 'ESCHER_STAIRS'       // 埃舍尔阶梯
-  | 'MIRROR_HALL'         // 镜像大厅
-  | 'TIME_INFIRMARY'      // 岁月医务室
-  | 'DISSOLUTION_CHAMBER' // 溶解室
-  | 'FLESH_HIVE'          // 血肉蜂巢
-  | 'INVERTED_TREE'       // 倒吊之树
-  | 'SYMBIOTIC_GALLERY'   // 共生画廊
-  | 'VOID_WINDOW'         // 虚空之窗
-  | 'ENTROPY_CLOCK';      // 熵之钟
+  // 层级一：感官与逻辑扭曲
+  | 'SILENT_SALON'             // 静默雅集
+  | 'ORACLE_WHISPER'           // 神谕之声
+  | 'NEGATIVE_GALLERY'         // 负空间画廊
+  | 'ESCHER_STAIRS'            // 埃舍尔阶梯
+  | 'SUBMERGED_OPERA'          // 溺水歌剧院
+  | 'BRAILLE_CORRIDOR'         // 盲文回廊
+  | 'INVERTED_COURTYARD'       // 倒悬庭院
+  // 层级二：时空与存在悖论
+  | 'MIRROR_HALL'              // 异变映厅
+  | 'TIME_INFIRMARY'           // 时滞病房
+  | 'DISSOLUTION_CHAMBER'      // 自我消融室
+  | 'QUANTUM_AMPHITHEATRE'     // 叠加态解剖室
+  | 'RETROGRADE_TEA_PARTY'     // 逆果茶会
+  | 'STATION_OF_UNBIRTH'       // 未生之站
+  // 层级三：宇宙级虚无与终极恐怖
+  | 'FLESH_HIVE'               // 血肉巢穴
+  | 'INVERTED_TREE'            // 倒生之树
+  | 'SYMBIOTIC_GALLERY'        // 共生回廊
+  | 'VOID_WINDOW'              // 利维坦之窗
+  | 'ENTROPY_CLOCK'            // 零熵之钟
+  | 'NON_EUCLIDEAN_SHRINE'     // 非欧几里得神龛
+  | 'LIBRARY_OF_PERMUTATIONS'  // 穷举图书馆
+  | 'NEBULA_WOMB';             // 星云母体
 
 /** 圣所车厢子集 */
 export type SanctuaryCarriageType = Extract<CarriageType,
-  | 'POOLS' | 'ATRIUM' | 'VEIL' | 'CONFESSIONAL' | 'ARCHIVE'
-  | 'MUSE_THEATRE' | 'SCALES_CONSERVATORY' | 'GARDEN'
-  | 'NURSERY' | 'ALTAR' | 'CAULDRON'
+  | 'POOLS' | 'ATRIUM' | 'VEIL' | 'DORMITORY' | 'BANQUET'
+  | 'CONFESSIONAL' | 'ARCHIVE' | 'MUSE_THEATRE' | 'BABEL_FOUNDRY' | 'MARIONETTE_ATELIER'
+  | 'SCALES_CONSERVATORY' | 'GARDEN' | 'LOOM_OF_ATONEMENT' | 'AUCTION_OF_GRACE'
+  | 'NURSERY' | 'ALTAR' | 'CAULDRON' | 'RELIQUARY_OF_MOLTING'
 >;
 
 /** 深渊车厢子集 */
 export type AbyssCarriageType = Extract<CarriageType,
   | 'SILENT_SALON' | 'ORACLE_WHISPER' | 'NEGATIVE_GALLERY' | 'ESCHER_STAIRS'
-  | 'MIRROR_HALL' | 'TIME_INFIRMARY' | 'DISSOLUTION_CHAMBER' | 'FLESH_HIVE'
-  | 'INVERTED_TREE' | 'SYMBIOTIC_GALLERY' | 'VOID_WINDOW' | 'ENTROPY_CLOCK'
+  | 'SUBMERGED_OPERA' | 'BRAILLE_CORRIDOR' | 'INVERTED_COURTYARD'
+  | 'MIRROR_HALL' | 'TIME_INFIRMARY' | 'DISSOLUTION_CHAMBER'
+  | 'QUANTUM_AMPHITHEATRE' | 'RETROGRADE_TEA_PARTY' | 'STATION_OF_UNBIRTH'
+  | 'FLESH_HIVE' | 'INVERTED_TREE' | 'SYMBIOTIC_GALLERY' | 'VOID_WINDOW' | 'ENTROPY_CLOCK'
+  | 'NON_EUCLIDEAN_SHRINE' | 'LIBRARY_OF_PERMUTATIONS' | 'NEBULA_WOMB'
 >;
 
 /**

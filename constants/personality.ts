@@ -1,10 +1,3 @@
-
-// ============================================
-// 详细人格特质库 (Detailed Personality Data)
-// 条目一律为短标签：生成后会原样拼入 AI 侧写提示词
-// （AIService/builder.ts 的 serializeMaiden），保持短语风格
-// ============================================
-
 // 正向特质 (Quirks/Traits)
 export const POSITIVE_TRAITS = [
   '洁癖', '母性光辉', '强迫症', '绝对音感', '过目不忘',

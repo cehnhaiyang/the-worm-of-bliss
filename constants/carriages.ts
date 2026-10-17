@@ -1,41 +1,57 @@
 import type { CarriageType, CarriageTypeInfo } from '../meta';
 
-/** 圣所类型列表 (11种) */
+/** 圣所类型列表 (18种) */
 export const SANCTUARY_TYPES: CarriageType[] = [
   // 社会性剥离
   'POOLS',           // 月光浴池
   'ATRIUM',          // 中庭
   'VEIL',            // 薄纱车厢
+  'DORMITORY',       // 无门寝殿
+  'BANQUET',         // 共感餐桌
   // 个体性瓦解
   'CONFESSIONAL',    // 忏情室
   'ARCHIVE',         // 回声档案馆
   'MUSE_THEATRE',    // 苦痛缪斯剧场
+  'BABEL_FOUNDRY',   // 巴别重铸室
+  'MARIONETTE_ATELIER', // 木偶工坊
   // 价值观重塑
   'SCALES_CONSERVATORY', // 天秤温室
   'GARDEN',          // 永绽花园
+  'LOOM_OF_ATONEMENT', // 赎罪织机
+  'AUCTION_OF_GRACE', // 恩宠拍卖行
   // 循环
   'NURSERY',         // 育婴室
   'ALTAR',           // 祭坛
   'CAULDRON',        // 熔炉 (永远关闭)
+  'RELIQUARY_OF_MOLTING', // 蜕壳陈列馆
 ];
 
-/** 深渊类型列表 (12种) */
+/** 深渊类型列表 (21种) */
 export const ABYSS_TYPES: CarriageType[] = [
   // 层级一：感官与逻辑扭曲
   'SILENT_SALON',    // 静默雅集
   'ORACLE_WHISPER',  // 神谕之声
   'NEGATIVE_GALLERY', // 负空间画廊
   'ESCHER_STAIRS',   // 埃舍尔阶梯
+  'SUBMERGED_OPERA', // 溺水歌剧院
+  'BRAILLE_CORRIDOR', // 盲文回廊
+  'INVERTED_COURTYARD', // 倒悬庭院
   // 层级二：时空与存在悖论
   'MIRROR_HALL',     // 异变映厅
   'TIME_INFIRMARY',  // 时滞病房
   'DISSOLUTION_CHAMBER', // 自我消融室
+  'QUANTUM_AMPHITHEATRE', // 叠加态解剖室
+  'RETROGRADE_TEA_PARTY', // 逆果茶会
+  'STATION_OF_UNBIRTH', // 未生之站
   // 层级三：宇宙级虚无与终极恐怖
   'FLESH_HIVE',      // 血肉巢穴
   'INVERTED_TREE',   // 倒生之树
   'SYMBIOTIC_GALLERY', // 共生回廊
   'VOID_WINDOW',     // 利维坦之窗
   'ENTROPY_CLOCK',   // 零熵之钟
+  'NON_EUCLIDEAN_SHRINE', // 非欧几里得神龛
+  'LIBRARY_OF_PERMUTATIONS', // 穷举图书馆
+  'NEBULA_WOMB',     // 星云母体
 ];
 
 // ============================================
@@ -53,17 +69,24 @@ export const SANCTUARY_CONFIG: {
     { type: 'POOLS', minCount: 8, maxCount: 15, category: '社会性剥离' },
     { type: 'ATRIUM', minCount: 20, maxCount: 35, category: '社会性剥离' },
     { type: 'VEIL', minCount: 6, maxCount: 12, category: '社会性剥离' },
+    { type: 'DORMITORY', minCount: 8, maxCount: 15, category: '社会性剥离' },
+    { type: 'BANQUET', minCount: 8, maxCount: 15, category: '社会性剥离' },
     // 个体性瓦解 - 精神控制区，数量中等
     { type: 'CONFESSIONAL', minCount: 8, maxCount: 15, category: '个体性瓦解' },
     { type: 'ARCHIVE', minCount: 3, maxCount: 6, category: '个体性瓦解' },
     { type: 'MUSE_THEATRE', minCount: 2, maxCount: 4, category: '个体性瓦解' },
+    { type: 'BABEL_FOUNDRY', minCount: 3, maxCount: 6, category: '个体性瓦解' },
+    { type: 'MARIONETTE_ATELIER', minCount: 3, maxCount: 6, category: '个体性瓦解' },
     // 价值观重塑 - 阶级与美学区
     { type: 'SCALES_CONSERVATORY', minCount: 4, maxCount: 8, category: '价值观重塑' },
     { type: 'GARDEN', minCount: 6, maxCount: 12, category: '价值观重塑' },
+    { type: 'LOOM_OF_ATONEMENT', minCount: 4, maxCount: 8, category: '价值观重塑' },
+    { type: 'AUCTION_OF_GRACE', minCount: 2, maxCount: 4, category: '价值观重塑' },
     // 循环 - 核心仪式区，数量稀少
     { type: 'NURSERY', minCount: 3, maxCount: 6, category: '循环' },
     { type: 'ALTAR', minCount: 1, maxCount: 2, category: '循环' },
     { type: 'CAULDRON', minCount: 1, maxCount: 1, category: '循环' }, // 唯一，永远关闭
+    { type: 'RELIQUARY_OF_MOLTING', minCount: 2, maxCount: 4, category: '循环' },
   ];
 
 /** 深渊层级配置 - 层级越高越稀少 */
@@ -81,9 +104,12 @@ export const ABYSS_TIERS: {
         'SILENT_SALON',
         'ORACLE_WHISPER',
         'NEGATIVE_GALLERY',
-        'ESCHER_STAIRS'
+        'ESCHER_STAIRS',
+        'SUBMERGED_OPERA',
+        'BRAILLE_CORRIDOR',
+        'INVERTED_COURTYARD'
       ],
-      totalCount: { min: 15, max: 25 },
+      totalCount: { min: 20, max: 32 },
     },
     // 层级二：时空与存在悖论 - 中等
     {
@@ -92,9 +118,12 @@ export const ABYSS_TIERS: {
       types: [
         'MIRROR_HALL',
         'TIME_INFIRMARY',
-        'DISSOLUTION_CHAMBER'
+        'DISSOLUTION_CHAMBER',
+        'QUANTUM_AMPHITHEATRE',
+        'RETROGRADE_TEA_PARTY',
+        'STATION_OF_UNBIRTH'
       ],
-      totalCount: { min: 8, max: 15 },
+      totalCount: { min: 12, max: 22 },
     },
     // 层级三：宇宙级虚无与终极恐怖 - 稀少，最危险
     {
@@ -105,9 +134,12 @@ export const ABYSS_TIERS: {
         'INVERTED_TREE',
         'SYMBIOTIC_GALLERY',
         'VOID_WINDOW',
-        'ENTROPY_CLOCK'
+        'ENTROPY_CLOCK',
+        'NON_EUCLIDEAN_SHRINE',
+        'LIBRARY_OF_PERMUTATIONS',
+        'NEBULA_WOMB'
       ],
-      totalCount: { min: 5, max: 10 },
+      totalCount: { min: 8, max: 16 },
     },
   ];
 
@@ -201,6 +233,38 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       stress: -10,
     }
   },
+  {
+    type: 'DORMITORY',
+    name: 'Thresholdless Dormitory',
+    nameCN: '无门寝殿',
+    category: 'sanctuary',
+    subcategory: '社会性剥离',
+    description: '一节由高透光声学折射水晶构成的蜂巢式车厢，数百个透明的睡眠舱呈环形向上堆叠。没有窗帘，没有隔板，也没有任何视觉死角。柔和却永不熄灭的暖白光源从水晶地板内部散发。',
+    functions: ['睡眠共享', '独处剥夺', '声学放大'],
+    visualTheme: 'crystal honeycomb, transparent sleep pods, perpetual warm light',
+    ambientSound: 'ambient_heartbeat',
+    periodicEffects: {
+      sanity: -2,
+      lust: 1,
+      stress: 1,
+    }
+  },
+  {
+    type: 'BANQUET',
+    name: 'Resonance Banquet',
+    nameCN: '共感餐桌',
+    category: 'sanctuary',
+    subcategory: '社会性剥离',
+    description: '一节狭长而华丽的洛可可风格餐厅，中央是一张贯穿整节车厢的纯白大理石长桌。桌面上没有独立的餐盘，只有一条缓缓流动的温热营养琼脂渠，上方悬挂着一排如钟摆般精准晃动的黄金节拍器。',
+    functions: ['同步进食', '口味抹杀', '连坐胁迫'],
+    visualTheme: 'rococo dining car, marble table, nutrient channel, golden metronomes',
+    ambientSound: 'ambient_train',
+    periodicEffects: {
+      sanity: -3,
+      lust: 0,
+      stress: 3,
+    }
+  },
 
   // ========== 圣所 - 个体性瓦解 ==========
   {
@@ -251,6 +315,38 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       stress: 4,
     }
   },
+  {
+    type: 'BABEL_FOUNDRY',
+    name: 'Babel Foundry',
+    nameCN: '巴别重铸室',
+    category: 'sanctuary',
+    subcategory: '个体性瓦解',
+    description: '一节充满老式黄铜传声筒与精密声波仪器的古典书房，空气中漂浮着全息投影出的、不断拆解与重组的文字字符。少女们在此接受定期的词汇矫正。',
+    functions: ['语言清洗', '概念阉割', '思维限界'],
+    visualTheme: 'brass speaking tubes, floating glyphs, classical study',
+    ambientSound: 'ambient_whisper',
+    periodicEffects: {
+      sanity: -4,
+      lust: 0,
+      stress: 3,
+    }
+  },
+  {
+    type: 'MARIONETTE_ATELIER',
+    name: 'Marionette Atelier',
+    nameCN: '木偶工坊',
+    category: 'sanctuary',
+    subcategory: '个体性瓦解',
+    description: '如同顶级高定时装屋般的工作室，陈列着无数与车厢内少女体型、面容一模一样的等身球形关节人偶，四周挂满丝线、蕾丝与精密的银质姿态矫正架。',
+    functions: ['物化美学', '主客模糊', '姿态矫正'],
+    visualTheme: 'haute couture atelier, ball-jointed dolls, silver posture frames',
+    ambientSound: 'ambient_train',
+    periodicEffects: {
+      sanity: -3,
+      lust: 2,
+      stress: 2,
+    }
+  },
 
   // ========== 圣所 - 价值观重塑 ==========
   {
@@ -283,6 +379,38 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       sanity: 2,
       lust: 1,
       stress: -3,
+    }
+  },
+  {
+    type: 'LOOM_OF_ATONEMENT',
+    name: 'Loom of Atonement',
+    nameCN: '赎罪织机',
+    category: 'sanctuary',
+    subcategory: '价值观重塑',
+    description: '高耸的哥特式穹顶车厢，数十台由白银与黑檀木打造的精密织机排列整齐。织机上方垂落着发着微光的纳米光纤，空气中弥漫着淡淡的臭氧与檀香味。',
+    functions: ['虚妄原罪', '西西弗斯劳作', '精力消耗'],
+    visualTheme: 'gothic vault, silver looms, nano fiber, ozone haze',
+    ambientSound: 'ambient_clock',
+    periodicEffects: {
+      sanity: -1,
+      lust: 0,
+      stress: -1,
+    }
+  },
+  {
+    type: 'AUCTION_OF_GRACE',
+    name: 'Auction of Grace',
+    nameCN: '恩宠拍卖行',
+    category: 'sanctuary',
+    subcategory: '价值观重塑',
+    description: '阶梯式的环形剧场，每个丝绒座位扶手上都嵌有一块显示着个人数据与顺从积分的终端屏幕。中央的升降展台上笼罩着圣洁的聚光灯。',
+    functions: ['尊严商品化', '竞底竞争', '检举激励'],
+    visualTheme: 'amphitheatre, velvet seats, data terminals, consecrated spotlight',
+    ambientSound: 'ambient_whisper',
+    periodicEffects: {
+      sanity: -3,
+      lust: 1,
+      stress: 4,
     }
   },
 
@@ -333,6 +461,22 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       sanity: -10,
       lust: 0,
       stress: 10,
+    }
+  },
+  {
+    type: 'RELIQUARY_OF_MOLTING',
+    name: 'Reliquary of Molting',
+    nameCN: '蜕壳陈列馆',
+    category: 'sanctuary',
+    subcategory: '循环',
+    description: '一节庄严肃穆的琥珀色长廊，两侧耸立着数百个充满透明凝固剂的玻璃柱，光线透过玻璃折射出如教堂彩窗般斑斓的光晕。柱中封存着旧世界的衣物、被剪下的长发与替换下的组织样本。',
+    functions: ['旧我葬礼', '遗物参拜', '新生合法化'],
+    visualTheme: 'amber corridor, glass columns, reliquary, stained-glass glow',
+    ambientSound: 'ambient_horror',
+    periodicEffects: {
+      sanity: -3,
+      lust: 0,
+      stress: 2,
     }
   },
 
@@ -401,6 +545,54 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       stress: 7,
     }
   },
+  {
+    type: 'SUBMERGED_OPERA',
+    name: 'Submerged Opera',
+    nameCN: '溺水歌剧院',
+    category: 'abyss',
+    subcategory: '感官扭曲',
+    description: '一节完全浸没在幽暗深水中的巴洛克歌剧院。踏入其中的观测者双脚依然踩在干爽的地毯上，也能正常呼吸；舞台上的歌剧演员却穿着吸水膨胀的华丽礼服，在浮力中缓慢地做着咏叹调口型，发不出任何声音。',
+    functions: ['溺水幻痛', '听觉倒错', '失语歌剧'],
+    visualTheme: 'submerged baroque opera, water pressure, silent arias',
+    ambientSound: 'ambient_water',
+    periodicEffects: {
+      sanity: -8,
+      lust: 0,
+      stress: 7,
+    }
+  },
+  {
+    type: 'BRAILLE_CORRIDOR',
+    name: 'Braille Corridor',
+    nameCN: '盲文回廊',
+    category: 'abyss',
+    subcategory: '感官扭曲',
+    description: '一条绝对剥夺视觉与听觉的狭长通道。一旦踏入，哪怕睁大双眼也只能看到纯粹的灰翳。唯一的感知来源是触觉——墙壁、地板与天花板上密密麻麻地凸起着温热湿润、仿佛拥有脉搏的肉质颗粒。',
+    functions: ['感官剥夺', '触觉侵蚀', '预言烙印'],
+    visualTheme: 'lightless corridor, warm fleshy granules, tactile braille',
+    ambientSound: 'ambient_heartbeat',
+    periodicEffects: {
+      sanity: -7,
+      lust: 1,
+      stress: 7,
+    }
+  },
+  {
+    type: 'INVERTED_COURTYARD',
+    name: 'Inverted Gravity Courtyard',
+    nameCN: '倒悬庭院',
+    category: 'abyss',
+    subcategory: '感官扭曲',
+    description: '一节模拟中世纪修道院露台的车厢，但上方并非天空，而是一片不断向下倾泻、却在距离头顶数米处悬停翻滚的黑色暴雨与碎石海。',
+    functions: ['重力错乱', '前庭欺骗', '坠落恐惧'],
+    visualTheme: 'monastery terrace, suspended black rain, falling debris sea',
+    ambientSound: 'ambient_horror',
+    periodicEffects: {
+      sanity: -7,
+      lust: 0,
+      stress: 7,
+    }
+  },
 
   // ========== 深渊 - 层级二：时空与存在悖论 ==========
   {
@@ -449,6 +641,54 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       sanity: -8,
       lust: 0,
       stress: 7,
+    }
+  },
+  {
+    type: 'QUANTUM_AMPHITHEATRE',
+    name: 'Quantum Amphitheatre',
+    nameCN: '叠加态解剖室',
+    category: 'abyss',
+    subcategory: '时空悖论',
+    description: '一节环形的近代医学解剖阶梯教室，中央的无影灯下躺着一具盖着白布的躯体。只要观测者停留在观众席不掀开白布，她的意识就会被迫分裂成"台下旁观"与"台上被解剖"的双重叠加态。',
+    functions: ['意识叠加', '自我解剖', '观测坍缩'],
+    visualTheme: 'anatomy amphitheatre, shadowless lamp, white sheet, mirror collapse',
+    ambientSound: 'ambient_horror',
+    periodicEffects: {
+      sanity: -10,
+      lust: 0,
+      stress: 9,
+    }
+  },
+  {
+    type: 'RETROGRADE_TEA_PARTY',
+    name: 'Retrograde Tea Party',
+    nameCN: '逆果茶会',
+    category: 'abyss',
+    subcategory: '时空悖论',
+    description: '一节洒满诡异夕阳余晖的古典茶室。桌上的骨瓷碎片会从地板上倒飞回桌面拼合，洒出的红茶逆流回壶嘴。观测者的生理与行为逻辑会被强制卷入"果在因前"的悖论。',
+    functions: ['因果倒置', '自由意志否定', '时序崩溃'],
+    visualTheme: 'classical tea room, reversed porcelain, backwards-pouring tea',
+    ambientSound: 'ambient_clock',
+    periodicEffects: {
+      sanity: -9,
+      lust: 0,
+      stress: 8,
+    }
+  },
+  {
+    type: 'STATION_OF_UNBIRTH',
+    name: 'Station of Unbirth',
+    nameCN: '未生之站',
+    category: 'abyss',
+    subcategory: '时空悖论',
+    description: '一节看似老式绿皮火车的车厢，车窗外是飞速倒退的、观测者记忆中最熟悉的故乡街景。街道上的父母与挚友都在进行着温馨的日常生活，唯独属于她的位置被彻底抹除。',
+    functions: ['存在抹除', '归属斩断', '未生假设'],
+    visualTheme: 'green-skin train, rewinding hometown, erased family photos',
+    ambientSound: 'ambient_train',
+    periodicEffects: {
+      sanity: -11,
+      lust: 0,
+      stress: 9,
     }
   },
 
@@ -531,6 +771,54 @@ export const CARRIAGE_TYPE_INFO: Array<CarriageTypeInfo> = [
       sanity: -13,
       lust: 0,
       stress: 11,
+    }
+  },
+  {
+    type: 'NON_EUCLIDEAN_SHRINE',
+    name: 'Non-Euclidean Shrine',
+    nameCN: '非欧几里得神龛',
+    category: 'abyss',
+    subcategory: '宇宙虚无',
+    description: '车厢内部没有任何有机生命或血肉，只有一座纯粹由高维几何体构成的悬浮祭坛。那些晶莹的多面体在三维空间中不断折叠、自相穿插，折射出人类视觉皮层无法解析的色彩与大于 360 度的锐角。',
+    functions: ['高维灼烧', '理性破产', '视觉过载'],
+    visualTheme: 'floating hyperdimensional polyhedra, impossible angles, unknown spectrum',
+    ambientSound: 'ambient_horror',
+    periodicEffects: {
+      sanity: -13,
+      lust: 0,
+      stress: 11,
+    }
+  },
+  {
+    type: 'LIBRARY_OF_PERMUTATIONS',
+    name: 'Library of Exhausted Permutations',
+    nameCN: '穷举图书馆',
+    category: 'abyss',
+    subcategory: '宇宙虚无',
+    description: '一节纵向无限延伸、看不到顶底的六角形书库。每一册书都精准无误地记录着观测者从出生到死亡的每一个微观瞬间，而在书架的更深处，则陈列着无数种她因微小选择不同而走向更凄惨结局的废弃剧本。',
+    functions: ['决定论恐怖', '绝望预载', '反抗无效'],
+    visualTheme: 'infinite hexagonal library, exhaustive ledgers, discarded scripts',
+    ambientSound: 'ambient_whisper',
+    periodicEffects: {
+      sanity: -14,
+      lust: 0,
+      stress: 10,
+    }
+  },
+  {
+    type: 'NEBULA_WOMB',
+    name: 'Nebula Womb',
+    nameCN: '星云母体',
+    category: 'abyss',
+    subcategory: '宇宙虚无',
+    description: '车厢没有墙壁与地板，只有一条悬浮在绝对真空中的透明窄桥，四周环绕着一团直径数十米的、正在缓慢坍缩与爆发的微缩星云。星尘漩涡中隐约凝聚出无数张由星光构成的、庞大而漠然的胚胎面孔。',
+    functions: ['宇宙漠然', '尺度碾压', '道德归零'],
+    visualTheme: 'transparent vacuum bridge, collapsing nebula, stellar embryo faces',
+    ambientSound: 'ambient_flesh',
+    periodicEffects: {
+      sanity: -15,
+      lust: 0,
+      stress: 12,
     }
   }
 ];
