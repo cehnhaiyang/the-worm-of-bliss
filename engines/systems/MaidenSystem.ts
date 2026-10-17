@@ -14,7 +14,6 @@ import {
     CharacterStatus,
     ClothingState,
     CUP_SIZES,
-    DressLevel,
     EventEffectContext,
     EventTimestampData,
     EventType,
@@ -209,16 +208,11 @@ class MaidenMemory {
     }
 
     /**
-     * 链的不变量：链尾永远不可编辑；已存在的死节点永远保持不可编辑。
+     * 链的不变量：链尾（登车瞬间）永远不可编辑，已存在的死节点永远保持不可编辑。
      *
-     * 只有这一条规则，同时覆盖两种链：
-     * - 初始链/深潜链：只有链尾（登车瞬间）是死节点，其余为 original；
-     * - 创世纪链：每一节都是"新存在的公理"，全部已是死节点。
-     *
-     * v1 写死了"非链尾的死节点一律降级为 original"。创世纪之后只要再植入一段记忆，
-     * 其余公理就被降级成可篡改的 original——提示词向模型承诺的"这些记忆不可篡改"
-     * 在第一次植入后就不成立了，而代码里看不出任何不一致。
-     * 因此 `isImmutable` 是权威，链尾只负责"补上"不可变标记，从不撤销它。
+     * `isImmutable` 是权威，链尾只负责"补上"标记、从不撤销它。v1 反过来写死"非链尾的
+     * 死节点一律降级为 original"，于是创世纪链再植入一段记忆，其余公理就变成可篡改的，
+     * 而提示词仍向模型承诺这些记忆不可篡改。
      */
     private syncTail(chain: MemoryNode[]): MemoryNode[] {
         return chain.map((node, index) => {
@@ -343,13 +337,11 @@ class MaidenMemory {
     }
 
     /**
-     * 构造执事创世纪链。
+     * 构造执事创世纪链。每一节都是她新存在的公理，因此整条链都不可篡改。
      *
-     * 与初始链的区别在于"不可变"的含义：初始链只有链尾（登车瞬间）不可变，
-     * 而创世纪链的每一节都是她新存在的公理，整条链都不可篡改。
-     * 这条差异必须留在链层——`isImmutable` 的唯一维护者是本模块，
-     * 让服务层自己拼节点会造出"整条链都是不可变节点"却不经过任何校验的链，
-     * 之后 `insertNode` 找不到唯一的链尾，落点就变成了猜。
+     * 这条差异留在链层：`isImmutable` 的唯一维护者是本模块，服务层自行拼节点会造出
+     * 整条链都不可变、却不经过任何校验的链，之后 `insertNode` 找不到唯一的链尾，
+     * 落点就变成了猜。
      */
     buildGenesisChain(raw: RawDeadNode[], timestamp: number): MemoryNode[] {
         return raw.map((node, index) => ({
@@ -386,10 +378,10 @@ class MaidenMemory {
             subjectiveNarrative: content,
             selfOpinion: "这感觉...有些不对劲，但我无法否认它的存在。",
             timeLabel: '未知时刻',
-            depth: depth,
+            depth,
             type: 'implanted',
-            corruptionLevel: Math.min(100, Math.max(0, corruptionLevel)),
-            category: category,
+            corruptionLevel: clamp(corruptionLevel, 0, 100),
+            category,
             timestamp: gameTimePassed,
             history: [{
                 timestamp: gameTimePassed,
@@ -419,12 +411,12 @@ class MaidenMemory {
 
         const historyEntry = {
             timestamp: gameTimePassed,
-            previousNarrative: previousNarrative,
+            previousNarrative,
             action: 'tamper' as const,
             directive,
         };
 
-        const newCorruptionLevel = Math.min(100, safeNode.corruptionLevel + corruptionIncrement);
+        const newCorruptionLevel = clamp(safeNode.corruptionLevel + corruptionIncrement, 0, 100);
         const isFullyCorrupted = newCorruptionLevel >= 100;
 
         let newTitle = safeNode.title;
@@ -463,12 +455,12 @@ class MaidenMemory {
 
         const historyEntry = {
             timestamp: gameTimePassed,
-            previousNarrative: previousNarrative,
+            previousNarrative,
             action: 'restore' as const,
             directive: '意识净化/记忆重塑',
         };
 
-        const newCorruptionLevel = Math.max(0, safeNode.corruptionLevel - recoveryAmount);
+        const newCorruptionLevel = clamp(safeNode.corruptionLevel - recoveryAmount, 0, 100);
         const isFullyRestored = newCorruptionLevel === 0;
 
         let newTitle = safeNode.title;
@@ -607,7 +599,7 @@ class MaidenRelationship {
             baseAffinity += 10;
         }
 
-        const affinity = Math.max(-100, Math.min(100, baseAffinity));
+        const affinity = clamp(baseAffinity, -100, 100);
         const trust = 20 + Math.floor(Math.random() * 30);
         const type = this.determineRelationType(affinity, trust, false, maiden, target);
 
@@ -633,8 +625,8 @@ class MaidenRelationship {
         gameTimePassed: number
     ): Relationship {
         const affinityDiff = Math.floor(Math.random() * 20) - 10;
-        const affinity = Math.max(-100, Math.min(100, original.affinity + affinityDiff));
-        const trust = Math.max(0, Math.min(100, original.trust + Math.floor(Math.random() * 10) - 5));
+        const affinity = clamp(original.affinity + affinityDiff, -100, 100);
+        const trust = clamp(original.trust + Math.floor(Math.random() * 10) - 5, 0, 100);
 
         return {
             targetId: target.id,
@@ -687,10 +679,10 @@ class MaidenRelationship {
         let newIsSecret = relationship.isSecret;
 
         if (changes.affinityDelta !== undefined) {
-            newAffinity = Math.max(-100, Math.min(100, newAffinity + changes.affinityDelta));
+            newAffinity = clamp(newAffinity + changes.affinityDelta, -100, 100);
         }
         if (changes.trustDelta !== undefined) {
-            newTrust = Math.max(0, Math.min(100, newTrust + changes.trustDelta));
+            newTrust = clamp(newTrust + changes.trustDelta, 0, 100);
         }
         if (changes.sharedTrauma !== undefined) {
             newSharedTrauma = changes.sharedTrauma || relationship.sharedTrauma;
@@ -839,7 +831,7 @@ class MaidenRelationship {
     }
 
     /**
-     * 执行关系定性推断（状态机核心基准）
+     * 关系定性推断：先看人格耦合的特例（保护者/依赖者/共犯），再按好感与信任的阈值分档。
      */
     private determineRelationType(
         affinity: number,
@@ -925,7 +917,7 @@ class MaidenRelationship {
                 trust = Math.max(0, trust - trustDecay);
 
                 if (sharedTrauma && affinity > 20) {
-                    affinity = Math.max(-100, Math.min(100, affinity + currentDecay * 0.15));
+                    affinity = clamp(affinity + currentDecay * 0.15, -100, 100);
                 }
 
                 if (affinity !== oldAffinity || trust !== oldTrust) {
@@ -1216,7 +1208,8 @@ class MaidenSocialization {
         carriage: Carriage,
         gameTimePassed: number
     ): { log?: string; updatedMaiden?: Maiden; updatedTarget?: Maiden } {
-        // 采用浅层解构隔离修改域
+        // 浅拷贝隔离：下面的属性结算与 processInteraction 都会就地改写这两个副本，
+        // 实体表里仍被他人读取的原件不能被动到
         const updatedMaiden = { ...maiden, attributes: { ...maiden.attributes } };
         const updatedTarget = { ...target, attributes: { ...target.attributes } };
         const mAttrs = updatedMaiden.attributes;
@@ -1329,12 +1322,11 @@ class MaidenSocialization {
     }
 
     private getSocialDuration(type: SocialInteractionType): number {
-        const base = SOCIAL_DURATION_MINUTES[type] ?? 10;
-        return base * (0.7 + Math.random() * 0.6);
+        return SOCIAL_DURATION_MINUTES[type] * (0.7 + Math.random() * 0.6);
     }
 
     private getInteractionIntensity(type: SocialInteractionType): number {
-        return SOCIAL_INTERACTION_INTENSITY[type] ?? 1.0;
+        return SOCIAL_INTERACTION_INTENSITY[type];
     }
 }
 
@@ -1387,7 +1379,7 @@ class MaidenNarcissus {
             reasons.push('理智过高，尚未被充分"教化"');
         }
 
-        if (maiden.graceReceived === 0 && requirements.hasExperiencedGrace) {
+        if (maiden.graceReceived === 0) {
             reasons.push('未曾体验过神恩');
         }
 
@@ -1408,22 +1400,17 @@ class MaidenNarcissus {
         if (!eligibility.eligible) return false;
 
         if (!maiden.isshex || !maiden.isshex.facets || !maiden.isshex.dynamics) {
-            return false; // 阻断残缺的人格模型导致的计算错误
+            return false; // 人格模型残缺：下面读 facets 与人格视图会取到 undefined
         }
 
         // 基础触发概率：每Tick极低，因为这是稀有且重大的个人觉醒事件
         let chance = 0.002;
 
-        // 1. 理智修正
         if (maiden.attributes.sanity < 35) chance += 0.003;
-
-        // 2. 压力修正
         if (maiden.attributes.stress > 80) chance += 0.003;
-
-        // 3. 深渊暴露修正
         chance += maiden.abyssExposureCount * 0.0005;
 
-        // 4. IS-SHEX人格修正：危险取舍靠风险承受与低诚信，顺从与虔诚抑制觉醒
+        // IS-SHEX 人格修正：危险取舍靠风险承受与低诚信，顺从与虔诚抑制觉醒
         const view = personalityView(maiden);
         const facets = maiden.isshex.facets;
 
@@ -1493,7 +1480,6 @@ class MaidenNarcissus {
             departureTime: gameTimePassed,
         };
 
-        // 去重写入 dissociated 状态
         const newStatus: CharacterStatus[] = withoutStatus(maiden, 'panicked', 'dissociated');
         newStatus.push('dissociated');
 
@@ -1527,6 +1513,7 @@ class MaidenNarcissus {
                 `她选择了留下。\n\n` +
                 `也许是恐惧，也许是依赖，也许是某种她自己都无法理解的渴望。但在这一刻，她做出了选择——这个世界，才是她的归属。`,
             maidenUpdate: {
+                // 调用方按字段合并，因此"清除状态"必须显式给出 undefined，缺字段是保留原值
                 narcissusState: undefined,
                 attributes: {
                     ...maiden.attributes,
@@ -1624,7 +1611,6 @@ class MaidenNarcissus {
             returnTime: gameTimePassed,
         };
 
-        // 归档旧记忆
         const archivedMaiden = maidenMemory.archiveMemoryChain(maiden);
 
         // 状态原子化处理：清洗对立状态，注入归拢状态
@@ -1784,7 +1770,6 @@ const EVENT_CONFIG = {
 class MaidenRandomEvent {
     private globalEventTimestamps: Map<EventType, number> = new Map();
 
-    // [核心 API] 随机事件轮询调度
     public checkForEvents(
         maidens: Map<string, Maiden>,
         carriages: Map<string, Carriage>,
@@ -1821,7 +1806,6 @@ class MaidenRandomEvent {
             const carriage = carriages.get(carriageId);
             if (!carriage) continue;
 
-            // 2. 梦魇侵袭 (睡眠状态异常)
             if (
                 maiden.behavior.currentActivity === 'sleeping' &&
                 maiden.attributes.sanity < 50 &&
@@ -1831,7 +1815,6 @@ class MaidenRandomEvent {
                 events.push(this.createNightmareEvent(maiden, carriage));
             }
 
-            // 3. 精神崩溃 (临界理智熔断)
             if (
                 this.shouldTriggerBreakdown(maiden.attributes.sanity, maiden.status.includes('broken')) &&
                 this.canTriggerGlobal('breakdown', now)
@@ -1839,7 +1822,6 @@ class MaidenRandomEvent {
                 events.push(this.createBreakdownEvent(maiden, carriage));
             }
 
-            // 4. 堕落觉醒 (高欲求与高堕落共振)
             if (
                 maiden.attributes.corruption > 60 &&
                 maiden.attributes.lust > 70 &&
@@ -1850,7 +1832,6 @@ class MaidenRandomEvent {
                 events.push(this.createAwakeningEvent(maiden, carriage));
             }
 
-            // 5. 深渊幻视 (深渊空间负面效应)
             if (
                 isAbyssTemplate(carriage.templateId) &&
                 maiden.attributes.sanity < 60 &&
@@ -1860,7 +1841,6 @@ class MaidenRandomEvent {
                 events.push(this.createAbyssVisionEvent(maiden, carriage));
             }
 
-            // 6. 妊娠表征显化 (孕期推进里程碑)
             // 不设周数上界：跨周结算可能一次越过多个里程碑，设了上界会让
             // "还没被察觉就已超过 8 周"的实体永远触发不到这条事件。
             const pregnancyInfo = maiden.physiology.pregnancy;
@@ -1873,12 +1853,10 @@ class MaidenRandomEvent {
                 events.push(this.createPregnancyEvent(maiden, carriage));
             }
 
-            // 7. 社交动态事件判定
             const peers = carriageMaidenMap.get(carriageId)?.filter(m => m.id !== maiden.id) || [];
             if (peers.length > 0) {
                 const randomPeer = randomElement(peers);
                 if (randomPeer) {
-                    // 互相慰藉 (一方高压，一方低压容纳)
                     if (
                         maiden.attributes.stress > 60 && randomPeer.attributes.stress < 40 &&
                         probabilityCheck(EVENT_CONFIG.PROBABILITY.comfort) &&
@@ -1886,7 +1864,6 @@ class MaidenRandomEvent {
                     ) {
                         events.push(this.createComfortEvent(maiden, randomPeer, carriage));
                     }
-                    // 冲突爆发 (双边高压应激)
                     else if (
                         maiden.attributes.stress > 70 && randomPeer.attributes.stress > 70 &&
                         probabilityCheck(EVENT_CONFIG.PROBABILITY.conflict) &&
@@ -1894,7 +1871,6 @@ class MaidenRandomEvent {
                     ) {
                         events.push(this.createConflictEvent(maiden, randomPeer, carriage));
                     }
-                    // 建立友谊 (双边基础理智在线)
                     else if (
                         maiden.attributes.sanity > 40 && randomPeer.attributes.sanity > 40 &&
                         probabilityCheck(EVENT_CONFIG.PROBABILITY.friendship) &&
@@ -1909,7 +1885,6 @@ class MaidenRandomEvent {
         return events;
     }
 
-    // [核心 API] 领域事件效能结算
     public applyEventEffects(
         event: GameEvent,
         ctx: EventEffectContext
@@ -1961,8 +1936,6 @@ class MaidenRandomEvent {
 
         return changedMaidens;
     }
-
-    // [私有辅助] 单体事件实例构造工厂
 
     private createNightmareEvent(maiden: Maiden, carriage: Carriage): GameEvent {
         const descriptions = [
@@ -2056,8 +2029,6 @@ class MaidenRandomEvent {
         };
     }
 
-    // [私有辅助] 社交动态与系统事件构造工厂
-
     private createFriendshipEvent(maiden: Maiden, peer: Maiden, carriage: Carriage): GameEvent {
         const descriptions = [
             `${maiden.name}和${peer.name}在黑暗中找到了彼此，她们在${carriage.name}中低声交谈，建立起脆弱的联系。`,
@@ -2118,8 +2089,6 @@ class MaidenRandomEvent {
             logType: 'social',
         };
     }
-
-    // [私有辅助] 算子变动写入策略
 
     private applyAttributeEffect(
         sourceMaidens: Map<string, Maiden>,
@@ -2260,8 +2229,6 @@ class MaidenRandomEvent {
 
         changedMaidens.set(maidenId, newMaiden);
     }
-
-    // [私有计算] 机制校验与状态探测
 
     private shouldTriggerBreakdown(sanity: number, isCurrentlyBroken: boolean): boolean {
         if (isCurrentlyBroken) return false;
@@ -2409,10 +2376,6 @@ const AGE_DRIFT_DIRECTION: Partial<Record<keyof HexacoFacets, number>> = {
     sincerity: 0.4, fairness: 0.4, modesty: 0.3,
 };
 
-// ============================================================================
-// 元因子（§3.3.2）
-// ============================================================================
-
 /**
  * 三个元因子的成分与符号。三个集合**互不重叠**，保证公式层面可区分。
  *
@@ -2461,10 +2424,6 @@ function deriveMetaTraits(facets: HexacoFacets): MetaTraits {
     }
     return meta;
 }
-
-// ============================================================================
-// 构型（§3.4）
-// ============================================================================
 
 /** 八分构型的原型向量 p_k ∈ {±1}³ */
 const OCTANT_PROTOTYPES: Record<OctantId, [number, number, number]> = {
@@ -2556,10 +2515,6 @@ function deriveSignatureMatches(facets: HexacoFacets): SignatureMatch[] {
         .filter(m => m.match > 0)
         .sort((a, b) => b.match - a.match);
 }
-
-// ============================================================================
-// 代理指标（§3.4.3）
-// ============================================================================
 
 /**
  * 光明/黑暗构念的近似代理成分（单位权重，符号内建）。
@@ -2735,12 +2690,12 @@ function sampleNormalZ(): number {
     const u1 = Math.max(Number.EPSILON, Math.random());
     const u2 = Math.random();
     const z = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
-    return Math.round(Math.max(-3, Math.min(3, z)) * 100) / 100;
+    return Math.round(clamp(z, -3, 3) * 100) / 100;
 }
 
 /** 子维度分数：维度位置 θ 加上子维度特有偏差（同域子维度相关约 .3–.5，故偏差不宜过大） */
 function sampleFacetZ(domainZ: number): number {
-    return Math.round(Math.max(-3, Math.min(3, domainZ + sampleNormalZ() * 0.75)) * 100) / 100;
+    return Math.round(clamp(domainZ + sampleNormalZ() * 0.75, -3, 3) * 100) / 100;
 }
 
 /**
@@ -3099,22 +3054,7 @@ class MaidenGenerator {
             }
         }
 
-        // 动态计算着装层级
-        let dressLevel: DressLevel = 'fully_dressed';
-        const hasTop = topType.id !== 'none';
-        const hasBottom = bottomType.id !== 'none';
-        const hasBra = braType.id !== 'none';
-        const hasPanties = pantyType.id !== 'none';
-
-        if (!hasTop && !hasBottom && !hasBra && !hasPanties) {
-            dressLevel = 'naked';
-        } else if (!hasTop && !hasBottom) {
-            dressLevel = 'underwear_only';
-        } else if (!hasTop || !hasBottom) {
-            dressLevel = 'partially_dressed';
-        }
-
-        return {
+        const clothing: ClothingState = {
             intimate: {
                 bra: { type: braType, color: braColor, material: braMaterial },
                 panties: { type: pantyType, color: pantyColor, material: pantyMaterial },
@@ -3132,8 +3072,13 @@ class MaidenGenerator {
             },
             accessories,
             state: 'intact',
-            dressLevel,
+            dressLevel: 'fully_dressed',
         };
+
+        // 层级只由 calculateDressLevel 判定：这里再写一份判据，就会与换装路径、UI 和立绘所用的层级漂移
+        clothing.dressLevel = calculateDressLevel(clothing);
+
+        return clothing;
     }
 
     generateDescription(physical: PhysicalStats, clothing: ClothingState, appearance: AppearanceData): string {
@@ -3200,10 +3145,10 @@ class MaidenGenerator {
         const stressMod = isshex.facets.anxiety * 3;
 
         return {
-            sanity: Math.round(Math.max(0, Math.min(100, sanityBase + sanityMod))),
-            obedience: Math.round(Math.max(0, Math.min(100, obedienceBase + obedienceMod))),
-            lust: Math.round(Math.max(0, Math.min(100, lustBase + lustMod))),
-            stress: Math.round(Math.max(0, Math.min(100, stressBase + stressMod))),
+            sanity: Math.round(clamp(sanityBase + sanityMod, 0, 100)),
+            obedience: Math.round(clamp(obedienceBase + obedienceMod, 0, 100)),
+            lust: Math.round(clamp(lustBase + lustMod, 0, 100)),
+            stress: Math.round(clamp(stressBase + stressMod, 0, 100)),
             corruption: Math.floor(Math.random() * 10),
             devotion: Math.floor(Math.random() * 5),
             hunger: 20 + Math.floor(Math.random() * 30),
@@ -3266,10 +3211,6 @@ class MaidenGenerator {
         };
     }
 }
-
-// 少女行为决策 - 需求计算与行为选择
-// Maiden Behavior - Need calculation & behavior decisions
-// 基于 IS-SHEX 六维层级人格模型
 
 /**
  * 情境的主激活维度。
@@ -3639,15 +3580,15 @@ class MaidenBehavior {
         if (attrs.corruption > 70) peekChance += 0.15;
         if (attrs.stress > 80) peekChance += 0.1;
 
-        peekChance *= (1 + view.domains.O * 0.01 * 10);
-        peekChance *= (1 - facets.fearfulness * 0.008 * 10);
+        peekChance *= (1 + view.domains.O * 0.1);
+        peekChance *= (1 - facets.fearfulness * 0.08);
         peekChance *= (1 + weights.riskTolerance * 0.5);
         // 冷酷冲动（低恐惧/低感伤/低审慎）者对深渊的吸引力更强；代理仅用于此处的倾向修正
-        peekChance *= (1 + view.proxies.psychopathy * 0.005 * 10);
+        peekChance *= (1 + view.proxies.psychopathy * 0.05);
 
         if (maiden.status.includes('voyeur')) peekChance += 0.2;
 
-        const clampedPeekChance = Math.min(1, Math.max(0, peekChance));
+        const clampedPeekChance = clamp(peekChance, 0, 1);
         if (Math.random() < clampedPeekChance) {
             return {
                 behavior: this.createActivityBehavior('observing', 10, behavior, gameTimePassed)
@@ -3932,13 +3873,6 @@ class MaidenBehavior {
     }
 }
 
-// 情绪与自发行为
-
-// 少女情绪系统 - 情绪计算与自发行为
-// Maiden Mood System - Mood calculation & spontaneous actions
-// 基于 IS-SHEX 六维层级人格模型
-
-// 情绪对行为的影响权重
 const SPONTANEOUS_ACTION_CONFIG: Record<SpontaneousAction, {
     triggerCondition: (attrs: { sanity: number; stress: number; lust: number; devotion: number; fatigue: number }) => boolean;
     probability: number;  // 基础触发概率
@@ -4386,8 +4320,6 @@ class MaidenMood {
     }
 }
 
-// 着装
-
 /**
  * 洗浴时替换的外显层（浴巾 + 拖鞋）。
  * dressLevel 在派生时由 calculateDressLevel 现算，这里无需也无法预设。
@@ -4415,8 +4347,6 @@ const SLEEPING_CLOTHING_STATE: ClothingState = {
     state: 'intact',
     dressLevel: 'partially_dressed',
 };
-
-// 服装变化触发器
 
 /** 活动对应的服装状态 */
 const ACTIVITY_CLOTHING_MAP: Partial<Record<CharacterStatus, Partial<ClothingState>>> = {
@@ -4540,8 +4470,6 @@ class MaidenClothing {
         });
     }
 }
-
-// 妊娠
 
 const MS_PER_WEEK = 7 * 24 * 60 * 60 * 1000;
 const ABORTION_RISK_THRESHOLD = 85;
@@ -4964,8 +4892,6 @@ class MaidenPregnancy {
     }
 }
 
-// 子系统实例
-
 const maidenMemory = new MaidenMemory();
 const maidenRelationship = new MaidenRelationship();
 const maidenSocialization = new MaidenSocialization();
@@ -5047,15 +4973,6 @@ const CHARACTER_STATUS_NAMES: Record<CharacterStatus, string> = {
 };
 
 /**
- * 少女系统协调器。
- *
- * 对外唯一出口（`maidenSystem` 单例）。职责是把各子系统的调用编排进一帧的更新顺序：
- * 属性推进 → 行为决策 → 事件结算 → 心境 → 状态 diff。
- *
- * 子系统通过 `readonly` 字段暴露，但它们各自持有的数据都内嵌于 `Maiden` 实体，
- * 因此本类不持有任何需要与存档同步的独立状态。
- */
-/**
  * 状态标签的日志描述表：数组下标 0 为新增、1 为移除。
  * 放在模块作用域而非方法内：它是纯常量，写在方法里等于每次调用都重建一遍。
  */
@@ -5087,10 +5004,12 @@ const SOCIAL_END_DESCRIPTIONS: Partial<Record<SocialInteractionType, string[]>> 
 };
 
 /**
- * 领域算法门面。
+ * 少女系统协调器（对外唯一出口 `maidenSystem`）：把各子系统的调用编排进一帧的更新顺序
+ * ——属性推进 → 行为决策 → 事件结算 → 心境 → 状态 diff。
  *
  * 子系统以只读字段直接暴露，不再逐层转发：转发方法只是把同一份签名再抄一遍，
- * 而这个文件的问题从来不是"调用点太长"，是同一个事实有多个所有者。
+ * 而这个文件的问题从来不是"调用点太长"，是同一个事实有多个所有者。各子系统持有的
+ * 数据都内嵌于 `Maiden` 实体，因此本类不持有任何需要与存档同步的独立状态。
  */
 class MaidenSystem {
     readonly generator = maidenGenerator;
@@ -5122,10 +5041,8 @@ class MaidenSystem {
             const id = `Unit-${String(i + 1).padStart(3, '0')}`;
             const carriageId = carriageIds[Math.floor(Math.random() * carriageIds.length)];
 
-            // 委托给生成器
             const maiden = this.generator.generateUnit(id, carriageId, usedNames, 0);
 
-            // 将少女放入车厢（不可变更新）
             const carriage = carriages.get(carriageId)!;
             carriages.set(carriageId, {
                 ...carriage,
@@ -5135,7 +5052,6 @@ class MaidenSystem {
             maidens.set(id, maiden);
         }
 
-        // 初始化关系网络
         this.relationship.initializeNetwork(maidens, 0);
 
         return maidens;
@@ -5176,7 +5092,7 @@ class MaidenSystem {
 
         let attrs = { ...maiden.attributes };
         // 高尽责者理智流失更慢（C 每 1σ 折减 0.08 倍率）
-        const sanityMod = 1 - domains.C * 0.008 * 10;
+        const sanityMod = 1 - domains.C * 0.08;
         const stressMod = 1 / behaviorWeights.stressResistance;
         const lustMod = behaviorWeights.lustSensitivity;
 
@@ -5278,15 +5194,15 @@ class MaidenSystem {
                 break;
             }
             case 'chatting': {
-                const socialBonus = 1 + domains.X * 0.01 * 10;
+                const socialBonus = 1 + domains.X * 0.1;
                 attrs.stress = clamp(attrs.stress - 0.2 * deltaMinutes * socialBonus, 0, 100);
                 if (domains.X > 0.5) attrs.sanity = clamp(attrs.sanity + 0.1 * deltaMinutes, 0, 100);
                 if (domains.X < -1.0) attrs.stress = clamp(attrs.stress + 0.1 * deltaMinutes, 0, 100);
                 break;
             }
             case 'observing': {
-                const sanityDrain = 1.5 * (1 + domains.O * 0.01 * 10);
-                const stressGain = 1.0 * (1 - facets.fearfulness * 0.008 * 10);
+                const sanityDrain = 1.5 * (1 + domains.O * 0.1);
+                const stressGain = 1 - facets.fearfulness * 0.08;
                 attrs.sanity = clamp(attrs.sanity - sanityDrain * deltaMinutes, 0, 100);
                 attrs.stress = clamp(attrs.stress + stressGain * deltaMinutes, 0, 100);
                 attrs.corruption = clamp(attrs.corruption + 0.2 * deltaMinutes, 0, 100);
@@ -5305,7 +5221,8 @@ class MaidenSystem {
         const statusSet = new Set(maiden.status);
         const activity = maiden.behavior.currentActivity;
 
-        // 严格限制为基础合规的 ActivityStatus 集合枚举，去除无关属性避免篡改数据
+        // 活动标签互斥：先清掉其余活动标签再补上当前活动；
+        // 状态类标签由下面的成对判定维护，不在此处清空
         const activityStatuses: CharacterStatus[] = [
             'performing', 'confessing', 'anchoring', 'sleeping', 'eating', 'bathing', 'wandering', 'chatting', 'observing', 'normal'
         ];
@@ -5367,7 +5284,7 @@ class MaidenSystem {
         situation: SituationType,
         situationalStrength: number
     ): HexacoProfile {
-        const strength = Math.max(0, Math.min(1, situationalStrength));
+        const strength = clamp(situationalStrength, 0, 1);
         const theta = deriveDomains(facets);
         const expressed = {} as HexacoProfile;
 
@@ -5391,7 +5308,7 @@ class MaidenSystem {
         situation: SituationType,
         situationalStrength: number
     ): number {
-        const strength = Math.max(0, Math.min(1, situationalStrength));
+        const strength = clamp(situationalStrength, 0, 1);
         const cues = SITUATION_CUE_RELEVANCE[situation];
         const norms = SITUATION_NORM_PRESSURE[situation];
 
@@ -5431,7 +5348,7 @@ class MaidenSystem {
         elapsedDays: number
     ): number {
         if (elapsedDays <= 0) return previousLoad;
-        const recovery = LOAD_PARAMS.recoveryEfficiency * Math.max(0, Math.min(1, restorativeAccess));
+        const recovery = LOAD_PARAMS.recoveryEfficiency * clamp(restorativeAccess, 0, 1);
         const retention = Math.pow(LOAD_PARAMS.retention, elapsedDays);
         return Math.max(0, retention * previousLoad + (load - recovery) * elapsedDays);
     }
@@ -5474,7 +5391,7 @@ class MaidenSystem {
 
             // 不在此处做小数位取整：单帧漂移量约 1e-6，取整会把每一帧都抹回原值，
             // 于是漂移永远累积不起来（P4 静默失效）。显示时才取整。
-            drifted[key] = Math.max(-DRIFT_PARAMS.clamp, Math.min(DRIFT_PARAMS.clamp, current + drift));
+            drifted[key] = clamp(current + drift, -DRIFT_PARAMS.clamp, DRIFT_PARAMS.clamp);
         }
 
         return drifted;
@@ -5629,7 +5546,7 @@ class MaidenSystem {
     private _getActivityStartDesc(maiden: Maiden): string {
         const activity = maiden.behavior.currentActivity;
         const options = ACTIVITY_START_DESCRIPTIONS[activity];
-        if (options?.length) return options[Math.floor(Math.random() * options.length)].replace(/\${name}/g, maiden.name);
+        if (options?.length) return options[Math.floor(Math.random() * options.length)];
         return `${maiden.name} 开始${CHARACTER_STATUS_NAMES[activity] || '活动'}`;
     }
 
@@ -5638,7 +5555,7 @@ class MaidenSystem {
         const durationMinutes = Math.floor(before.behavior.activityDuration / 60000);
         const options = ACTIVITY_END_DESCRIPTIONS[activity];
         if (options?.length) {
-            const base = options[Math.floor(Math.random() * options.length)].replace(/\${name}/g, after.name);
+            const base = options[Math.floor(Math.random() * options.length)];
             return durationMinutes > 30 ? `${base}（持续了约${durationMinutes}分钟）` : base;
         }
         return null;
@@ -5650,7 +5567,7 @@ class MaidenSystem {
         const { targetName, interactionType } = context;
         const options = interactionType ? SOCIAL_END_DESCRIPTIONS[interactionType] : undefined;
         if (options?.length) {
-            return randomElement(options)!
+            return options[Math.floor(Math.random() * options.length)]
                 .replace(/\{name1\}/g, maiden.name)
                 .replace(/\{name2\}/g, targetName);
         }
@@ -5682,7 +5599,6 @@ class MaidenSystem {
             currentActivity: m.behavior.currentActivity,
         }));
     }
-
 }
 
 export const maidenSystem = new MaidenSystem();
