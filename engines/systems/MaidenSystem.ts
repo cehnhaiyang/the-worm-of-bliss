@@ -646,24 +646,6 @@ class MaidenRelationship {
         };
     }
 
-    /** 读取单向关系边；不存在时返回 undefined（不隐式创建） */
-    public getRelationship(maiden: Maiden, targetId: string): Relationship | undefined {
-        return getRelationship(maiden, targetId);
-    }
-
-    /** 关系边的隔离副本，调用方改写它不会影响实体 */
-    public getAllRelationships(maiden: Maiden): Relationship[] {
-        return getAllRelationships(maiden);
-    }
-
-    /**
-     * 细粒度更新单向关系。
-     * 关系不存在时以 'stranger' 基线创建；每次调用都会累加互动次数并刷新 lastInteraction，
-     * 因此不要用它做"只读探测"。
-     *
-     * 注意：本方法**就地修改**传入的两个实体（沿用社交结算的浅拷贝隔离约定），
-     * 而本文件其余部分一律返回新对象。
-     */
     /**
      * 细粒度更新单向关系。
      * 关系不存在时以 'stranger' 基线创建；每次调用都会累加互动次数并刷新 lastInteraction，
@@ -1162,7 +1144,7 @@ class MaidenSocialization {
         const candidates = othersInCarriage.filter(id => id !== maiden.id);
         if (candidates.length === 0) return null;
 
-        const relationships = maidenRelationship.getAllRelationships(maiden);
+        const relationships = getAllRelationships(maiden);
 
         const weights = candidates.map(id => {
             let weight = 10;
@@ -4910,38 +4892,6 @@ class MaidenPregnancy {
         return result;
     }
 
-    getPregnancyStats(maidens: Map<string, Maiden>): {
-        total: number;
-        byStage: Record<PregnancyStage, number>;
-        averageWeek: number;
-    } {
-        const stats = {
-            total: 0,
-            byStage: {
-                'none': 0,
-                'conception': 0,
-                'early': 0,
-                'middle': 0,
-                'late': 0,
-                'labor': 0,
-            },
-            averageWeek: 0,
-        };
-
-        let totalWeeks = 0;
-        for (const maiden of maidens.values()) {
-            const state = maiden.physiology.pregnancy;
-            if (state) {
-                stats.total++;
-                stats.byStage[state.stage]++;
-                totalWeeks += state.weekNumber;
-            }
-        }
-
-        stats.averageWeek = stats.total > 0 ? totalWeeks / stats.total : 0;
-        return stats;
-    }
-
     /**
      * 把妊娠状态同步到实体层，并维护派生的状态标签。
      *
@@ -5189,17 +5139,6 @@ class MaidenSystem {
         return maidens;
     }
 
-    /** 游戏内小时（0-23），由绝对游戏时间换算 */
-    getGameHour(gameTimePassed: number): number {
-        return Math.floor((gameTimePassed / (60 * 60 * 1000)) % 24);
-    }
-
-    /** 是否处于夜间休息时段（跨零点，因此判定必须用"或"而非区间） */
-    isRestTime(gameTimePassed: number): boolean {
-        const hour = this.getGameHour(gameTimePassed);
-        return hour >= 22 || hour < 6;
-    }
-
     /**
      * 推进单帧的属性与状态。
      *
@@ -5246,7 +5185,7 @@ class MaidenSystem {
         const resonanceEffect = Math.max(0, (20 - resonanceFrequency) / 20);
         attrs.lust = clamp(attrs.lust + resonanceEffect * deltaMinutes * 0.2 * lustMod);
 
-        const isResting = this.isRestTime(gameTimePassed);
+        const isResting = isRestTime(gameTimePassed);
         let hungerRate = isResting ? RATES.HUNGER_INCREASE * 0.5 : RATES.HUNGER_INCREASE;
         let fatigueRate = isResting ? RATES.FATIGUE_INCREASE * 0.3 : RATES.FATIGUE_INCREASE;
 
