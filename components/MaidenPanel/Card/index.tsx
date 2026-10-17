@@ -1,14 +1,7 @@
-
-// ============================================
-// 角色卡片组件 - 入口文件
-// 显示选中少女的详细信息和立绘；
-// 并协调所有Card模块下的UI组件
-// ============================================
-
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { Maiden, CharacterStatus, CarriageType } from '../../../meta';
+import { Maiden, MaidenView, CharacterStatus, CarriageType } from '../../../meta';
 import { STATUS_LABELS, ABYSS_TYPES } from '../../../constants';
-import { aiService, useGameEngine } from '../../../engines';
+import { aiService } from '../../../engines';
 import { formatPreciseAge } from '../../../const';
 import { Appearance } from './Appearance';
 import { Attire } from './Attire';
@@ -17,6 +10,10 @@ import { Personality } from './Personality';
 
 interface MaidenCardProps {
     maiden: Maiden | undefined;
+    /** 由聚合层算好的派生视图；卡片不自行推导 */
+    view: MaidenView | undefined;
+    /** 会话已推进的游戏时间，用于精确年龄 */
+    gameTimePassed: number;
     carriageType?: CarriageType;
     onClose?: () => void;
     onOpenMemory?: () => void;
@@ -76,6 +73,8 @@ EmptyState.displayName = 'EmptyState';
 
 export const MaidenCard: React.FC<MaidenCardProps> = memo(({
     maiden,
+    view,
+    gameTimePassed,
     carriageType,
     onClose,
     onOpenMemory,
@@ -93,9 +92,6 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
     // 不应触发渲染。
     const lastRequestedHashRef = useRef<string>('');
     const mountedRef = useRef(true);
-
-    const { systemState, getMaidenView } = useGameEngine();
-    const view = maiden ? getMaidenView(maiden) : undefined;
 
     const isInAbyss = carriageType ? ABYSS_TYPES.includes(carriageType) : false;
 
@@ -158,7 +154,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
 
     const { attributes, physiology, status, clothing, isshex } = maiden;
     const isCritical = attributes.sanity < 30;
-    const currentAgeMs = (maiden.initialAgeMs || 0) + (systemState?.gameTimePassed || 0);
+    const currentAgeMs = (maiden.initialAgeMs || 0) + gameTimePassed;
     const preciseAgeString = formatPreciseAge(currentAgeMs);
 
     return (

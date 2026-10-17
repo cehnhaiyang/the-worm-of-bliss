@@ -4,11 +4,13 @@
 // ============================================
 
 import React, { memo } from 'react';
-import { Maiden, CharacterStatus } from '../../../../meta';
-import { useGameEngine } from '../../../../engines';
+import { Maiden, PregnancyStats, PregnancyState, CharacterStatus } from '../../../../meta';
 
 interface PregnancyProps {
   maiden: Maiden;
+  /** 全部在孕实体及其状态 */
+  pregnancies: Array<{ maiden: Maiden; state: PregnancyState }>;
+  stats: PregnancyStats;
   onClose: () => void;
   onMaidenSelect: (maidenId: string) => void;
 }
@@ -78,14 +80,10 @@ const PregnancyItem = memo<PregnancyItemProps>(({ maiden, weekNumber, stage, isS
 
 PregnancyItem.displayName = 'PregnancyItem';
 
-export const Pregnancy: React.FC<PregnancyProps> = ({ maiden, onClose, onMaidenSelect }) => {
-  const { getPregnancies, getPregnancyStats, getPregnancyOf } = useGameEngine();
-  const pregnantMaidens = getPregnancies();
-  const stats = getPregnancyStats();
-
+export const Pregnancy: React.FC<PregnancyProps> = ({ maiden, pregnancies: pregnantMaidens, stats, onClose, onMaidenSelect }) => {
   // 未显怀的妊娠不出现在详情里：'pregnant' 标签只在 isDiscovered 后由 syncToMaiden 加上
   const currentMaidenPregnancy = maiden.status.includes(CharacterStatus.PREGNANT)
-    ? getPregnancyOf(maiden)
+    ? maiden.physiology.pregnancy ?? undefined
     : undefined;
 
   return (

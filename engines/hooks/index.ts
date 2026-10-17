@@ -317,7 +317,7 @@ export const useGameEngine = () => {
 
     // 少女：派生视图
     getMaidenView: maiden.viewOf,
-    getAllMaidenSummaries: maiden.summaries,
+    allMaidenSummaries: maiden.summaries,
     getMaidensInCarriage,
 
     // 少女：写入

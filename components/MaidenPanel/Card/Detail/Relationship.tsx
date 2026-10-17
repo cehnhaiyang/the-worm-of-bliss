@@ -4,14 +4,17 @@
 // ============================================
 
 import React, { useMemo, memo } from 'react';
-import { Maiden, RelationType } from '../../../../meta';
+import { Maiden, RelationType, RelationshipStats } from '../../../../meta';
 import { getCurrentCarriageId } from '../../../../const';
-
-import { useGameEngine } from '../../../../engines';
 
 interface RelationshipProps {
   maiden: Maiden;
   allMaidens: Map<string, Maiden>;
+  /** 已剔除陌生、按好感降序的关系列表 */
+  relationships: Maiden['relationships'];
+  stats: RelationshipStats;
+  /** 行为驱动权重，0–1 */
+  weights: { socialSeek: number; solitudeSeek: number; empathy: number; aggressiveness: number };
   onClose: () => void;
   onMaidenSelect: (maidenId: string) => void;
 }
@@ -99,21 +102,7 @@ const RelationshipItem = memo<RelationshipItemProps>(({ targetMaiden, relationTy
 
 RelationshipItem.displayName = 'RelationshipItem';
 
-export const Relationship: React.FC<RelationshipProps> = ({ maiden, allMaidens, onClose, onMaidenSelect }) => {
-  const { getRelationshipsOf, getRelationshipStats, getMaidenView } = useGameEngine();
-
-  const relationships = useMemo(
-    () => getRelationshipsOf(maiden),
-    [getRelationshipsOf, maiden]
-  );
-
-  const stats = useMemo(
-    () => getRelationshipStats(maiden),
-    [getRelationshipStats, maiden]
-  );
-
-  const weights = getMaidenView(maiden).weights;
-
+export const Relationship: React.FC<RelationshipProps> = ({ maiden, allMaidens, relationships, stats, weights, onClose, onMaidenSelect }) => {
   // 计算社交状态标签
   const socialStatus = useMemo(() => {
     if (relationships.length === 0) return { label: '孤立者', color: 'text-zinc-500' };

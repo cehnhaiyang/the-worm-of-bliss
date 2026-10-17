@@ -21,6 +21,8 @@ interface CarriagePanelProps {
     onHubShuffle?: () => void;
     currentCarriage?: Carriage;
     occupantCount: number;
+    /** 全车在孕人数 */
+    gravidCount: number;
     systemState: SystemState;
     // 设置相关 Props
     onSave: (slot: number) => Promise<void>;
@@ -54,6 +56,7 @@ export const CarriagePanel: React.FC<CarriagePanelProps> = memo((props) => {
                 carriages={props.carriages}
                 maidensInCarriageCount={props.occupantCount}
                 isInAbyss={isInAbyss}
+                gravidCount={props.gravidCount}
             />
 
             {/* 4. 设置与控制区域 (直接展示) */}

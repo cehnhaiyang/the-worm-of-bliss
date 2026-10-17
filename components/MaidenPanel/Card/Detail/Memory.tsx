@@ -7,8 +7,7 @@
 import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
 import { Maiden, MemoryNode, MemoryHistoryEntry } from '../../../../meta';
 import { formatGameTimeDisplay, isAlteredMemory } from '../../../../const';
-import { aiService } from '../../../../engines/services';
-import { useGameEngine } from '../../../../engines';
+import { aiService } from '../../../../engines';
 import { TAMPER_PERMISSIONS } from '../../../../constants';
 
 interface MemoryProps {
@@ -16,6 +15,18 @@ interface MemoryProps {
   onClose: () => void;
   /** 会话起始墙钟时间：记忆历史里的时间戳是游戏内时间，需要它换算成日期 */
   gameStartTime: number;
+  /** 覆盖整条链（初次生成 / 深潜） */
+  onSetChain: (maidenId: string, chain: MemoryNode[]) => void;
+  /** 篡改或修复单个节点；返回落链后的节点 */
+  onTamper: (
+    maidenId: string,
+    node: MemoryNode,
+    narrative: string,
+    directive: string,
+    selfOpinion?: string
+  ) => MemoryNode | undefined;
+  /** 植入一段并未真实发生的记忆；返回新节点 */
+  onImplant: (maidenId: string, content: string, afterNodeId?: string) => MemoryNode | undefined;
 }
 
 /** 布局可容纳的最大层级：更深的节点不再继续下移，避免溢出与负 z-index */
@@ -135,8 +146,7 @@ const MemoryNodeItem = memo<MemoryNodeItemProps>(({ node, nextNode, onSelect, is
 
 MemoryNodeItem.displayName = 'MemoryNodeItem';
 
-export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime }) => {
-  const { setMemoryChain, tamperMemory, implantMemory } = useGameEngine();
+export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, onSetChain, onTamper, onImplant }) => {
   const [selectedNode, setSelectedNode] = useState<MemoryNode | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
   const [isDeepening, setIsDeepening] = useState(false);
@@ -185,7 +195,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime }
           setNotice('记忆解密失败，重新打开本面板可再次尝试。');
           return;
         }
-        setMemoryChain(maiden.id, chain);
+        onSetChain(maiden.id, chain);
       })
       .catch(err => {
         console.error('[Memory] Init generation failed:', err);
@@ -199,7 +209,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime }
       });
 
     return () => { cancelled = true; };
-  }, [maiden.id, maiden.lastUpdateTime, activeChain.length, isDeaconess, setMemoryChain]);
+  }, [maiden.id, maiden.lastUpdateTime, activeChain.length, isDeaconess, onSetChain]);
 
   // 滚轮横向滚动
   const handleWheel = (e: React.WheelEvent) => {
@@ -226,7 +236,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime }
       const { chain, rejections } = result;
       const inserted = chain.length - activeChain.length;
       if (inserted > 0) {
-        setMemoryChain(maiden.id, chain);
+        onSetChain(maiden.id, chain);
         setNotice(`追忆完成：新增 ${inserted} 段记忆。`);
       } else if (rejections.length > 0) {
         setNotice(`追忆失败：${rejections[0].reason}（${rejections.length} 处插入被拒绝）。`);
@@ -254,7 +264,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime }
         return;
       }
 
-      const tamperedNode = tamperMemory(
+      const tamperedNode = onTamper(
         maiden.id,
         selectedNode,
         result.narrative,
@@ -274,7 +284,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime }
   const handleImplant = () => {
     if (!permission.canImplant || viewLegacy || !tamperDirective.trim()) return;
     // 节点由控制器创建并返回，这样能立刻选中它；落点由链层按登车瞬间不变量决定
-    const newNode = implantMemory(maiden.id, tamperDirective.trim(), selectedNode?.id);
+    const newNode = onImplant(maiden.id, tamperDirective.trim(), selectedNode?.id);
     if (!newNode) return;
     setTamperDirective('');
     setNotice('记忆已植入。');

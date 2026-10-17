@@ -37,7 +37,16 @@ export default function App() {
         getCurrentCarriage,
         getFocusedMaiden,
         getMaidensInCarriage,
-        getAllMaidenSummaries,
+        allMaidenSummaries,
+        // 少女：派生视图与写入
+        getMaidenView,
+        setMemoryChain,
+        tamperMemory,
+        implantMemory,
+        getPregnancies,
+        getPregnancyStats,
+        getRelationshipsOf,
+        getRelationshipStats,
         // 暴露设置状态的方法以便加载存档
         setCarriages,
         setMaidens,
@@ -85,8 +94,12 @@ export default function App() {
         return currentCarriage ? getMaidensInCarriage(currentCarriage.id) : [];
     }, [currentCarriage, getMaidensInCarriage, maidens]);
 
-    // 所有少女摘要
-    const allMaidenSummaries = useMemo(() => getAllMaidenSummaries, [getAllMaidenSummaries]);
+    // 聚焦少女的派生视图与各面板所需投影，全部在此算好交给 UI
+    const focusedView = focusedMaiden ? getMaidenView(focusedMaiden) : undefined;
+    const pregnancies = getPregnancies();
+    const pregnancyStats = getPregnancyStats();
+    const focusedRelationships = focusedMaiden ? getRelationshipsOf(focusedMaiden) : [];
+    const focusedRelationshipStats = focusedMaiden ? getRelationshipStats(focusedMaiden) : undefined;
 
     const handleSplashComplete = useCallback(() => {
         setShowSplash(false);
@@ -157,6 +170,8 @@ export default function App() {
                         <div className="absolute inset-0 z-20 bg-black/98 flex flex-col p-2.5 animate-fade-in h-full">
                             <MaidenCard
                                 maiden={focusedMaiden}
+                                view={focusedView}
+                                gameTimePassed={systemState.gameTimePassed}
                                 carriageType={currentCarriage?.type}
                                 onClose={handleClearFocus}
                                 onOpenMemory={() => setShowMemory(true)}
@@ -211,6 +226,7 @@ export default function App() {
                     focusedMaidenCarriageId={focusedMaiden ? getCurrentCarriageId(focusedMaiden) : undefined}
                     currentCarriage={currentCarriage}
                     occupantCount={maidensInCarriage.length}
+                    gravidCount={pregnancyStats.total}
                     systemState={systemState}
                     onSave={handleSave}
                     onLoad={handleLoad}
@@ -224,6 +240,9 @@ export default function App() {
                     maiden={focusedMaiden}
                     gameStartTime={systemState.gameStartTime}
                     onClose={() => setShowMemory(false)}
+                    onSetChain={setMemoryChain}
+                    onTamper={tamperMemory}
+                    onImplant={implantMemory}
                 />
             )}
 
@@ -231,16 +250,21 @@ export default function App() {
             {showPregnancy && focusedMaiden && (
                 <Pregnancy
                     maiden={focusedMaiden}
+                    pregnancies={pregnancies}
+                    stats={pregnancyStats}
                     onClose={() => setShowPregnancy(false)}
                     onMaidenSelect={focusMaiden}
                 />
             )}
 
             {/* 关系网络全屏面板 */}
-            {showRelationship && focusedMaiden && (
+            {showRelationship && focusedMaiden && focusedView && focusedRelationshipStats && (
                 <Relationship
                     maiden={focusedMaiden}
                     allMaidens={maidens}
+                    relationships={focusedRelationships}
+                    stats={focusedRelationshipStats}
+                    weights={focusedView.weights}
                     onClose={() => setShowRelationship(false)}
                     onMaidenSelect={focusMaiden}
                 />
