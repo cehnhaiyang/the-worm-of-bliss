@@ -1,7 +1,7 @@
 {
-  "version": "0.2.1",
-  "timestamp": 1792143916462,
-  "playTime": 321898,
+  "version": "0.3.0",
+  "timestamp": 1792234425851,
+  "playTime": 224367,
   "slotName": "存档 3",
   "stats": {
     "totalGraceGiven": 0,
@@ -16,7 +16,7 @@
     "totalBreakdowns": 0,
     "totalRelationshipsFormed": 0,
     "totalMemoriesCorrupted": 0,
-    "longestPlaySession": 321898
+    "longestPlaySession": 224367
   },
   "maidenCount": 250
 }
