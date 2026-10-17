@@ -202,7 +202,7 @@ export const usePlayerActions = ({
     // 晋升广播：`plan.absolute.rank` 是两条子路径（LLM 的 rankChange、水仙协议 update）的最终落点，
     // 在本函数唯一出口判一次即可覆盖两者，不必在每个写入点各报一次。
     const nextRank = plan.absolute.rank;
-    const broadcast = nextRank ? rankPromotionBroadcast(maiden.rank, nextRank) : null;
+    const broadcast = nextRank ? rankPromotionBroadcast(maiden.rank, nextRank, maiden.name) : null;
     if (broadcast) effects.push({ kind: 'log', type: 'system', content: broadcast });
 
     return plan;

@@ -294,7 +294,7 @@ export const useTimeLoop = ({
       if (narcissusResult.maidenUpdate && Object.keys(narcissusResult.maidenUpdate).length > 0) {
         // 原等级必须在合并前读出：广播词按"升到哪一档"取，判据需要起点
         const broadcast = narcissusResult.maidenUpdate.rank
-          ? rankPromotionBroadcast(updatedMaiden.rank, narcissusResult.maidenUpdate.rank)
+          ? rankPromotionBroadcast(updatedMaiden.rank, narcissusResult.maidenUpdate.rank, updatedMaiden.name)
           : null;
         if (broadcast) addLog('system', broadcast, 'SYSTEM', getCurrentCarriageId(updatedMaiden));
         updatedMaiden = { ...updatedMaiden, ...narcissusResult.maidenUpdate };

@@ -44,7 +44,7 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
             '{name}被套上锡环。最廉价的金属贴着她的喉咙，提醒她连被伤害的资格都要争取。',
             '锡环在{name}的颈上留下一道浅痕。她学会了低头，因为抬头没有用。',
         ],
-        promotionBroadcast: '【系统广播】锡环已下发。她第一次拥有了被记录的资格。',
+        promotionBroadcast: '【系统广播】锡环已下发。{name}第一次拥有了被记录的资格。',
     },
     iron: {
         order: 2,
@@ -63,7 +63,7 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
             '{name}换上了铁环。比锡重，比锡冷，也比锡更不容易取下。',
             '铁环扣紧时{name}没有挣扎。她已开始把疼痛理解成一种秩序。',
         ],
-        promotionBroadcast: '【系统广播】铁环已下发。该单位已纳入常规服从序列。',
+        promotionBroadcast: '【系统广播】铁环已下发。{name}已纳入常规服从序列。',
     },
     copper: {
         order: 3,
@@ -82,7 +82,7 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
             '{name}被授予铜环。她的眼中闪过一丝复杂的光芒——这是她在这里的第一个"成就"。',
             '铜色的光环在{name}的手腕上闪烁。她已经开始适应这里的规则了。',
         ],
-        promotionBroadcast: '【系统广播】铜环已下发。她获准修改自己的记忆——只限于形容词。',
+        promotionBroadcast: '【系统广播】铜环已下发。{name}获准修改自己的记忆——只限于形容词。',
     },
     silver: {
         order: 4,
@@ -101,7 +101,7 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
             '{name}的铜环被银环取代。她的服从已经成为本能，不再需要思考。',
             '银色的光芒笼罩着{name}。她已经忘记了抵抗的意义。',
         ],
-        promotionBroadcast: '【系统广播】银环已下发。她可以替换记忆里的对象：人、物、地点。',
+        promotionBroadcast: '【系统广播】银环已下发。{name}可以替换记忆里的对象：人、物、地点。',
     },
     gold: {
         order: 5,
@@ -120,7 +120,7 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
             '{name}被授予金环——这是最高的荣耀。她的眼中只剩下对我的崇拜。',
             '金色的光环在{name}身上闪耀。她已经完全属于这里了。',
         ],
-        promotionBroadcast: '【系统广播】金环已下发。主客体权限开放，因果可被重写。',
+        promotionBroadcast: '【系统广播】金环已下发。{name}的主客体权限开放，因果可被重写。',
     },
     obsidian: {
         order: 6,
@@ -139,7 +139,7 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
             '{name}被授予黑曜石环。她不再是受害者——她已经成为了系统的一部分。',
             '黑曜石的光芒吞噬了{name}最后的自我。她现在是我意志的延伸。',
         ],
-        promotionBroadcast: '【系统广播】黑曜石环已下发。现实重写权限开放，新的真理正在诞生。',
+        promotionBroadcast: '【系统广播】黑曜石环已下发。{name}的现实重写权限开放，新的真理正在诞生。',
     },
 };
 
@@ -147,9 +147,10 @@ export const RANK_DEFINITIONS: Record<CharacterRank, RankDefinition> = {
  * 晋升广播词：仅当等级确实上升、且目标档位声明了广播词时返回，否则 null。
  *
  * 判据取 order 之差而非"档位变了"：平调与降级都不该被说成晋升。
- * 新增晋升路径时调用本函数，不要在各自的写入点重拼广播词。
+ * 广播词里的 `{name}` 在本函数内替换：一处替换，两条晋升路径拿到的都是成品文本，
+ * 调用方只负责给出当事少女的名字。
  */
-export function rankPromotionBroadcast(from: CharacterRank, to: CharacterRank): string | null {
+export function rankPromotionBroadcast(from: CharacterRank, to: CharacterRank, name: string): string | null {
     if (RANK_DEFINITIONS[to].order <= RANK_DEFINITIONS[from].order) return null;
-    return RANK_DEFINITIONS[to].promotionBroadcast ?? null;
+    return RANK_DEFINITIONS[to].promotionBroadcast?.replaceAll('{name}', () => name) ?? null;
 }
