@@ -849,7 +849,6 @@ export interface SaveData {
   logs: GameLog[];
   stats: GameStats;
   maidenCount: number;
-  checksum?: string;
 }
 
 /**
