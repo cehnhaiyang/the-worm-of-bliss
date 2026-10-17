@@ -1,5 +1,6 @@
 import { memo } from 'react';
-import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState, OCTANT_LABELS, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../meta';
+import { ISShexPersonality, PersonalityProfile, HexacoFacets, OctantId, SignatureId, PersonalityState } from '../../../meta';
+import { OCTANT_LABELS, SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../const';
 import { PersonalityView } from '../../../engines/systems';
 
 /** 五点分档边界（§2.3），对称且每端人群占比一致 */

@@ -322,7 +322,7 @@ export interface PersonalityDynamics {
  *
  * 八层派生值（维度、元因子、构型、签名、代理、行为权重）在 v1 中各存一份并写入存档，
  * 却没有一处维护它们与 facets 的一致性。此处改为：**只有 facets 与 dynamics 是存储的**，
- * 其余全部由 `meta/utils.ts` 与 `PersonalityView` 的纯函数在读取时算出。
+ * 其余全部由 `const.ts` 与 `PersonalityView` 的纯函数在读取时算出。
  */
 export interface ISShexPersonality {
   facets: HexacoFacets;

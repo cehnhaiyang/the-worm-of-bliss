@@ -5,7 +5,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react';
 import { useGameEngine, usePersistence, audioService } from './engines';
-import { formatGameTimeDisplay, getCurrentCarriageId } from './meta';
+import { formatGameTimeDisplay, getCurrentCarriageId } from './const';
 
 import { Log, Control } from './components/TerminalPanel';
 import { MaidenList } from './components/MaidenPanel';

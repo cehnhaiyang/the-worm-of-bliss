@@ -1,4 +1,11 @@
-import { CarriageType, EventType, ActivityStatus, PersonalityState } from './type';
+/**
+ * 全局工具与人格派生常量。
+ *
+ * 与 `constants/` 的分工：`constants/` 是纯数据（配置、词表、资源映射），
+ * 本文件是纯函数与派生表——它们需要读 `constants/` 的配置才能工作。
+ */
+
+import { CarriageType, EventType, ActivityStatus, PersonalityState } from './meta/type';
 import {
   Carriage,
   CarriageFunction,
@@ -19,8 +26,8 @@ import {
   OctantId,
   SignatureId,
   BehaviorWeights
-} from './interface';
-import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from '../constants';
+} from './meta/interface';
+import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from './constants';
 
 // ============================================
 // 1. 基础数学与概率
@@ -29,28 +36,25 @@ import { CARRIAGE_FUNCTIONS, TIME_CONFIG } from '../constants';
 /**
  * 将数值限制在指定阈值范围内
  */
-export function clamp(value: number, min: number = 0, max: number = 100): number {
-  return Math.min(max, Math.max(min, value));
-}
+export const clamp = (value: number, min: number = 0, max: number = 100): number =>
+  Math.min(max, Math.max(min, value));
 
 /**
  * 生成指定范围内的随机整数 [min, max]
  */
-export function randomInt(min: number, max: number): number {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
+export const randomInt = (min: number, max: number): number =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
 
 /**
  * 生成指定范围内的随机浮点数 [min, max)
  */
-export function randomFloat(min: number, max: number): number {
-  return Math.random() * (max - min) + min;
-}
+export const randomFloat = (min: number, max: number): number =>
+  Math.random() * (max - min) + min;
 
 /**
  * 依据权重执行随机抽取
  */
-export function weightedRandom<T>(items: { item: T; weight: number }[]): T {
+export const weightedRandom = <T,>(items: { item: T; weight: number }[]): T => {
   if (!Array.isArray(items) || items.length === 0) {
     throw new Error('weightedRandom: 权重数组为空或类型非法');
   }
@@ -75,36 +79,33 @@ export function weightedRandom<T>(items: { item: T; weight: number }[]): T {
   }
 
   return validItems[validItems.length - 1].item;
-}
+};
 
 /**
  * 绝对概率判定
  */
-export function probabilityCheck(probability: number): boolean {
-  return Math.random() < probability;
-}
+export const probabilityCheck = (probability: number): boolean => Math.random() < probability;
 
 /**
  * 基于角色属性特征的概率乘区修正
  */
-export function modifiedProbability(
+export const modifiedProbability = (
   baseProbability: number,
   modifiers: { value: number; weight: number }[]
-): number {
+): number => {
   let modifier = 1;
   for (const { value, weight } of modifiers) {
     modifier *= 1 + (value / 100 - 0.5) * weight;
   }
   return clamp(baseProbability * modifier, 0, 1);
-}
+};
 
 /**
  * 判断记忆节点是否"被改动过"——篡改或植入。
  * 登车瞬间（死节点）只是不可编辑，不属于被污染的记忆，故不计入。
  */
-export function isAlteredMemory(node: MemoryNode): boolean {
-  return node.type === 'corrupted' || node.type === 'implanted';
-}
+export const isAlteredMemory = (node: MemoryNode): boolean =>
+  node.type === 'corrupted' || node.type === 'implanted';
 
 // ============================================
 // 2. 字符串处理与标识生成
@@ -113,7 +114,7 @@ export function isAlteredMemory(node: MemoryNode): boolean {
 /**
  * 生成系统级唯一标识符（优先调用高熵原生接口）
  */
-export function generateId(prefix: string = ''): string {
+export const generateId = (prefix: string = ''): string => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return prefix ? `${prefix}_${crypto.randomUUID()}` : crypto.randomUUID();
   }
@@ -125,12 +126,12 @@ export function generateId(prefix: string = ''): string {
 
   const id = `${timestamp}_${random1}_${random2}_${performanceCounter}`;
   return prefix ? `${prefix}_${id}` : id;
-}
+};
 
 /**
  * 计算字符串的32位特征哈希码
  */
-export function hashCode(str: string): number {
+export const hashCode = (str: string): number => {
   let hash = 0;
   for (let i = 0; i < str.length; i++) {
     const char = str.charCodeAt(i);
@@ -138,14 +139,13 @@ export function hashCode(str: string): number {
     hash = hash & hash;
   }
   return hash;
-}
+};
 
 /**
  * 基于字典的动态模板注入
  */
-export function formatTemplate(template: string, values: Record<string, string>): string {
-  return template.replace(/\{(\w+)\}/g, (match, key) => values[key] !== undefined ? values[key] : match);
-}
+export const formatTemplate = (template: string, values: Record<string, string>): string =>
+  template.replace(/\{(\w+)\}/g, (match, key) => values[key] !== undefined ? values[key] : match);
 
 // ============================================
 // 3. 数组变换矩阵
@@ -154,33 +154,33 @@ export function formatTemplate(template: string, values: Record<string, string>)
 /**
  * 提取数组随机元素
  */
-export function randomElement<T>(array: T[]): T | undefined {
+export const randomElement = <T,>(array: T[]): T | undefined => {
   if (!array || array.length === 0) return undefined;
   return array[Math.floor(Math.random() * array.length)];
-}
+};
 
 /**
  * 数组混淆重排
  */
-export function shuffleArray<T>(array: T[]): T[] {
+export const shuffleArray = <T,>(array: T[]): T[] => {
   const result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [result[i], result[j]] = [result[j], result[i]];
   }
   return result;
-}
+};
 
 /**
  * 数组分块切片
  */
-export function chunkArray<T>(array: T[], size: number): T[][] {
+export const chunkArray = <T,>(array: T[], size: number): T[][] => {
   const chunks: T[][] = [];
   for (let i = 0; i < array.length; i += size) {
     chunks.push(array.slice(i, i + size));
   }
   return chunks;
-}
+};
 
 // ============================================
 // 4. 时序流转处理
@@ -189,7 +189,7 @@ export function chunkArray<T>(array: T[], size: number): T[][] {
 /**
  * 格式化世界运行时钟展示
  */
-export function formatGameTimeDisplay(gameTimePassed: number, startTime?: number, includeSeconds: boolean = true): string {
+export const formatGameTimeDisplay = (gameTimePassed: number, startTime?: number, includeSeconds: boolean = true): string => {
   const currentTotal = startTime ? startTime + gameTimePassed : gameTimePassed;
   const days = Math.floor(currentTotal / TIME_CONFIG.MS_PER_DAY) + 1;
   const totalSeconds = Math.floor(currentTotal / TIME_CONFIG.MS_PER_SECOND);
@@ -204,12 +204,12 @@ export function formatGameTimeDisplay(gameTimePassed: number, startTime?: number
     return `Day ${days} - ${hourStr}:${minStr}:${seconds.toString().padStart(2, '0')}`;
   }
   return `Day ${days} - ${hourStr}:${minStr}`;
-}
+};
 
 /**
  * 格式化实体精确年龄标识
  */
-export function formatPreciseAge(ageInMs: number): string {
+export const formatPreciseAge = (ageInMs: number): string => {
   const { MS_PER_YEAR, MS_PER_MONTH, MS_PER_DAY, MS_PER_HOUR, MS_PER_MINUTE, MS_PER_SECOND } = TIME_CONFIG;
 
   const years = Math.floor(ageInMs / MS_PER_YEAR);
@@ -230,25 +230,21 @@ export function formatPreciseAge(ageInMs: number): string {
   const seconds = Math.floor(remaining / MS_PER_SECOND);
 
   return `${years}.${months}.${days}.${hours}.${minutes}.${seconds}`;
-}
+};
 
-export function msToMinutes(ms: number): number {
-  return ms / TIME_CONFIG.MS_PER_MINUTE;
-}
+export const msToMinutes = (ms: number): number => ms / TIME_CONFIG.MS_PER_MINUTE;
 
-export function minutesToMs(minutes: number): number {
-  return minutes * TIME_CONFIG.MS_PER_MINUTE;
-}
+export const minutesToMs = (minutes: number): number => minutes * TIME_CONFIG.MS_PER_MINUTE;
 
-export function getGameHour(gameTimeMs: number): number {
+export const getGameHour = (gameTimeMs: number): number => {
   const totalSeconds = Math.floor(gameTimeMs / 1000);
   return Math.floor(totalSeconds / 3600) % 24;
-}
+};
 
-export function isRestTime(gameTimeMs: number): boolean {
+export const isRestTime = (gameTimeMs: number): boolean => {
   const hour = getGameHour(gameTimeMs);
   return hour >= TIME_CONFIG.REST_START_HOUR || hour < TIME_CONFIG.REST_END_HOUR;
-}
+};
 
 // ============================================
 // 5. 坐标网络与寻径
@@ -257,45 +253,41 @@ export function isRestTime(gameTimeMs: number): boolean {
 /**
  * 曼哈顿距离测算
  */
-export function manhattanDistance(
+export const manhattanDistance = (
   pos1: { row: number; col: number },
   pos2: { row: number; col: number }
-): number {
-  return Math.abs(pos1.row - pos2.row) + Math.abs(pos1.col - pos2.col);
-}
+): number => Math.abs(pos1.row - pos2.row) + Math.abs(pos1.col - pos2.col);
 
 /**
  * 逆向解析拓扑坐标标识
  */
-export function parseCarriageId(id: string): { row: number; col: number } | null {
+export const parseCarriageId = (id: string): { row: number; col: number } | null => {
   const match = id.match(/R(\d+)C(\d+)/);
   if (!match) return null;
   return { row: parseInt(match[1], 10), col: parseInt(match[2], 10) };
-}
+};
 
 /**
  * 构建拓扑坐标标识
  */
-export function makeCarriageId(row: number, col: number): string {
-  return `R${row}C${col}`;
-}
+export const makeCarriageId = (row: number, col: number): string => `R${row}C${col}`;
 
-function seededRandom(seed: number): number {
+const seededRandom = (seed: number): number => {
   let t = seed += 0x6D2B79F5;
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-}
+};
 
 /**
  * 获取临近的特定类型设施空间
  */
-export function findNearestCarriageByType(
+export const findNearestCarriageByType = (
   current: Carriage,
   allCarriages: Map<string, Carriage>,
   type: CarriageType,
   options: { fuzzFactor?: number; seed?: number } = {}
-): string | undefined {
+): string | undefined => {
   const { fuzzFactor = 5, seed } = options;
   let nearest: string | undefined;
   let minDistance = Infinity;
@@ -314,17 +306,17 @@ export function findNearestCarriageByType(
   }
 
   return nearest;
-}
+};
 
 /**
  * 根据交互许可功能获取临近设施空间
  */
-export function findNearestCarriageByFunction(
+export const findNearestCarriageByFunction = (
   current: Carriage,
   allCarriages: Map<string, Carriage>,
   funcName: keyof CarriageFunction,
   options: { fuzzFactor?: number; seed?: number } = {}
-): string | null {
+): string | null => {
   const { fuzzFactor = 3, seed } = options;
   let nearest: string | null = null;
   let minDistance = Infinity;
@@ -346,7 +338,7 @@ export function findNearestCarriageByFunction(
   }
 
   return nearest;
-}
+};
 
 // ============================================
 // 6. 深层约束与流控
@@ -355,7 +347,7 @@ export function findNearestCarriageByFunction(
 /**
  * 实体状态全量深度拷贝（优先原生层结构化克隆）
  */
-export function deepCopy<T>(obj: T): T {
+export const deepCopy = <T,>(obj: T): T => {
   if (typeof structuredClone === 'function') {
     try {
       return structuredClone(obj);
@@ -391,31 +383,31 @@ export function deepCopy<T>(obj: T): T {
     }
   }
   return copy;
-}
+};
 
 /**
  * 执行频次防抖节流阀
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function debounce<T extends (...args: any[]) => void>(
+export const debounce = <T extends (...args: any[]) => void>(
   func: T,
   wait: number
-): (...args: Parameters<T>) => void {
+): (...args: Parameters<T>) => void => {
   let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);
   };
-}
+};
 
 /**
  * 流量控制节流阀
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function throttle<T extends (...args: any[]) => void>(
+export const throttle = <T extends (...args: any[]) => void>(
   func: T,
   limit: number
-): (...args: Parameters<T>) => void {
+): (...args: Parameters<T>) => void => {
   let inThrottle = false;
   return (...args: Parameters<T>) => {
     if (!inThrottle) {
@@ -424,7 +416,7 @@ export function throttle<T extends (...args: any[]) => void>(
       setTimeout(() => (inThrottle = false), limit);
     }
   };
-}
+};
 
 // ============================================
 // 7. 领域属性校验工具
@@ -433,7 +425,7 @@ export function throttle<T extends (...args: any[]) => void>(
 /**
  * 核心维生基准属性边界收敛验证
  */
-export function clampAttributes(attributes: Partial<CharacterAttributes>): Partial<CharacterAttributes> {
+export const clampAttributes = (attributes: Partial<CharacterAttributes>): Partial<CharacterAttributes> => {
   const clamped: Partial<CharacterAttributes> = {};
   for (const key of Object.keys(attributes) as Array<keyof CharacterAttributes>) {
     const val = attributes[key];
@@ -442,7 +434,7 @@ export function clampAttributes(attributes: Partial<CharacterAttributes>): Parti
     }
   }
   return clamped;
-}
+};
 
 // ============================================
 // 8. 移动与空间导航枢纽
@@ -451,67 +443,59 @@ export function clampAttributes(attributes: Partial<CharacterAttributes>): Parti
 /**
  * 解析并提取当前动态目标车厢意图
  */
-export function getTargetCarriageId(movement: UnifiedMovementState): string | undefined {
-  return movement.intent?.targetCarriageId;
-}
+export const getTargetCarriageId = (movement: UnifiedMovementState): string | undefined =>
+  movement.intent?.targetCarriageId;
 
 /**
  * 读取实体当前锁定的物理所在车厢标识
  */
-export function getCurrentCarriageId(maiden: Maiden): string {
-  return maiden.movement?.currentCarriageId ?? '';
-}
+export const getCurrentCarriageId = (maiden: Maiden): string =>
+  maiden.movement?.currentCarriageId ?? '';
 
 /**
  * 基于不可变模式同步更新实体的物理落点网络
  */
-export function setCurrentCarriageId(maiden: Maiden, carriageId: string): Maiden {
-  return {
-    ...maiden,
-    movement: {
-      ...(maiden.movement || {}),
-      currentCarriageId: carriageId,
-    },
-  };
-}
+export const setCurrentCarriageId = (maiden: Maiden, carriageId: string): Maiden => ({
+  ...maiden,
+  movement: {
+    ...(maiden.movement || {}),
+    currentCarriageId: carriageId,
+  },
+});
 
 /**
  * 构建初始化运动流转聚合状态机
  */
-export function createUnifiedMovementState(
+export const createUnifiedMovementState = (
   currentCarriageId: string,
   intent?: MovementIntent
-): UnifiedMovementState {
-  return {
-    currentCarriageId,
-    intent,
-    isMoving: intent?.movementState === 'moving' || intent?.movementState === 'planning',
-  };
-}
+): UnifiedMovementState => ({
+  currentCarriageId,
+  intent,
+  isMoving: intent?.movementState === 'moving' || intent?.movementState === 'planning',
+});
 
 /**
  * 合并刷新统一运动状态
  */
-export function updateMovementState(
+export const updateMovementState = (
   movement: UnifiedMovementState,
   updates: Partial<UnifiedMovementState>
-): UnifiedMovementState {
-  return {
-    ...movement,
-    ...updates,
-  };
-}
+): UnifiedMovementState => ({
+  ...movement,
+  ...updates,
+});
 
 /**
  * 触发路径巡游意图
  */
-export function startMovement(
+export const startMovement = (
   movement: UnifiedMovementState,
   targetCarriageId: string,
   intendedActivity: ActivityStatus,
   movementPath: string[],
   estimatedDuration?: number
-): UnifiedMovementState {
+): UnifiedMovementState => {
   const intent: MovementIntent = {
     targetCarriageId,
     intendedActivity,
@@ -524,12 +508,12 @@ export function startMovement(
     intent,
     isMoving: true,
   });
-}
+};
 
 /**
  * 闭合验证巡游到达，执行状态坍缩
  */
-export function completeMovement(movement: UnifiedMovementState): UnifiedMovementState {
+export const completeMovement = (movement: UnifiedMovementState): UnifiedMovementState => {
   if (!movement.intent) {
     return movement;
   }
@@ -539,62 +523,53 @@ export function completeMovement(movement: UnifiedMovementState): UnifiedMovemen
     intent: undefined,
     isMoving: false,
   });
-}
+};
 
 /**
  * 强行剥离当前运动意图并中止流转
  */
-export function cancelMovement(movement: UnifiedMovementState): UnifiedMovementState {
-  return updateMovementState(movement, {
+export const cancelMovement = (movement: UnifiedMovementState): UnifiedMovementState =>
+  updateMovementState(movement, {
     intent: undefined,
     isMoving: false,
   });
-}
 
 // ============================================
 // 9. 时光逆流转换器（存档向后兼容层）
 // ============================================
 
-export function convertRelationshipsFromLegacy(legacy: [string, [string, Relationship][]][]): RelationshipNetworkData[] {
-  return legacy.map(([maidenId, relationships]) => ({
+export const convertRelationshipsFromLegacy = (legacy: [string, [string, Relationship][]][]): RelationshipNetworkData[] =>
+  legacy.map(([maidenId, relationships]) => ({
     maidenId,
     relationships: relationships.map(([targetId, relationship]) => ({
       targetId,
       relationship
     }))
   }));
-}
 
-export function convertRelationshipsToLegacy(data: RelationshipNetworkData[]): [string, [string, Relationship][]][] {
-  return data.map(({ maidenId, relationships }) => [
+export const convertRelationshipsToLegacy = (data: RelationshipNetworkData[]): [string, [string, Relationship][]][] =>
+  data.map(({ maidenId, relationships }) => [
     maidenId,
     relationships.map(({ targetId, relationship }) => [targetId, relationship])
   ]);
-}
 
-export function convertPregnancyFromLegacy(legacy: [string, PregnancyState][]): PregnancyData[] {
-  return legacy.map(([maidenId, pregnancyState]) => ({ maidenId, pregnancyState }));
-}
+export const convertPregnancyFromLegacy = (legacy: [string, PregnancyState][]): PregnancyData[] =>
+  legacy.map(([maidenId, pregnancyState]) => ({ maidenId, pregnancyState }));
 
-export function convertPregnancyToLegacy(data: PregnancyData[]): [string, PregnancyState][] {
-  return data.map(({ maidenId, pregnancyState }) => [maidenId, pregnancyState]);
-}
+export const convertPregnancyToLegacy = (data: PregnancyData[]): [string, PregnancyState][] =>
+  data.map(({ maidenId, pregnancyState }) => [maidenId, pregnancyState]);
 
-export function convertNarcissusFromLegacy(legacy: [string, NarcissusState][]): NarcissusData[] {
-  return legacy.map(([maidenId, narcissusState]) => ({ maidenId, narcissusState }));
-}
+export const convertNarcissusFromLegacy = (legacy: [string, NarcissusState][]): NarcissusData[] =>
+  legacy.map(([maidenId, narcissusState]) => ({ maidenId, narcissusState }));
 
-export function convertNarcissusToLegacy(data: NarcissusData[]): [string, NarcissusState][] {
-  return data.map(({ maidenId, narcissusState }) => [maidenId, narcissusState]);
-}
+export const convertNarcissusToLegacy = (data: NarcissusData[]): [string, NarcissusState][] =>
+  data.map(({ maidenId, narcissusState }) => [maidenId, narcissusState]);
 
-export function convertEventsFromLegacy(legacy: [EventType, number][]): EventTimestampData[] {
-  return legacy.map(([eventType, timestamp]) => ({ eventType, timestamp }));
-}
+export const convertEventsFromLegacy = (legacy: [EventType, number][]): EventTimestampData[] =>
+  legacy.map(([eventType, timestamp]) => ({ eventType, timestamp }));
 
-export function convertEventsToLegacy(data: EventTimestampData[]): [EventType, number][] {
-  return data.map(({ eventType, timestamp }) => [eventType, timestamp]);
-}
+export const convertEventsToLegacy = (data: EventTimestampData[]): [EventType, number][] =>
+  data.map(({ eventType, timestamp }) => [eventType, timestamp]);
 
 // ============================================
 // 10. 命运交织：关系系统边界操作
@@ -603,18 +578,18 @@ export function convertEventsToLegacy(data: EventTimestampData[]): [EventType, n
 /**
  * 构建高优实体连接寻址索引
  */
-export function buildRelationshipIndex(relationships: Relationship[]): Map<string, number> {
+export const buildRelationshipIndex = (relationships: Relationship[]): Map<string, number> => {
   const index = new Map<string, number>();
   for (let i = 0; i < relationships.length; i++) {
     index.set(relationships[i].targetId, i);
   }
   return index;
-}
+};
 
 /**
  * 单向提取关系边快照
  */
-export function getRelationship(maiden: Maiden, targetId: string): Relationship | undefined {
+export const getRelationship = (maiden: Maiden, targetId: string): Relationship | undefined => {
   if (!maiden.relationships) return undefined;
 
   if (!maiden._relationshipIndex) {
@@ -622,12 +597,12 @@ export function getRelationship(maiden: Maiden, targetId: string): Relationship 
   }
   const idx = maiden._relationshipIndex.get(targetId);
   return idx !== undefined ? maiden.relationships[idx] : undefined;
-}
+};
 
 /**
  * 并发安全的关系状态写入流（遵循深度不可变克隆原则）
  */
-export function setRelationship(maiden: Maiden, rel: Relationship): Maiden {
+export const setRelationship = (maiden: Maiden, rel: Relationship): Maiden => {
   const relationships = [...(maiden.relationships || [])];
   const index = maiden._relationshipIndex ?? buildRelationshipIndex(relationships);
   const idx = index.get(rel.targetId);
@@ -643,14 +618,13 @@ export function setRelationship(maiden: Maiden, rel: Relationship): Maiden {
     relationships,
     _relationshipIndex: buildRelationshipIndex(relationships),
   };
-}
+};
 
 /**
  * 全量输出关联投影数组隔离副本
  */
-export function getAllRelationships(maiden: Maiden): Relationship[] {
-  return [...(maiden.relationships || [])];
-}
+export const getAllRelationships = (maiden: Maiden): Relationship[] =>
+  [...(maiden.relationships || [])];
 
 // ============================================
 // 11. 人格派生（权威为 HexacoFacets）
@@ -678,34 +652,32 @@ const DOMAIN_INTERCORRELATION = 0.35;
  * 不重标准化就套用分档会让所有合成分数挤在中间档、极端档永远触发不了。
  * `meanSignedCorrelation` 即 r̄ₛ，缺完整相关矩阵时的近似。
  */
-export function restandardize(components: number[], meanSignedCorrelation: number): number {
+export const restandardize = (components: number[], meanSignedCorrelation: number): number => {
   const k = components.length;
   if (k === 0) return 0;
   const mean = components.reduce((sum, z) => sum + z, 0) / k;
   const sd = Math.sqrt((1 + (k - 1) * meanSignedCorrelation) / k);
   return sd > 0 ? mean / sd : 0;
-}
+};
 
 /** 由子维度折算六个维度分数 */
-export function deriveDomains(facets: HexacoFacets): HexacoProfile {
+export const deriveDomains = (facets: HexacoFacets): HexacoProfile => {
   const domains = {} as HexacoProfile;
   for (const key of Object.keys(DOMAIN_FACETS) as (keyof HexacoProfile)[]) {
     const values = DOMAIN_FACETS[key].map(f => facets[f]);
     domains[key] = Math.round(restandardize(values, DOMAIN_INTERCORRELATION) * 100) / 100;
   }
   return domains;
-}
+};
 
 /**
  * 把 z 线性映射到 0–1（`(z + 3) / 6`，±3σ 覆盖全量程），
  * 使下游既有的 `> 0.5` 类比较保持含义（0.5 即人群均值）。
  */
-function normalized(z: number): number {
-  return Math.max(0, Math.min(1, (z + 3) / 6));
-}
+const normalized = (z: number): number => Math.max(0, Math.min(1, (z + 3) / 6));
 
 /** 由子维度派生行为权重 */
-export function deriveBehaviorWeights(facets: HexacoFacets): BehaviorWeights {
+export const deriveBehaviorWeights = (facets: HexacoFacets): BehaviorWeights => {
   const {
     sociability, dependence, socialBoldness, fearfulness, prudence,
     anxiety, patience, sentimentality, unconventionality, liveliness,
@@ -725,7 +697,7 @@ export function deriveBehaviorWeights(facets: HexacoFacets): BehaviorWeights {
     empathy: normalized((sentimentality + gentleness) / 2),
     impulsivity: normalized((-prudence + liveliness + socialSelfEsteem) / 3),
   };
-}
+};
 
 /** 档位的中文描述，用于日志与卡片（§6.2：报告区间与不确定性，不下结论） */
 export const PERSONALITY_STATE_LABELS: Record<PersonalityState, string> = {

@@ -3,7 +3,7 @@ import { Carriage, Maiden, SystemState, MasterState, LogType, StateChange } from
 import { GAME_CONFIG, TIME_CONFIG, formatGameTime, getTimePeriod, TimePeriod } from '../../constants';
 import { maidenSystem, carriageSystem } from '../systems';
 import { audioService } from '../services';
-import { getCurrentCarriageId, setCurrentCarriageId, completeMovement } from '../../meta/utils';
+import { getCurrentCarriageId, setCurrentCarriageId, completeMovement } from '../../const';
 
 // 入参契约
 interface UseTimeLoopParams {

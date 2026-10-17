@@ -41,7 +41,6 @@ import {
     NarcissusEligibility,
     NarcissusStage,
     NarcissusState,
-    OCTANT_LABELS,
     OctantAffinity,
     OctantId,
     PersonalityDynamics,
@@ -60,7 +59,6 @@ import {
     RelationType,
     Relationship,
     RelationshipNetworkData,
-    SIGNATURE_LABELS,
     SignatureMatch,
     SignatureId,
     SituationType,
@@ -70,6 +68,10 @@ import {
     SpontaneousActionEvent,
     StateChange,
     UnifiedMovementState,
+} from '../../meta';
+import {
+    OCTANT_LABELS,
+    SIGNATURE_LABELS,
     buildRelationshipIndex,
     clamp,
     createUnifiedMovementState,
@@ -96,7 +98,7 @@ import {
     setRelationship,
     startMovement,
     weightedRandom,
-} from '../../meta';
+} from '../../const';
 import {
     ACCESSORY_COLORS,
     ACCESSORY_MATERIALS,

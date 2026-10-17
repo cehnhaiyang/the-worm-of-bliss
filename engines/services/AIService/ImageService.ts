@@ -8,7 +8,7 @@
 import { Maiden, CarriageType, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../../meta';
 import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../../constants';
 import { PersonalityView, personalityView } from '../../systems';
-import { hashCode } from '../../../meta';
+import { hashCode } from '../../../const';
 
 // ============================================
 // 配置常量

@@ -15,9 +15,8 @@ import {
   SystemState,
   AIResponse,
   LogType,
-  clamp,
-  getCurrentCarriageId
 } from '../../meta';
+import { clamp, getCurrentCarriageId } from '../../const';
 import { ABYSS_TYPES, CARRIAGE_TYPE_INFO, GAME_CONFIG } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
 import { audioService, aiService } from '../services';

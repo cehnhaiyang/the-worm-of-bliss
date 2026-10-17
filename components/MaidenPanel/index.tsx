@@ -4,7 +4,8 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Maiden, MaidenSummary, CharacterStatus, getCurrentCarriageId, RANK_ORDER } from '../../meta';
+import { Maiden, MaidenSummary, CharacterStatus, RANK_ORDER } from '../../meta';
+import { getCurrentCarriageId } from '../../const';
 import { STATUS_LABELS } from '../../constants';
 
 /**

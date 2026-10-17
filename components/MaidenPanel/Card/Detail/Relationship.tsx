@@ -4,7 +4,8 @@
 // ============================================
 
 import React, { useMemo, memo } from 'react';
-import { Maiden, RelationType, getCurrentCarriageId } from '../../../../meta';
+import { Maiden, RelationType } from '../../../../meta';
+import { getCurrentCarriageId } from '../../../../const';
 
 import { maidenSystem, personalityView } from '../../../../engines/systems';
 

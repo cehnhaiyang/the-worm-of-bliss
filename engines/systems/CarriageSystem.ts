@@ -6,12 +6,11 @@
 import {
     Carriage,
     CarriageType,
-    randomInt,
-    shuffleArray,
     SystemState,
     GameEvent,
     StateUpdaters,
 } from '../../meta';
+import { randomInt, shuffleArray } from '../../const';
 import {
     CARRIAGE_TYPE_INFO,
     ABYSS_TYPES,

@@ -9,7 +9,7 @@ import React, { useState, useEffect, memo, useRef } from 'react';
 import { Maiden, CharacterStatus, CarriageType } from '../../../meta';
 import { STATUS_LABELS, ABYSS_TYPES } from '../../../constants';
 import { aiService, maidenSystem, useGameEngine } from '../../../engines';
-import { formatPreciseAge, isAlteredMemory } from '../../../meta';
+import { formatPreciseAge, isAlteredMemory } from '../../../const';
 import { Appearance } from './Appearance';
 import { Attire } from './Attire';
 import { Attribute } from './Attribute';
