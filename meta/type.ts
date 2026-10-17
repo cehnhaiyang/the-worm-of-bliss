@@ -168,75 +168,28 @@ export type MovementState =
 // ============================================================================
 
 /**
- * 列车车厢分区拓扑节点
+ * 车厢可声明的功能。
+ *
+ * 这是本模型里唯一保持**封闭**的集合：车厢的种类由数据（`CARRIAGE_TEMPLATES`）
+ * 列举，可以随时增删；而功能是行为引擎真正依赖的稳定词表。引擎只查询功能，
+ * 不认识任何具体车厢，因此新增车厢不需要改动 meta、引擎或 UI。
+ *
+ * 分两类：
+ * - **行为许可**：对应一项少女能在此执行的活动，决定需求系统能否把车厢作为目的地；
+ * - **语义角色**：不产生活动，仅作为行为决策的目的地标签（例如"想独处反省"→ `memory`）。
  */
-export type CarriageType =
-  // ========== 圣所 (Sanctuary) ==========
-  // 社会性剥离
-  | 'POOLS'                    // 月光浴池
-  | 'ATRIUM'                   // 中庭
-  | 'VEIL'                     // 薄纱车厢
-  | 'DORMITORY'                // 无门寝殿
-  | 'BANQUET'                  // 共感餐桌
-  // 个体性瓦解
-  | 'CONFESSIONAL'             // 忏情室
-  | 'ARCHIVE'                  // 回声档案馆
-  | 'MUSE_THEATRE'             // 苦痛缪斯剧场
-  | 'BABEL_FOUNDRY'            // 巴别重铸室
-  | 'MARIONETTE_ATELIER'       // 木偶工坊
-  // 价值观重塑
-  | 'SCALES_CONSERVATORY'      // 天秤温室
-  | 'GARDEN'                   // 永绽花园
-  | 'LOOM_OF_ATONEMENT'        // 赎罪织机
-  | 'AUCTION_OF_GRACE'         // 恩宠拍卖行
-  // 循环
-  | 'NURSERY'                  // 育婴室
-  | 'ALTAR'                    // 祭坛
-  | 'CAULDRON'                 // 熔炉
-  | 'RELIQUARY_OF_MOLTING'     // 蜕壳陈列馆
-  // ========== 深渊 (Abyss) ==========
-  // 层级一：感官与逻辑扭曲
-  | 'SILENT_SALON'             // 静默雅集
-  | 'ORACLE_WHISPER'           // 神谕之声
-  | 'NEGATIVE_GALLERY'         // 负空间画廊
-  | 'ESCHER_STAIRS'            // 埃舍尔阶梯
-  | 'SUBMERGED_OPERA'          // 溺水歌剧院
-  | 'BRAILLE_CORRIDOR'         // 盲文回廊
-  | 'INVERTED_COURTYARD'       // 倒悬庭院
-  // 层级二：时空与存在悖论
-  | 'MIRROR_HALL'              // 异变映厅
-  | 'TIME_INFIRMARY'           // 时滞病房
-  | 'DISSOLUTION_CHAMBER'      // 自我消融室
-  | 'QUANTUM_AMPHITHEATRE'     // 叠加态解剖室
-  | 'RETROGRADE_TEA_PARTY'     // 逆果茶会
-  | 'STATION_OF_UNBIRTH'       // 未生之站
-  // 层级三：宇宙级虚无与终极恐怖
-  | 'FLESH_HIVE'               // 血肉巢穴
-  | 'INVERTED_TREE'            // 倒生之树
-  | 'SYMBIOTIC_GALLERY'        // 共生回廊
-  | 'VOID_WINDOW'              // 利维坦之窗
-  | 'ENTROPY_CLOCK'            // 零熵之钟
-  | 'NON_EUCLIDEAN_SHRINE'     // 非欧几里得神龛
-  | 'LIBRARY_OF_PERMUTATIONS'  // 穷举图书馆
-  | 'NEBULA_WOMB';             // 星云母体
-
-/** 圣所车厢子集 */
-export type SanctuaryCarriageType = Extract<CarriageType,
-  | 'POOLS' | 'ATRIUM' | 'VEIL' | 'DORMITORY' | 'BANQUET'
-  | 'CONFESSIONAL' | 'ARCHIVE' | 'MUSE_THEATRE' | 'BABEL_FOUNDRY' | 'MARIONETTE_ATELIER'
-  | 'SCALES_CONSERVATORY' | 'GARDEN' | 'LOOM_OF_ATONEMENT' | 'AUCTION_OF_GRACE'
-  | 'NURSERY' | 'ALTAR' | 'CAULDRON' | 'RELIQUARY_OF_MOLTING'
->;
-
-/** 深渊车厢子集 */
-export type AbyssCarriageType = Extract<CarriageType,
-  | 'SILENT_SALON' | 'ORACLE_WHISPER' | 'NEGATIVE_GALLERY' | 'ESCHER_STAIRS'
-  | 'SUBMERGED_OPERA' | 'BRAILLE_CORRIDOR' | 'INVERTED_COURTYARD'
-  | 'MIRROR_HALL' | 'TIME_INFIRMARY' | 'DISSOLUTION_CHAMBER'
-  | 'QUANTUM_AMPHITHEATRE' | 'RETROGRADE_TEA_PARTY' | 'STATION_OF_UNBIRTH'
-  | 'FLESH_HIVE' | 'INVERTED_TREE' | 'SYMBIOTIC_GALLERY' | 'VOID_WINDOW' | 'ENTROPY_CLOCK'
-  | 'NON_EUCLIDEAN_SHRINE' | 'LIBRARY_OF_PERMUTATIONS' | 'NEBULA_WOMB'
->;
+export type CarriageFunction =
+  // 行为许可
+  | 'sleep'      // 睡眠
+  | 'eat'        // 进食
+  | 'bathe'      // 沐浴
+  | 'pray'       // 祈祷/忏悔
+  | 'socialize'  // 社交
+  // 语义角色
+  | 'rest'       // 疗愈休憩：能恢复理智、消解压力
+  | 'leisure'    // 消遣享受：感官刺激丰富，适合高开放度者
+  | 'memory'     // 记忆与过去：重塑或否定个人历史
+  | 'ritual';    // 仪式献祭：神恩与献祭的发生地
 
 /**
  * 全局透视观测模式

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
-import { Maiden, MaidenView, CharacterStatus, CarriageType } from '../../../meta';
-import { STATUS_LABELS, ABYSS_TYPES } from '../../../constants';
+import { Maiden, MaidenView, CharacterStatus } from '../../../meta';
+import { STATUS_LABELS, isAbyssTemplate } from '../../../constants';
 import { aiService } from '../../../engines';
 import { formatPreciseAge } from '../../../const';
 import { Appearance } from './Appearance';
@@ -14,7 +14,7 @@ interface MaidenCardProps {
     view: MaidenView | undefined;
     /** 会话已推进的游戏时间，用于精确年龄 */
     gameTimePassed: number;
-    carriageType?: CarriageType;
+    carriageTemplateId?: string;
     onClose?: () => void;
     onOpenMemory?: () => void;
     onOpenPregnancy?: () => void;
@@ -75,7 +75,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
     maiden,
     view,
     gameTimePassed,
-    carriageType,
+    carriageTemplateId,
     onClose,
     onOpenMemory,
     onOpenPregnancy,
@@ -93,7 +93,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
     const lastRequestedHashRef = useRef<string>('');
     const mountedRef = useRef(true);
 
-    const isInAbyss = carriageType ? ABYSS_TYPES.includes(carriageType) : false;
+    const isInAbyss = carriageTemplateId ? isAbyssTemplate(carriageTemplateId) : false;
 
     useEffect(() => {
         return () => { mountedRef.current = false; };
@@ -111,7 +111,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
         }
 
         // 计算当前视觉状态的哈希值 (包含 ID、服装、关键状态、理智区间等)
-        const currentHash = aiService.getPortraitHash(maiden, carriageType);
+        const currentHash = aiService.getPortraitHash(maiden, carriageTemplateId);
 
         // 只按"视觉状态是否变化"决定要不要请求。上一次请求失败不构成重发理由：
         // 之前把 loadError 也放进这个判断里，于是失败后每个 tick 都重发一次，
@@ -122,7 +122,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
         setLoading(true);
         setLoadError(false);
 
-        const { url, model } = aiService.generateCharacterImage(maiden, carriageType);
+        const { url, model } = aiService.generateCharacterImage(maiden, carriageTemplateId);
 
         // 预加载图片：生成接口只拼 URL，真正的加载与失败判定都在这里
         const img = new Image();
@@ -142,7 +142,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
             console.error("Image load failed for URL:", url);
         };
 
-    }, [maiden, carriageType, retryNonce]); // 依赖项保持宽泛，由内部哈希比对进行节流
+    }, [maiden, carriageTemplateId, retryNonce]); // 依赖项保持宽泛，由内部哈希比对进行节流
 
     /** 重试：作废上次请求记录并重跑 effect，加载逻辑只此一份 */
     const handleRetry = () => {

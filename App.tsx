@@ -12,7 +12,7 @@ import { MaidenList } from './components/MaidenPanel';
 import { CarriagePanel } from './components/CarriagePanel';
 import { SplashScreen } from './components';
 import { Memory, Pregnancy, Relationship, MaidenCard } from './components/MaidenPanel/Card';
-import { ABYSS_TYPES, CARRIAGE_TYPE_INFO } from './constants';
+import { getCarriageTemplate } from './constants';
 
 // ============================================
 // 主组件
@@ -81,8 +81,8 @@ export default function App() {
 
     // 当前车厢
     const currentCarriage = getCurrentCarriage();
-    const isInAbyss = currentCarriage ? ABYSS_TYPES.includes(currentCarriage.type) : false;
-    const carriageInfo = currentCarriage ? CARRIAGE_TYPE_INFO.find(info => info.type === currentCarriage.type) : null;
+    const isInAbyss = currentCarriage?.category === 'abyss';
+    const carriageInfo = currentCarriage ? getCarriageTemplate(currentCarriage.templateId) : null;
 
     // 聚焦的少女
     const focusedMaiden = getFocusedMaiden();
@@ -170,7 +170,7 @@ export default function App() {
                                 maiden={focusedMaiden}
                                 view={focusedView}
                                 gameTimePassed={systemState.gameTimePassed}
-                                carriageType={currentCarriage?.type}
+                                carriageTemplateId={currentCarriage?.templateId}
                                 onClose={handleClearFocus}
                                 onOpenMemory={() => setShowMemory(true)}
                                 onOpenPregnancy={() => setShowPregnancy(true)}

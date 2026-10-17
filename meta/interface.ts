@@ -1,9 +1,9 @@
 import {
   AttireState, DressLevel, CharacterRank, CharacterStatus, ActivityStatus,
-  MoodState, CarriageType, MemoryCategory, PregnancyStage, RelationType,
+  MoodState, CarriageFunction, MemoryCategory, PregnancyStage, RelationType,
   NarcissusStage, EventType, SoundCategory, GraceType, ChangeType, LogType,
   NameOrigin, SocialInteractionType, PersonalityState, SpontaneousAction,
-  MovementState, CupSize,
+  MovementState, CupSize, SituationType,
 } from './type';
 
 // ============================================================================
@@ -736,7 +736,8 @@ export type CarriageCategory = 'sanctuary' | 'abyss';
 export interface Carriage {
   id: string;
   position: CarriagePosition;
-  type: CarriageType;
+  /** 指向 `CARRIAGE_TEMPLATES` 的模板 id；车厢种类是开放集合，不设封闭联合类型 */
+  templateId: string;
   name: string;
   category: CarriageCategory;  // 替代原 isAbyss boolean，语义更明确
   occupants: string[];
@@ -746,16 +747,36 @@ export interface Carriage {
 }
 
 /**
- * 车厢静态类型元数据
+ * 车厢模板：一种车厢的完整静态定义。
+ *
+ * 这是"新增车厢只改常量文件"的全部依据——行为许可、语义角色、情境参数、可达性、
+ * 图标、展示素材都声明在这里，引擎与 UI 只读不硬编码。代价是模板之间通过 string id
+ * 互相引用，漏声明字段不再有编译期报错，因此由 `validateCarriageTemplates()` 在
+ * 开发期兜底。
  */
-export interface CarriageTypeInfo {
-  type: CarriageType;
+export interface CarriageTemplate {
+  id: string;
   name: string;
   nameCN: string;
   category: CarriageCategory;
+  /** 展示分组；同时是地图配色的分组键，因此它是承重字段而非纯标签 */
   subcategory: string;
   description: string;
-  functions: string[];
+  /** 可执行功能；空数组表示不能用于任何日常活动（全部深渊车厢都是如此） */
+  function: CarriageFunction[];
+  /** 展示用的环境效应短标签，供详情面板与 AI 提示词消费 */
+  features: string[];
+  /** 地图格子与悬浮卡上的单字标识 */
+  icon: string;
+  /** 是否可进入；未声明即视为可进入（只有熔炉声明 false） */
+  accessible?: boolean;
+  /** 舒适度 [0,1]，越低则持续停留累积的压力越多 */
+  comfortLevel: number;
+  /** 该车厢映射到的情境类型与情境强度 ς ∈ [0,1]（过程平面 P1/P2 的输入） */
+  situation: SituationType;
+  situationStrength: number;
+  /** 进入时强制覆写的着装状态；未声明则沿用当前污损状态 */
+  clothingState?: AttireState;
   visualTheme: string;
   ambientSound: string;
   /** 每周期属性影响偏移量 */
@@ -764,18 +785,6 @@ export interface CarriageTypeInfo {
     lust: number;
     stress: number;
   };
-}
-
-/**
- * 车厢交互功能许可与效能配置
- */
-export interface CarriageFunction {
-  canSleep: boolean;
-  canEat: boolean;
-  canBathe: boolean;
-  canPray: boolean;
-  canSocialize: boolean;
-  comfortLevel: number;
 }
 
 // ============================================================================

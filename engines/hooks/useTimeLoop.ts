@@ -229,7 +229,7 @@ export const useTimeLoop = ({
       {
         const currentCarriageAfterMove = nextCarriages.get(getCurrentCarriageId(updatedMaiden));
         if (currentCarriageAfterMove) {
-          const derivedClothing = maidenSystem.clothing.deriveClothing(updatedMaiden, currentCarriageAfterMove.type);
+          const derivedClothing = maidenSystem.clothing.deriveClothing(updatedMaiden, currentCarriageAfterMove.templateId);
           if (derivedClothing) {
             updatedMaiden = { ...updatedMaiden, clothing: derivedClothing };
           }

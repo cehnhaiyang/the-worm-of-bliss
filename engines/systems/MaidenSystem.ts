@@ -7,7 +7,7 @@ import {
     BehaviorState,
     BehaviorWeights,
     Carriage,
-    CarriageType,
+    CarriageFunction,
     ChainRejection,
     CharacterAttributes,
     CharacterRank,
@@ -75,7 +75,6 @@ import {
     deriveDomains,
     DOMAIN_FACETS,
     findNearestCarriageByFunction,
-    findNearestCarriageByType,
     formatPreciseAge,
     generateId,
     getAllRelationships,
@@ -95,6 +94,7 @@ import {
     weightedRandom,
 } from '../../const';
 import {
+    ABYSS_TIERS,
     ACCESSORY_COLORS,
     ACCESSORY_MATERIALS,
     ACCESSORY_TYPES,
@@ -109,8 +109,6 @@ import {
     BRA_COLORS,
     BRA_MATERIALS,
     BRA_TYPES,
-    CARRIAGE_FUNCTIONS,
-    CARRIAGE_TYPE_INFO,
     CHANGE_THRESHOLDS,
     COPING_MECHANISMS,
     DISLIKES,
@@ -120,6 +118,7 @@ import {
     FACIAL_FEATURES,
     FETISHES,
     GAME_CONFIG,
+    getCarriageTemplate,
     GLOVE_COLORS,
     GLOVE_MATERIALS,
     GLOVE_TYPES,
@@ -1138,7 +1137,7 @@ class MaidenSocialization {
         const attrs = maiden.attributes;
         const tAttrs = target.attributes;
 
-        if (carriage.type === 'ALTAR' || carriage.type === 'CONFESSIONAL') {
+        if (carriageHasFunction(carriage, 'pray')) {
             if (mView.weights.devotionTendency > 0.5 || tView.weights.devotionTendency > 0.5) {
                 return 'pray';
             }
@@ -3238,100 +3237,25 @@ const MOOD_BEHAVIOR_MODIFIERS: Record<MoodState, {
     'numb': { socialChance: 0.2, moveChance: 0.3, restPreference: 1.0 },
 };
 
-/** 车厢类型到情境类型的映射 */
-const CARRIAGE_SITUATION_MAP: Record<CarriageType, SituationType> = {    // 圣所
-    'POOLS': 'intimate',
-    'ATRIUM': 'opportunity',
-    'VEIL': 'intimate',
-    'CONFESSIONAL': 'task',
-    'ARCHIVE': 'ambiguous',
-    'MUSE_THEATRE': 'competition',
-    'SCALES_CONSERVATORY': 'competition',
-    'GARDEN': 'opportunity',
-    'NURSERY': 'intimate',
-    'ALTAR': 'task',
-    'CAULDRON': 'threat',
-    'DORMITORY': 'intimate',
-    'BANQUET': 'task',
-    'BABEL_FOUNDRY': 'task',
-    'MARIONETTE_ATELIER': 'task',
-    'LOOM_OF_ATONEMENT': 'task',
-    'AUCTION_OF_GRACE': 'competition',
-    'RELIQUARY_OF_MOLTING': 'ambiguous',
-    // 深渊
-    'SILENT_SALON': 'ambiguous',
-    'ORACLE_WHISPER': 'ambiguous',
-    'NEGATIVE_GALLERY': 'ambiguous',
-    'ESCHER_STAIRS': 'threat',
-    'MIRROR_HALL': 'threat',
-    'TIME_INFIRMARY': 'threat',
-    'DISSOLUTION_CHAMBER': 'threat',
-    'FLESH_HIVE': 'threat',
-    'INVERTED_TREE': 'threat',
-    'SYMBIOTIC_GALLERY': 'threat',
-    'VOID_WINDOW': 'threat',
-    'ENTROPY_CLOCK': 'threat',
-    'SUBMERGED_OPERA': 'threat',
-    'BRAILLE_CORRIDOR': 'ambiguous',
-    'INVERTED_COURTYARD': 'threat',
-    'QUANTUM_AMPHITHEATRE': 'threat',
-    'RETROGRADE_TEA_PARTY': 'threat',
-    'STATION_OF_UNBIRTH': 'threat',
-    'NON_EUCLIDEAN_SHRINE': 'threat',
-    'LIBRARY_OF_PERMUTATIONS': 'threat',
-    'NEBULA_WOMB': 'threat',
-};
+/**
+ * 车厢 id → 该车厢具备的功能。
+ *
+ * 情境类型与情境强度都随模板声明（见 `CARRIAGE_TEMPLATES`），引擎不再维护
+ * "车厢 → 情境/强度"的第二份清单，因此新增车厢不需要改本文件。
+ */
+const templateFunctions = (carriage: Carriage): readonly CarriageFunction[] =>
+    getCarriageTemplate(carriage.templateId)?.function ?? [];
+
+/** 该车厢是否具备某项功能 */
+const carriageHasFunction = (carriage: Carriage, fn: CarriageFunction): boolean =>
+    templateFunctions(carriage).includes(fn);
 
 /**
- * 车厢类型到情境强度的映射 ς ∈ [0,1]（§4.1 参考值）。
+ * 深渊层级一（"入门"层）的车厢 id。
  *
- * 强度高表示规范清晰、后果严重、被问责、行动受限——个体差异被压缩；
- * 强度低则状态由特质主导。这与"车厢越危险越强"不是一回事：深渊车厢的规范
- * 恰恰是最模糊的，真正的强情境是祭坛与被监督的公共空间。
+ * 由层级表派生而不是就地写死列表：新增入门层车厢时只需改常量文件。
  */
-const SITUATION_STRENGTH: Record<CarriageType, number> = {
-    // 圣所：公共、有明确规约
-    'ALTAR': 0.65,
-    'CONFESSIONAL': 0.6,
-    'MUSE_THEATRE': 0.6,
-    'SCALES_CONSERVATORY': 0.55,
-    'NURSERY': 0.45,
-    'POOLS': 0.3,
-    'VEIL': 0.3,
-    'ATRIUM': 0.25,
-    'GARDEN': 0.2,
-    'ARCHIVE': 0.2,
-    'DORMITORY': 0.2,
-    'BANQUET': 0.6,
-    'BABEL_FOUNDRY': 0.6,
-    'MARIONETTE_ATELIER': 0.65,
-    'LOOM_OF_ATONEMENT': 0.5,
-    'AUCTION_OF_GRACE': 0.55,
-    'RELIQUARY_OF_MOLTING': 0.45,
-    // 深渊：规范失效，但后果严重——取中等强度
-    'CAULDRON': 0.7,
-    'ESCHER_STAIRS': 0.6,
-    'MIRROR_HALL': 0.6,
-    'TIME_INFIRMARY': 0.65,
-    'DISSOLUTION_CHAMBER': 0.7,
-    'FLESH_HIVE': 0.65,
-    'INVERTED_TREE': 0.6,
-    'SYMBIOTIC_GALLERY': 0.55,
-    'VOID_WINDOW': 0.75,
-    'ENTROPY_CLOCK': 0.7,
-    'SILENT_SALON': 0.4,
-    'ORACLE_WHISPER': 0.45,
-    'NEGATIVE_GALLERY': 0.35,
-    'SUBMERGED_OPERA': 0.55,
-    'BRAILLE_CORRIDOR': 0.45,
-    'INVERTED_COURTYARD': 0.5,
-    'QUANTUM_AMPHITHEATRE': 0.65,
-    'RETROGRADE_TEA_PARTY': 0.6,
-    'STATION_OF_UNBIRTH': 0.5,
-    'NON_EUCLIDEAN_SHRINE': 0.7,
-    'LIBRARY_OF_PERMUTATIONS': 0.6,
-    'NEBULA_WOMB': 0.55,
-};
+const TIER1_ABYSS_IDS = ABYSS_TIERS.find(t => t.tier === 1)?.templateIds ?? [];
 
 /** 各活动提供的恢复性生态位可及度 N ∈ [0,1]（§4.2），未列出的活动取低位 */
 const RESTORATIVE_ACCESS: Partial<Record<ActivityStatus, number>> = {
@@ -3366,15 +3290,15 @@ class MaidenBehavior {
         maiden: Maiden,
         gameTime: number,
         currentCarriage?: Carriage
-    ): { need: string; urgency: number; activity: ActivityStatus; targetType: CarriageType }[] {
+    ): { need: string; urgency: number; activity: ActivityStatus; targetFunction: CarriageFunction }[] {
         const { attributes: a, physiology } = maiden;
         const view = personalityView(maiden);
         const weights = view.weights;
         const facets = maiden.isshex.facets;
         const domains = view.domains;
-        const needs: { need: string; urgency: number; activity: ActivityStatus; targetType: CarriageType }[] = [];
+        const needs: { need: string; urgency: number; activity: ActivityStatus; targetFunction: CarriageFunction }[] = [];
 
-        const situation: SituationType = currentCarriage ? CARRIAGE_SITUATION_MAP[currentCarriage.type] : 'ambiguous';
+        const situation: SituationType = (currentCarriage && getCarriageTemplate(currentCarriage.templateId)?.situation) ?? 'ambiguous';
         const traitMod = this.getTraitActivationMultiplier(situation);
 
         // 疲劳需求 - 睡眠
@@ -3386,14 +3310,14 @@ class MaidenBehavior {
             if (situation === 'task') urgency *= (0.8 / traitMod);
             if (situation === 'threat') urgency *= (1.2 * traitMod);
 
-            needs.push({ need: 'sleep', urgency, activity: 'sleeping', targetType: 'ATRIUM' });
+            needs.push({ need: 'sleep', urgency, activity: 'sleeping', targetFunction: 'sleep' });
         }
 
         // 饥饿需求 - 进食
         if (a.hunger > NEED_THRESHOLDS.LOW) {
             let urgency = a.hunger;
             if (a.hunger > NEED_THRESHOLDS.CRITICAL) urgency += 50;
-            needs.push({ need: 'eat', urgency, activity: 'eating', targetType: 'ATRIUM' });
+            needs.push({ need: 'eat', urgency, activity: 'eating', targetFunction: 'eat' });
         }
 
         // 清洁需求 - 沐浴
@@ -3405,7 +3329,7 @@ class MaidenBehavior {
 
             if (situation === 'intimate') urgency *= 1.3;
 
-            needs.push({ need: 'bathe', urgency, activity: 'bathing', targetType: 'POOLS' });
+            needs.push({ need: 'bathe', urgency, activity: 'bathing', targetFunction: 'bathe' });
         }
 
         // 压力需求 - 休憩/祈祷
@@ -3416,11 +3340,11 @@ class MaidenBehavior {
             if (situation === 'competition') urgency *= 1.2;
 
             if (weights.devotionTendency > 0.5) {
-                needs.push({ need: 'pray', urgency: urgency * 1.5, activity: 'confessing', targetType: 'ALTAR' });
+                needs.push({ need: 'pray', urgency: urgency * 1.5, activity: 'confessing', targetFunction: 'ritual' });
             } else if (facets.fearfulness > 1.0 && domains.X < -0.5) {
-                needs.push({ need: 'hide', urgency: urgency * 1.2, activity: 'wandering', targetType: 'GARDEN' });
+                needs.push({ need: 'hide', urgency: urgency * 1.2, activity: 'wandering', targetFunction: 'rest' });
             } else {
-                needs.push({ need: 'relax', urgency, activity: 'wandering', targetType: 'GARDEN' });
+                needs.push({ need: 'relax', urgency, activity: 'wandering', targetFunction: 'rest' });
             }
         }
 
@@ -3429,11 +3353,11 @@ class MaidenBehavior {
             let urgency = a.lust * weights.lustSensitivity;
 
             if (domains.O > 1.0 && facets.prudence < -1.0) {
-                needs.push({ need: 'indulge', urgency: urgency * 1.5, activity: 'wandering', targetType: 'VEIL' });
+                needs.push({ need: 'indulge', urgency: urgency * 1.5, activity: 'wandering', targetFunction: 'leisure' });
             } else if (domains.H > 1.0) {
-                needs.push({ need: 'confess', urgency: urgency * 1.2, activity: 'confessing', targetType: 'CONFESSIONAL' });
+                needs.push({ need: 'confess', urgency: urgency * 1.2, activity: 'confessing', targetFunction: 'pray' });
             } else if (domains.A < -1.0 && domains.H < -1.0) {
-                needs.push({ need: 'submit', urgency, activity: 'wandering', targetType: 'VEIL' });
+                needs.push({ need: 'submit', urgency, activity: 'wandering', targetFunction: 'leisure' });
             }
         }
 
@@ -3447,24 +3371,24 @@ class MaidenBehavior {
         if (situation === 'intimate') socialNeed *= 1.1;
 
         if (socialNeed > 20) {
-            needs.push({ need: 'socialize', urgency: socialNeed, activity: 'chatting', targetType: 'ATRIUM' });
+            needs.push({ need: 'socialize', urgency: socialNeed, activity: 'chatting', targetFunction: 'socialize' });
         }
 
         // 独处需求
         const solitudeNeed = weights.solitudeSeek * 60;
         if (solitudeNeed > 25 && a.stress > 40) {
-            needs.push({ need: 'solitude', urgency: solitudeNeed, activity: 'wandering', targetType: 'ARCHIVE' });
+            needs.push({ need: 'solitude', urgency: solitudeNeed, activity: 'wandering', targetFunction: 'memory' });
         }
 
         // 虔诚需求
         if (weights.devotionTendency > 0.6 && a.devotion > 30) {
-            needs.push({ need: 'worship', urgency: a.devotion * 0.8, activity: 'confessing', targetType: 'ALTAR' });
+            needs.push({ need: 'worship', urgency: a.devotion * 0.8, activity: 'confessing', targetFunction: 'ritual' });
         }
 
         // 怀孕特殊需求
         if (physiology.pregnancy && physiology.pregnancy.stage !== 'none') {
             const pregnancyFatigue = physiology.pregnancy.weekNumber * 2;
-            needs.push({ need: 'rest', urgency: 50 + pregnancyFatigue, activity: 'sleeping', targetType: 'NURSERY' });
+            needs.push({ need: 'rest', urgency: 50 + pregnancyFatigue, activity: 'sleeping', targetFunction: 'sleep' });
         }
 
         return needs.sort((a, b) => b.urgency - a.urgency);
@@ -3501,8 +3425,8 @@ class MaidenBehavior {
 
         const needs = this.calculateNeedPriorities(maiden, gameTimePassed, currentCarriage);
         const isNight = isRestTime(gameTimePassed);
-        const carriageFunc = CARRIAGE_FUNCTIONS[currentCarriage.type];
-        const situation = CARRIAGE_SITUATION_MAP[currentCarriage.type];
+        const carriageFunctions = templateFunctions(currentCarriage);
+        const situation: SituationType = getCarriageTemplate(currentCarriage.templateId)?.situation ?? 'ambiguous';
 
         // 威胁应激与状态崩溃校验：极端偏离个人基线时进入惊恐
         if (attrs.sanity < 20 ||
@@ -3521,7 +3445,7 @@ class MaidenBehavior {
 
         // 周期性夜间强制休眠指令
         if (isNight && attrs.fatigue > 40) {
-            if (carriageFunc.canSleep) {
+            if (carriageFunctions.includes('sleep')) {
                 return {
                     behavior: this.createActivityBehavior(
                         'sleeping',
@@ -3531,7 +3455,7 @@ class MaidenBehavior {
                     )
                 };
             }
-            const sleepCarriageId = findNearestCarriageByFunction(currentCarriage, allCarriages, 'canSleep');
+            const sleepCarriageId = findNearestCarriageByFunction(currentCarriage, allCarriages, 'sleep');
             if (sleepCarriageId) {
                 return this.executeMovement(maiden, sleepCarriageId, 'sleeping', allCarriages, gameTimePassed);
             }
@@ -3552,10 +3476,10 @@ class MaidenBehavior {
                 };
             }
 
-            const targetCarriageId = findNearestCarriageByType(
+            const targetCarriageId = findNearestCarriageByFunction(
                 currentCarriage,
                 allCarriages,
-                topNeed.targetType
+                topNeed.targetFunction
             );
 
             if (targetCarriageId && targetCarriageId !== currentCarriage.id) {
@@ -3641,7 +3565,7 @@ class MaidenBehavior {
             return { behavior: this.createActivityBehavior('wandering', 10, behavior, gameTimePassed) };
         }
         else if (weights.devotionTendency > 0.6) {
-            const altar = findNearestCarriageByType(currentCarriage, allCarriages, 'ALTAR');
+            const altar = findNearestCarriageByFunction(currentCarriage, allCarriages, 'ritual');
             if (altar) return this.executeMovement(maiden, altar, 'confessing', allCarriages, gameTimePassed);
         }
         else if (view.domains.X > 0 && facets.fearfulness < 0) {
@@ -3653,7 +3577,7 @@ class MaidenBehavior {
             }
         }
 
-        const garden = findNearestCarriageByType(currentCarriage, allCarriages, 'GARDEN');
+        const garden = findNearestCarriageByFunction(currentCarriage, allCarriages, 'rest');
         if (garden) {
             return this.executeMovement(maiden, garden, 'wandering', allCarriages, gameTimePassed);
         }
@@ -3677,21 +3601,19 @@ class MaidenBehavior {
         const rand = Math.random();
 
         if (weights.devotionTendency > 0.6 && rand < 0.4) {
-            const altar = findNearestCarriageByType(currentCarriage, allCarriages, 'ALTAR');
+            const altar = findNearestCarriageByFunction(currentCarriage, allCarriages, 'ritual');
             if (altar && altar !== currentCarriage.id) {
                 return this.executeMovement(maiden, altar, 'confessing', allCarriages, gameTimePassed);
             }
         }
         else if (domains.O > 1.0 && facets.liveliness > 0.5 && rand < 0.4) {
-            const targets: CarriageType[] = ['POOLS', 'VEIL', 'ATRIUM'];
-            const targetType = targets[Math.floor(Math.random() * targets.length)];
-            const carriage = findNearestCarriageByType(currentCarriage, allCarriages, targetType);
+            const carriage = findNearestCarriageByFunction(currentCarriage, allCarriages, 'leisure');
             if (carriage && carriage !== currentCarriage.id) {
                 return this.executeMovement(maiden, carriage, 'wandering', allCarriages, gameTimePassed);
             }
         }
         else if (domains.X < -0.5 && facets.inquisitiveness > 0.5 && rand < 0.3) {
-            const archive = findNearestCarriageByType(currentCarriage, allCarriages, 'ARCHIVE');
+            const archive = findNearestCarriageByFunction(currentCarriage, allCarriages, 'memory');
             if (archive && archive !== currentCarriage.id) {
                 return this.executeMovement(maiden, archive, 'wandering', allCarriages, gameTimePassed);
             }
@@ -3714,9 +3636,7 @@ class MaidenBehavior {
             return { behavior: this.createActivityBehavior('chatting', 20, behavior, gameTimePassed) };
         }
 
-        const safeTypes: CarriageType[] = ['ATRIUM', 'GARDEN', 'POOLS'];
-        const targetType = safeTypes[Math.floor(Math.random() * safeTypes.length)];
-        const target = findNearestCarriageByType(currentCarriage, allCarriages, targetType);
+        const target = findNearestCarriageByFunction(currentCarriage, allCarriages, 'rest');
 
         const moveChance = 0.3 * moodMod.moveChance;
         if (target && target !== currentCarriage.id && Math.random() < moveChance) {
@@ -3824,14 +3744,13 @@ class MaidenBehavior {
     }
 
     private canSatisfyNeed(carriage: Carriage, need: string): boolean {
-        const func = CARRIAGE_FUNCTIONS[carriage.type];
         switch (need) {
-            case 'sleep': case 'rest': return func.canSleep;
-            case 'eat': return func.canEat;
-            case 'bathe': return func.canBathe;
-            case 'pray': case 'worship': case 'confess': return func.canPray;
-            case 'socialize': return func.canSocialize && carriage.category !== 'abyss';
-            case 'solitude': return !func.canSocialize || carriage.occupants.length <= 1;
+            case 'sleep': case 'rest': return carriageHasFunction(carriage, 'sleep');
+            case 'eat': return carriageHasFunction(carriage, 'eat');
+            case 'bathe': return carriageHasFunction(carriage, 'bathe');
+            case 'pray': case 'worship': case 'confess': return carriageHasFunction(carriage, 'pray');
+            case 'socialize': return carriageHasFunction(carriage, 'socialize') && carriage.category !== 'abyss';
+            case 'solitude': return !carriageHasFunction(carriage, 'socialize') || carriage.occupants.length <= 1;
             default: return true;
         }
     }
@@ -3851,14 +3770,8 @@ class MaidenBehavior {
     }
 
     private findSafeAbyssCarriage(allCarriages: Map<string, Carriage>): string | null {
-        const tier1Abyss = [
-            'SILENT_SALON',
-            'ORACLE_WHISPER',
-            'NEGATIVE_GALLERY',
-        ];
-
         for (const [id, c] of allCarriages) {
-            if (c.isAccessible && tier1Abyss.includes(c.type)) {
+            if (c.isAccessible && TIER1_ABYSS_IDS.includes(c.templateId)) {
                 return id;
             }
         }
@@ -4385,13 +4298,6 @@ const DROP_CARRYABLES_ACTIVITIES: CharacterStatus[] = [
     'performing',
 ];
 
-/** 车厢类型对服装状态的影响 */
-const CARRIAGE_CLOTHING_EFFECTS: Partial<Record<CarriageType, Partial<ClothingState>>> = {
-    'POOLS': {
-        state: 'wet' as AttireState,
-    },
-};
-
 /**
  * 比较两份着装是否等值（按层与饰品逐项）。
  * 用于让换装成为幂等操作：无变化时返回 null，避免每 tick 都产生新的 clothing 引用，
@@ -4437,7 +4343,7 @@ class MaidenClothing {
      * - 饰品按活动过滤：沐浴仅保留束缚类，其余活动只放下携带物
      * - `state`（破损/湿透等）与着装结构解耦，换装时保留现状，仅由车厢效果覆写
      */
-    deriveClothing(maiden: Maiden, carriageType: CarriageType): ClothingState | null {
+    deriveClothing(maiden: Maiden, templateId: string): ClothingState | null {
         const currentClothing = maiden.clothing;
         const activity = maiden.behavior.currentActivity;
         const activityClothing = ACTIVITY_CLOTHING_MAP[activity];
@@ -4460,8 +4366,8 @@ class MaidenClothing {
                 dressLevel: 'fully_dressed',
             };
 
-        const carriageEffect = CARRIAGE_CLOTHING_EFFECTS[carriageType];
-        if (carriageEffect?.state) target.state = carriageEffect.state;
+        const clothingState = getCarriageTemplate(templateId)?.clothingState;
+        if (clothingState) target.state = clothingState;
 
         target.dressLevel = calculateDressLevel(target);
 
@@ -5193,16 +5099,16 @@ class MaidenSystem {
     ): Maiden {
         const deltaSeconds = gameDeltaMs / 1000;
         const deltaMinutes = deltaSeconds / 60;
-        const typeInfo = CARRIAGE_TYPE_INFO.find(info => info.type === carriage.type);
-        if (!typeInfo) {
-            throw new Error(`Unknown carriage type: ${carriage.type}`);
+        const template = getCarriageTemplate(carriage.templateId);
+        if (!template) {
+            throw new Error(`Unknown carriage template: ${carriage.templateId}`);
         }
         const { RATES, THRESHOLDS } = GAME_CONFIG;
         const view = personalityView(maiden);
         const facets = maiden.isshex.facets;
         const domains = view.domains;
         const behaviorWeights = view.weights;
-        const carriageFunc = CARRIAGE_FUNCTIONS[carriage.type];
+        const carriageFunctions = template.function;
 
         let attrs = { ...maiden.attributes };
         // 高尽责者理智流失更慢（C 每 1σ 折减 0.08 倍率）
@@ -5210,9 +5116,9 @@ class MaidenSystem {
         const stressMod = 1 / behaviorWeights.stressResistance;
         const lustMod = behaviorWeights.lustSensitivity;
 
-        attrs.sanity = clamp(attrs.sanity + typeInfo.periodicEffects.sanity * deltaMinutes * 0.1 * sanityMod);
-        attrs.lust = clamp(attrs.lust + typeInfo.periodicEffects.lust * deltaMinutes * 0.1 * lustMod);
-        attrs.stress = clamp(attrs.stress + typeInfo.periodicEffects.stress * deltaMinutes * 0.1 * stressMod);
+        attrs.sanity = clamp(attrs.sanity + template.periodicEffects.sanity * deltaMinutes * 0.1 * sanityMod);
+        attrs.lust = clamp(attrs.lust + template.periodicEffects.lust * deltaMinutes * 0.1 * lustMod);
+        attrs.stress = clamp(attrs.stress + template.periodicEffects.stress * deltaMinutes * 0.1 * stressMod);
 
         const resonanceEffect = Math.max(0, (20 - resonanceFrequency) / 20);
         attrs.lust = clamp(attrs.lust + resonanceEffect * deltaMinutes * 0.2 * lustMod);
@@ -5235,7 +5141,7 @@ class MaidenSystem {
         attrs.fatigue = clamp(attrs.fatigue + fatigueRate * deltaMinutes);
         attrs.hygiene = clamp(attrs.hygiene - RATES.HYGIENE_DECREASE * deltaMinutes);
 
-        attrs = this._applyActivityEffects(maiden, attrs, deltaMinutes, carriageFunc, domains, facets, RATES);
+        attrs = this._applyActivityEffects(maiden, attrs, deltaMinutes, carriageFunctions, domains, facets, RATES);
 
         if (carriage.category === 'abyss') {
             attrs.sanity = clamp(attrs.sanity - deltaMinutes * RATES.SANITY_ABYSS_DRAIN * sanityMod);
@@ -5245,7 +5151,7 @@ class MaidenSystem {
             }
         }
 
-        const discomfort = 1 - carriageFunc.comfortLevel;
+        const discomfort = 1 - template.comfortLevel;
         attrs.stress = clamp(attrs.stress + discomfort * 0.05 * deltaMinutes);
 
         // 状态标签必须从 syncedMaiden 推导：syncToMaiden 刚写入的 pregnant/gestating
@@ -5268,7 +5174,7 @@ class MaidenSystem {
         maiden: Maiden,
         attrs: Maiden['attributes'],
         deltaMinutes: number,
-        carriageFunc: typeof CARRIAGE_FUNCTIONS[keyof typeof CARRIAGE_FUNCTIONS],
+        carriageFunctions: readonly CarriageFunction[],
         domains: HexacoProfile,
         facets: Maiden['isshex']['facets'],
         RATES: typeof GAME_CONFIG.RATES
@@ -5276,7 +5182,7 @@ class MaidenSystem {
         const activity = maiden.behavior.currentActivity;
         switch (activity) {
             case 'sleeping': {
-                const sleepBonus = carriageFunc.canSleep ? 1.0 : 0.5;
+                const sleepBonus = carriageFunctions.includes('sleep') ? 1.0 : 0.5;
                 const cBonus = 1 + domains.C * 0.05;
                 attrs.fatigue = clamp(attrs.fatigue - RATES.FATIGUE_SLEEP_REGEN * deltaMinutes * sleepBonus * cBonus, 0, 100);
                 attrs.sanity = clamp(attrs.sanity + RATES.SANITY_SLEEP_REGEN * deltaMinutes * sleepBonus, 0, 100);
@@ -5284,12 +5190,12 @@ class MaidenSystem {
                 break;
             }
             case 'eating': {
-                const eatBonus = carriageFunc.canEat ? 1.0 : 0.3;
+                const eatBonus = carriageFunctions.includes('eat') ? 1.0 : 0.3;
                 attrs.hunger = clamp(attrs.hunger - RATES.HUNGER_EAT_REGEN * deltaMinutes * eatBonus, 0, 100);
                 break;
             }
             case 'bathing': {
-                const bathBonus = carriageFunc.canBathe ? 1.0 : 0.2;
+                const bathBonus = carriageFunctions.includes('bathe') ? 1.0 : 0.2;
                 attrs.hygiene = clamp(attrs.hygiene + RATES.HYGIENE_BATH_REGEN * deltaMinutes * bathBonus, 0, 100);
                 attrs.stress = clamp(attrs.stress - RATES.STRESS_BATH_REGEN * deltaMinutes * bathBonus, 0, 100);
                 if (facets.aestheticAppreciation > 1.0) attrs.stress = clamp(attrs.stress - 0.1 * deltaMinutes, 0, 100);
@@ -5297,7 +5203,7 @@ class MaidenSystem {
                 break;
             }
             case 'confessing': {
-                const prayBonus = carriageFunc.canPray ? 1.0 : 0.5;
+                const prayBonus = carriageFunctions.includes('pray') ? 1.0 : 0.5;
                 const devotionTendency = deriveBehaviorWeights(facets).devotionTendency;
                 const devotionGain = 0.5 * (1 + devotionTendency);
                 attrs.devotion = clamp(attrs.devotion + devotionGain * deltaMinutes * prayBonus, 0, 100);
@@ -5526,8 +5432,8 @@ class MaidenSystem {
         carriage: Carriage
     ): Maiden['isshex'] {
         const view = personalityView(maiden);
-        const situation = CARRIAGE_SITUATION_MAP[carriage.type];
-        const strength = SITUATION_STRENGTH[carriage.type];
+        const situation: SituationType = getCarriageTemplate(carriage.templateId)?.situation ?? 'ambiguous';
+        const strength = getCarriageTemplate(carriage.templateId)?.situationStrength ?? 0.5;
 
         // 时间基：P2 的 ρ 与 P4 的漂移率都以**游戏日**定义，因此两者共用
         // lastDriftTime 这一个时钟，按实际经过的天数推进，与调用频率无关

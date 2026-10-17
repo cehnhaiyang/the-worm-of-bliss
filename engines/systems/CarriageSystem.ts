@@ -5,19 +5,30 @@
 
 import {
     Carriage,
-    CarriageType,
     SystemState,
     GameEvent,
     StateUpdaters,
 } from '../../meta';
 import { randomInt, shuffleArray } from '../../const';
 import {
-    CARRIAGE_TYPE_INFO,
-    ABYSS_TYPES,
+    BASE_FILL_TEMPLATE_ID,
     SANCTUARY_CONFIG,
     ABYSS_TIERS,
     GAME_CONFIG,
+    getCarriageTemplate,
+    isAbyssTemplate,
+    isTemplateAccessible,
 } from '../../constants';
+
+/**
+ * 连通性校验期间把待测格临时标为深渊用的占位值。
+ * 用哨兵而不是借用某个深渊模板 id，避免"删掉那个模板后这里静默失效"。
+ */
+const ABYSS_PLACEHOLDER = '__ABYSS__';
+
+/** 该格是不是圣所；连通性计算与邻居扫描都以此为准 */
+const isSanctuaryCell = (templateId: string): boolean =>
+    templateId !== ABYSS_PLACEHOLDER && !isAbyssTemplate(templateId);
 
 
 /**
@@ -96,7 +107,7 @@ class CarriageSystem {
         const cols = GAME_CONFIG.GRID_COLS;
 
         // 初始化网格基底
-        const grid: CarriageType[][] = Array(rows).fill(null).map(() => Array(cols).fill('ATRIUM'));
+        const grid: string[][] = Array(rows).fill(null).map(() => Array(cols).fill(BASE_FILL_TEMPLATE_ID));
 
         this.distributeSpecialSanctuaries(grid, rows, cols);
         this.carveAbyss(grid, rows, cols);
@@ -109,8 +120,8 @@ class CarriageSystem {
     // 分布特殊圣所
     // ============================================
 
-    private distributeSpecialSanctuaries(grid: CarriageType[][], rows: number, cols: number): void {
-        const configs = SANCTUARY_CONFIG.filter(c => c.type !== 'ATRIUM');
+    private distributeSpecialSanctuaries(grid: string[][], rows: number, cols: number): void {
+        const configs = SANCTUARY_CONFIG.filter(c => c.templateId !== BASE_FILL_TEMPLATE_ID);
 
         for (const config of configs) {
             const count = randomInt(config.minCount, config.maxCount);
@@ -122,8 +133,8 @@ class CarriageSystem {
                 const r = randomInt(0, rows - 1);
                 const c = randomInt(0, cols - 1);
 
-                if (grid[r][c] === 'ATRIUM') {
-                    grid[r][c] = config.type;
+                if (grid[r][c] === BASE_FILL_TEMPLATE_ID) {
+                    grid[r][c] = config.templateId;
                     placed++;
                 }
                 attempts++;
@@ -135,13 +146,13 @@ class CarriageSystem {
     // 雕刻深渊 (核心约束逻辑)
     // ============================================
 
-    private carveAbyss(grid: CarriageType[][], rows: number, cols: number): void {
+    private carveAbyss(grid: string[][], rows: number, cols: number): void {
         // 预计算基准圣所总数水位线
         let currentSanctuaryCount = rows * cols;
 
         for (const tier of ABYSS_TIERS) {
             const totalCount = randomInt(tier.totalCount.min, tier.totalCount.max);
-            const types = shuffleArray([...tier.types]);
+            const types = shuffleArray([...tier.templateIds]);
 
             let placedTotal = 0;
             let typeIndex = 0;
@@ -152,7 +163,7 @@ class CarriageSystem {
                 const r = randomInt(0, rows - 1);
                 const c = randomInt(0, cols - 1);
 
-                if (!ABYSS_TYPES.includes(grid[r][c])) {
+                if (isSanctuaryCell(grid[r][c])) {
                     if (this.canPlaceAbyss(grid, r, c, rows, cols, currentSanctuaryCount - 1)) {
                         grid[r][c] = abyssType;
                         currentSanctuaryCount--;
@@ -169,7 +180,7 @@ class CarriageSystem {
      * 拓扑破坏安全校验
      */
     private canPlaceAbyss(
-        grid: CarriageType[][],
+        grid: string[][],
         r: number,
         c: number,
         rows: number,
@@ -177,7 +188,7 @@ class CarriageSystem {
         expectedSanctuaryCount: number
     ): boolean {
         const originalType = grid[r][c];
-        grid[r][c] = 'VOID_WINDOW';
+        grid[r][c] = ABYSS_PLACEHOLDER;
 
         let hasSanctuaryNeighbor = false;
         const directions = [[0, 1], [0, -1], [1, 0], [-1, 0]];
@@ -186,7 +197,7 @@ class CarriageSystem {
             const nr = r + dr;
             const nc = c + dc;
             if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                if (!ABYSS_TYPES.includes(grid[nr][nc])) {
+                if (isSanctuaryCell(grid[nr][nc])) {
                     hasSanctuaryNeighbor = true;
                     break;
                 }
@@ -208,7 +219,7 @@ class CarriageSystem {
      * 基于预期容量断言的连通性泛洪扫描
      */
     private checkSanctuaryConnectivity(
-        grid: CarriageType[][],
+        grid: string[][],
         rows: number,
         cols: number,
         expectedCount: number
@@ -220,7 +231,7 @@ class CarriageSystem {
         // 定位首个活跃圣所切入点
         for (let r = 0; r < rows; r++) {
             for (let c = 0; c < cols; c++) {
-                if (!ABYSS_TYPES.includes(grid[r][c])) {
+                if (isSanctuaryCell(grid[r][c])) {
                     startNode = { r, c };
                     break;
                 }
@@ -246,7 +257,7 @@ class CarriageSystem {
                 const nc = curr.c + dc;
 
                 if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
-                    if (!ABYSS_TYPES.includes(grid[nr][nc])) {
+                    if (isSanctuaryCell(grid[nr][nc])) {
                         const key = `${nr},${nc}`;
                         if (!visited.has(key)) {
                             visited.add(key);
@@ -265,30 +276,30 @@ class CarriageSystem {
     // 构建域模型 Map
     // ============================================
 
-    private buildMap(grid: CarriageType[][], carriages: Map<string, Carriage>, rows: number, cols: number): void {
-        const typeCounters = new Map<CarriageType, number>();
+    private buildMap(grid: string[][], carriages: Map<string, Carriage>, rows: number, cols: number): void {
+        const typeCounters = new Map<string, number>();
 
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const id = `R${row}C${col}`;
-                const type = grid[row][col];
-                const info = CARRIAGE_TYPE_INFO.find(i => i.type === type);
+                const templateId = grid[row][col];
+                const template = getCarriageTemplate(templateId);
 
-                if (!info) continue;
+                if (!template) continue;
 
-                const currentCount = (typeCounters.get(type) || 0) + 1;
-                typeCounters.set(type, currentCount);
+                const currentCount = (typeCounters.get(templateId) || 0) + 1;
+                typeCounters.set(templateId, currentCount);
 
                 carriages.set(id, {
                     id,
                     position: { row, col },
-                    type,
-                    name: `${info.nameCN} #${currentCount}`,
-                    category: ABYSS_TYPES.includes(type) ? 'abyss' : 'sanctuary',
+                    templateId,
+                    name: `${template.nameCN} #${currentCount}`,
+                    category: template.category,
                     occupants: [],
-                    isAccessible: type !== 'CAULDRON',
+                    isAccessible: isTemplateAccessible(templateId),
                     lastHubShuffle: Date.now(),
-                    ambientSoundId: info.ambientSound,
+                    ambientSoundId: template.ambientSound,
                 });
             }
         }
@@ -335,20 +346,20 @@ class CarriageSystem {
         const updatedC1 = { ...c1, occupants: [...c1.occupants], position: { ...c1.position } };
         const updatedC2 = { ...c2, occupants: [...c2.occupants], position: { ...c2.position } };
 
-        const tempType = updatedC1.type;
+        const tempType = updatedC1.templateId;
         const tempName = updatedC1.name;
         const tempCategory = updatedC1.category;
         const tempAmbient = updatedC1.ambientSoundId;
         const tempIsAccessible = updatedC1.isAccessible;
 
-        updatedC1.type = updatedC2.type;
+        updatedC1.templateId = updatedC2.templateId;
         updatedC1.name = updatedC2.name;
         updatedC1.category = updatedC2.category;
         updatedC1.ambientSoundId = updatedC2.ambientSoundId;
         updatedC1.isAccessible = updatedC2.isAccessible;
         updatedC1.lastHubShuffle = Date.now();
 
-        updatedC2.type = tempType;
+        updatedC2.templateId = tempType;
         updatedC2.name = tempName;
         updatedC2.category = tempCategory;
         updatedC2.ambientSoundId = tempAmbient;
@@ -420,12 +431,12 @@ class CarriageSystem {
     // 域方法
     // ============================================
 
-    getTypeInfo(type: CarriageType) {
-        return CARRIAGE_TYPE_INFO.find(info => info.type === type);
+    getTemplate(templateId: string) {
+        return getCarriageTemplate(templateId);
     }
 
-    isAbyss(type: CarriageType): boolean {
-        return ABYSS_TYPES.includes(type);
+    isAbyss(templateId: string): boolean {
+        return isAbyssTemplate(templateId);
     }
 
     // ============================================

@@ -5,7 +5,7 @@
 
 import React, { memo } from 'react';
 import { Carriage } from '../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES } from '../../constants';
+import { getCarriageTemplate } from '../../constants';
 
 // ============================================
 // Props 接口
@@ -60,8 +60,8 @@ EmptyState.displayName = 'EmptyState';
 export const Detail: React.FC<DetailProps> = memo(({ carriage, occupantCount }) => {
     if (!carriage) return <EmptyState />;
 
-    const info = CARRIAGE_TYPE_INFO.find(i => i.type === carriage.type);
-    const isAbyss = ABYSS_TYPES.includes(carriage.type);
+    const info = getCarriageTemplate(carriage.templateId);
+    const isAbyss = carriage.category === 'abyss';
 
     if (!info) return <EmptyState />;
 
@@ -91,7 +91,7 @@ export const Detail: React.FC<DetailProps> = memo(({ carriage, occupantCount }) 
 
                 {/* 效果标签 */}
                 <div className="flex flex-wrap gap-1">
-                    {(info.functions || []).map((effect, idx) => (
+                    {(info.features || []).map((effect, idx) => (
                         <span
                             key={idx}
                             className={`text-[9px] px-1.5 py-0.5 rounded ${isAbyss ? 'bg-purple-900/30 text-purple-400 border border-purple-800/30' : 'bg-zinc-900/60 text-zinc-400 border border-zinc-800/30'}`}

@@ -15,7 +15,7 @@ import {
   LogType,
 } from '../../meta';
 import { clamp, getCurrentCarriageId, mergeMaiden } from '../../const';
-import { ABYSS_TYPES, CARRIAGE_TYPE_INFO, GAME_CONFIG } from '../../constants';
+import { GAME_CONFIG, getCarriageTemplate } from '../../constants';
 import { carriageSystem, maidenSystem } from '../systems';
 import { audioService, aiService } from '../services';
 
@@ -287,12 +287,11 @@ export const usePlayerActions = ({
       focusedMaidenId: newFocusedMaidenId
     }));
 
-    // FIX: CARRIAGE_TYPE_INFO 已变为数组，必须用 .find() 而非对象索引
-    const typeInfo = CARRIAGE_TYPE_INFO.find(info => info.type === targetCarriage.type);
-    const isAbyss = ABYSS_TYPES.includes(targetCarriage.type);
+    const template = getCarriageTemplate(targetCarriage.templateId);
+    const isAbyss = targetCarriage.category === 'abyss';
 
     addLog('movement',
-      `>>> 传送至 ${typeInfo?.nameCN ?? targetCarriage.type} [${targetCarriage.id}] ${isAbyss ? '【深渊区域】' : ''}`,
+      `>>> 传送至 ${template?.nameCN ?? targetCarriage.templateId} [${targetCarriage.id}] ${isAbyss ? '【深渊区域】' : ''}`,
       'player'
     );
 
@@ -359,7 +358,7 @@ export const usePlayerActions = ({
         input,
         focusedMaiden,
         currSystem,
-        currentCarriage?.type,
+        currentCarriage?.templateId,
       );
 
       // 翻译成增量计划：纯计算，可在更新函数里安全重放

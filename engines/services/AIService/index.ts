@@ -4,7 +4,7 @@
 // 组合 TextService 和 ImageService
 // ============================================
 
-import { Maiden, SystemState, AIResponse, CarriageType, MemoryNode, ChainRejection } from '../../../meta';
+import { Maiden, SystemState, AIResponse, MemoryNode, ChainRejection } from '../../../meta';
 import { TextService } from './TextService';
 import { ImageService } from './ImageService';
 
@@ -45,9 +45,9 @@ class AIService {
     playerInput: string,
     maiden: Maiden,
     systemState: SystemState,
-    carriageType?: CarriageType,
+    carriageTemplateId?: string,
   ): Promise<AIResponse> {
-    return this.textService.generateNarrative(playerInput, maiden, systemState, carriageType);
+    return this.textService.generateNarrative(playerInput, maiden, systemState, carriageTemplateId);
   }
 
   /**
@@ -89,31 +89,31 @@ class AIService {
   /**
    * 生成角色立绘（返回图片 URL 与所用模型；URL 由调用方交给浏览器加载）
    */
-  generateCharacterImage(maiden: Maiden, carriageType?: CarriageType): { url: string; model: string } {
-    return this.imageService.generateCharacterImage(maiden, carriageType);
+  generateCharacterImage(maiden: Maiden, carriageTemplateId?: string): { url: string; model: string } {
+    return this.imageService.generateCharacterImage(maiden, carriageTemplateId);
   }
 
   /**
    * 获取 Pollinations URL (同步/回退)
    */
-  getCharacterImageUrl(maiden: Maiden, carriageType?: CarriageType): string {
-    return this.imageService.getPollinationsUrl(maiden, carriageType);
+  getCharacterImageUrl(maiden: Maiden, carriageTemplateId?: string): string {
+    return this.imageService.getPollinationsUrl(maiden, carriageTemplateId);
   }
 
   getThumbnailUrl(maiden: Maiden): string {
     return this.imageService.getThumbnailUrl(maiden);
   }
 
-  getSceneImageUrl(carriageType: CarriageType, description?: string): string {
-    return this.imageService.getSceneImageUrl(carriageType, description);
+  getSceneImageUrl(carriageTemplateId: string, description?: string): string {
+    return this.imageService.getSceneImageUrl(carriageTemplateId, description);
   }
 
   /**
    * 获取视觉状态哈希值 (UI优化用)
    * 结合 ID 和 视觉快照，用于前端去重请求
    */
-  getPortraitHash(maiden: Maiden, carriageType?: CarriageType): string {
-    return `${maiden.id}_${this.imageService.generatePortraitHash(maiden, carriageType)}`;
+  getPortraitHash(maiden: Maiden, carriageTemplateId?: string): string {
+    return `${maiden.id}_${this.imageService.generatePortraitHash(maiden, carriageTemplateId)}`;
   }
 }
 

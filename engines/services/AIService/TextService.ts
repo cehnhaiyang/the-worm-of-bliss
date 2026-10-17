@@ -1,6 +1,5 @@
 import {
   AIResponse,
-  CarriageType,
   ChainRejection,
   CharacterRank,
   CharacterStatus,
@@ -288,9 +287,9 @@ ${schemaDescription}`;
     playerInput: string,
     maiden: Maiden,
     systemState: SystemState,
-    carriageType?: CarriageType,
+    carriageTemplateId?: string,
   ): Promise<AIResponse> {
-    const systemPrompt = Builder.buildSystemPrompt(playerInput, maiden, systemState, carriageType);
+    const systemPrompt = Builder.buildSystemPrompt(playerInput, maiden, systemState, carriageTemplateId);
 
     try {
       const result = await this.callAPI(

@@ -1,14 +1,6 @@
-/**
- * 全局工具与人格派生常量。
- *
- * 与 `constants/` 的分工：`constants/` 是纯数据（配置、词表、资源映射），
- * 本文件是纯函数与派生表——它们需要读 `constants/` 的配置才能工作。
- */
-
-import { CarriageType, EventType, ActivityStatus, PersonalityState, RelationType, PregnancyStage, GraceType } from './meta/type';
 import {
+  CarriageFunction, EventType, ActivityStatus, PersonalityState, RelationType, PregnancyStage, GraceType,
   Carriage,
-  CarriageFunction,
   UnifiedMovementState,
   MovementIntent,
   Relationship,
@@ -28,8 +20,8 @@ import {
   BehaviorWeights,
   PregnancyStats,
   RelationshipStats
-} from './meta/interface';
-import { CARRIAGE_FUNCTIONS, TIME_CONFIG, GRACE_REWARDS, GAME_CONFIG } from './constants';
+} from './meta';
+import { getCarriageTemplate, TIME_CONFIG, GRACE_REWARDS, GAME_CONFIG } from './constants';
 
 // ============================================
 // 1. 基础数学与概率
@@ -282,60 +274,32 @@ const seededRandom = (seed: number): number => {
 };
 
 /**
- * 获取临近的特定类型设施空间
- */
-export const findNearestCarriageByType = (
-  current: Carriage,
-  allCarriages: Map<string, Carriage>,
-  type: CarriageType,
-  options: { fuzzFactor?: number; seed?: number } = {}
-): string | undefined => {
-  const { fuzzFactor = 5, seed } = options;
-  let nearest: string | undefined;
-  let minDistance = Infinity;
-
-  for (const [id, carriage] of allCarriages) {
-    if (carriage.type === type && carriage.isAccessible) {
-      const distance = manhattanDistance(current.position, carriage.position);
-      const fuzz = seed !== undefined ? seededRandom(seed + distance) * fuzzFactor : Math.random() * fuzzFactor;
-      const fuzzyDistance = distance + fuzz;
-
-      if (fuzzyDistance < minDistance) {
-        minDistance = fuzzyDistance;
-        nearest = id;
-      }
-    }
-  }
-
-  return nearest;
-};
-
-/**
- * 根据交互许可功能获取临近设施空间
+ * 按功能获取临近车厢。
+ *
+ * 行为决策挑选目的地的唯一入口。车厢种类是开放集合，因此这里只匹配功能、不匹配
+ * 具体车厢——新增车厢只要声明了功能就被自动纳入候选。
  */
 export const findNearestCarriageByFunction = (
   current: Carriage,
   allCarriages: Map<string, Carriage>,
-  funcName: keyof CarriageFunction,
+  fn: CarriageFunction,
   options: { fuzzFactor?: number; seed?: number } = {}
-): string | null => {
+): string | undefined => {
   const { fuzzFactor = 3, seed } = options;
-  let nearest: string | null = null;
+  let nearest: string | undefined;
   let minDistance = Infinity;
 
   for (const [id, carriage] of allCarriages) {
     if (!carriage.isAccessible) continue;
+    if (!getCarriageTemplate(carriage.templateId)?.function.includes(fn)) continue;
 
-    const func = CARRIAGE_FUNCTIONS[carriage.type];
-    if (func && func[funcName]) {
-      const distance = manhattanDistance(current.position, carriage.position);
-      const fuzz = seed !== undefined ? seededRandom(seed + distance) * fuzzFactor : Math.random() * fuzzFactor;
-      const fuzzyDistance = distance + fuzz;
+    const distance = manhattanDistance(current.position, carriage.position);
+    const fuzz = seed !== undefined ? seededRandom(seed + distance) * fuzzFactor : Math.random() * fuzzFactor;
+    const fuzzyDistance = distance + fuzz;
 
-      if (fuzzyDistance < minDistance) {
-        minDistance = fuzzyDistance;
-        nearest = id;
-      }
+    if (fuzzyDistance < minDistance) {
+      minDistance = fuzzyDistance;
+      nearest = id;
     }
   }
 

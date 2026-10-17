@@ -5,8 +5,8 @@
 // API 文档：https://enter.pollinations.ai/api/docs
 // ============================================
 
-import { Maiden, CarriageType, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../../constants';
+import { Maiden, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../../meta';
+import { getCarriageTemplate, isAbyssTemplate, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../../constants';
 import { PersonalityView, personalityView } from '../../systems';
 import { hashCode } from '../../../const';
 
@@ -145,11 +145,11 @@ export class ImageService {
   // 立绘更新判定逻辑
   // ============================================
 
-  generatePortraitHash(maiden: Maiden, carriageType?: CarriageType): string {
-    return JSON.stringify(this.createPortraitSnapshot(maiden, carriageType));
+  generatePortraitHash(maiden: Maiden, carriageTemplateId?: string): string {
+    return JSON.stringify(this.createPortraitSnapshot(maiden, carriageTemplateId));
   }
 
-  private createPortraitSnapshot(maiden: Maiden, carriageType?: CarriageType): PortraitSnapshot {
+  private createPortraitSnapshot(maiden: Maiden, carriageTemplateId?: string): PortraitSnapshot {
     const attrs = maiden.attributes;
     const dressLevel = calculateDressLevel(maiden.clothing);
 
@@ -174,7 +174,7 @@ export class ImageService {
       dressLevel,
       clothingState: maiden.clothing.state,
       pregnancyMilestone,
-      isInAbyss: carriageType ? ABYSS_TYPES.includes(carriageType) : false,
+      isInAbyss: carriageTemplateId ? isAbyssTemplate(carriageTemplateId) : false,
       personalityState: personalityView(maiden).state,
       rank: maiden.rank,
     };
@@ -211,9 +211,9 @@ export class ImageService {
    *
    * 纯字符串拼装，无网络 I/O——真正的请求发生在调用方把 `url` 交给浏览器加载时。
    */
-  generateCharacterImage(maiden: Maiden, carriageType?: CarriageType): { url: string; model: string } {
+  generateCharacterImage(maiden: Maiden, carriageTemplateId?: string): { url: string; model: string } {
     return {
-      url: this.getPollinationsUrl(maiden, carriageType),
+      url: this.getPollinationsUrl(maiden, carriageTemplateId),
       model: this.currentModel
     };
   }
@@ -222,7 +222,7 @@ export class ImageService {
   // Pollinations URL 生成
   // ============================================
 
-  getPollinationsUrl(maiden: Maiden, carriageType?: CarriageType): string {
+  getPollinationsUrl(maiden: Maiden, carriageTemplateId?: string): string {
     const parts: string[] = [];
     const ethnicity = ETHNICITY_MAP[maiden.nameOrigin] || '';
     parts.push(`(1girl:1.4), ${this.getAgeTag(maiden.age)}, ${ethnicity}`);
@@ -236,10 +236,10 @@ export class ImageService {
     parts.push(clothing || 'nude, bare skin');
     const rank = RANK_VISUALS[maiden.rank];
     if (rank) parts.push(rank);
-    parts.push(this.buildBackgroundPrompt(carriageType));
+    parts.push(this.buildBackgroundPrompt(carriageTemplateId));
     parts.push('portrait, cinematic lighting, dark fantasy, gothic, 8k');
 
-    return this.buildUrl(parts, CONFIG.portrait, this.generateSeed(maiden, carriageType));
+    return this.buildUrl(parts, CONFIG.portrait, this.generateSeed(maiden, carriageTemplateId));
   }
 
   getThumbnailUrl(maiden: Maiden): string {
@@ -254,19 +254,19 @@ export class ImageService {
     return this.buildUrl([prompt], { width: CONFIG.thumbnail.size, height: CONFIG.thumbnail.size }, seed);
   }
 
-  getSceneImageUrl(carriageType: CarriageType, description?: string): string {
-    const info = CARRIAGE_TYPE_INFO.find(i => i.type === carriageType);
-    const isAbyss = ABYSS_TYPES.includes(carriageType);
+  getSceneImageUrl(carriageTemplateId: string, description?: string): string {
+    const template = getCarriageTemplate(carriageTemplateId);
+    const isAbyss = isAbyssTemplate(carriageTemplateId);
 
     const parts = [
       'wide shot, interior',
-      info?.visualTheme || 'dark train corridor',
+      template?.visualTheme || 'dark train corridor',
       description,
       isAbyss ? 'eldritch horror, cosmic void, surreal, purple red tones' : 'gothic interior, dim lighting, elegant',
       'cinematic, 8k'
     ].filter(Boolean) as string[];
 
-    const seed = Math.abs(hashCode(carriageType + (description || ''))) % 10000;
+    const seed = Math.abs(hashCode(carriageTemplateId + (description || ''))) % 10000;
     return this.buildUrl(parts, CONFIG.scene, seed);
   }
 
@@ -492,22 +492,22 @@ export class ImageService {
     return null;
   }
 
-  private buildBackgroundPrompt(carriageType?: CarriageType): string {
-    if (!carriageType) return 'dark train interior background';
+  private buildBackgroundPrompt(carriageTemplateId?: string): string {
+    if (!carriageTemplateId) return 'dark train interior background';
 
-    const info = CARRIAGE_TYPE_INFO.find(i => i.type === carriageType);
-    const theme = info?.visualTheme || 'dark corridor';
-    const isAbyss = ABYSS_TYPES.includes(carriageType);
+    const template = getCarriageTemplate(carriageTemplateId);
+    const theme = template?.visualTheme || 'dark corridor';
+    const isAbyss = isAbyssTemplate(carriageTemplateId);
 
     return isAbyss
       ? `${theme} background, eldritch horror atmosphere, cosmic void, surreal purple tones`
       : `${theme} background, gothic interior, detailed background`;
   }
 
-  private generateSeed(maiden: Maiden, carriageType?: CarriageType): number {
+  private generateSeed(maiden: Maiden, carriageTemplateId?: string): number {
     const seedStr = maiden.id +
       maiden.status.slice().sort().join('') +
-      (carriageType || '') +
+      (carriageTemplateId || '') +
       maiden.clothing.state;
     return Math.abs(hashCode(seedStr)) % 10000;
   }

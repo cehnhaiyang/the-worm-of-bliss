@@ -5,68 +5,31 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Carriage, CarriageType, ViewMode } from '../../meta';
-import { CARRIAGE_TYPE_INFO, ABYSS_TYPES, SANCTUARY_TYPES, GAME_CONFIG } from '../../constants';
+import { Carriage, ViewMode } from '../../meta';
+import { GAME_CONFIG, getCarriageTemplate } from '../../constants';
 
 /**
- * 车厢类型的底色。
+ * 车厢底色，按 `subcategory` 分组而非逐个车厢指定。
  *
- * 按语义分组而非逐个挑色：圣所按"社会性剥离 / 个体性瓦解 / 价值观重塑 / 循环"
- * 四组递进，深渊按三层递进。分组关系只有对照着看才成立，拆到别处就失去了。
+ * 分组关系只有对照着看才成立，拆到各条模板里就失去了；而键取分组意味着新增一种
+ * 车厢只要落在已有分组内，这个文件不需要改动。分组本身来自 background.md 的
+ * 四个圣所分组与三个深渊层级。
  */
-const TYPE_COLORS: Partial<Record<CarriageType, string>> = {
+const SUBCATEGORY_COLORS: Record<string, string> = {
     // 圣所 - 社会性剥离
-    ['ATRIUM']: 'bg-emerald-900/50',
-    ['POOLS']: 'bg-cyan-900/50',
-    ['VEIL']: 'bg-pink-900/50',
-    ['CONFESSIONAL']: 'bg-purple-900/50',
-    ['GARDEN']: 'bg-green-900/50',
-    ['SCALES_CONSERVATORY']: 'bg-yellow-900/50',
-    ['ARCHIVE']: 'bg-orange-900/50',
-    ['MUSE_THEATRE']: 'bg-rose-900/50',
-    ['NURSERY']: 'bg-teal-900/50',
-    ['ALTAR']: 'bg-red-900/50',
-    ['CAULDRON']: 'bg-red-950/50',
-    // 深渊
-    ['SILENT_SALON']: 'bg-violet-900/70',
-    ['ORACLE_WHISPER']: 'bg-violet-900/70',
-    ['NEGATIVE_GALLERY']: 'bg-violet-900/70',
-    ['ESCHER_STAIRS']: 'bg-violet-900/70',
-    ['MIRROR_HALL']: 'bg-fuchsia-900/70',
-    ['TIME_INFIRMARY']: 'bg-fuchsia-900/70',
-    ['DISSOLUTION_CHAMBER']: 'bg-fuchsia-900/70',
-    ['FLESH_HIVE']: 'bg-purple-950/80',
-    ['INVERTED_TREE']: 'bg-purple-950/80',
-    ['SYMBIOTIC_GALLERY']: 'bg-purple-950/80',
-    ['VOID_WINDOW']: 'bg-purple-950/80',
-    ['ENTROPY_CLOCK']: 'bg-purple-950/80',
-};
-
-/** 车厢类型在格子与悬浮卡上的单字标识 */
-const CARRIAGE_ICONS: Partial<Record<CarriageType, string>> = {
-    ['POOLS']: 'P',
-    ['ATRIUM']: 'A',
-    ['VEIL']: 'V',
-    ['CONFESSIONAL']: 'C',
-    ['ARCHIVE']: 'R',
-    ['MUSE_THEATRE']: 'M',
-    ['SCALES_CONSERVATORY']: 'S',
-    ['GARDEN']: 'G',
-    ['NURSERY']: 'N',
-    ['ALTAR']: 'T',
-    ['CAULDRON']: 'X',
-    ['SILENT_SALON']: 'I',
-    ['ORACLE_WHISPER']: 'O',
-    ['NEGATIVE_GALLERY']: 'E',
-    ['ESCHER_STAIRS']: 'H',
-    ['MIRROR_HALL']: 'L',
-    ['TIME_INFIRMARY']: 'F',
-    ['DISSOLUTION_CHAMBER']: 'D',
-    ['FLESH_HIVE']: 'B',
-    ['INVERTED_TREE']: 'Y',
-    ['SYMBIOTIC_GALLERY']: 'W',
-    ['VOID_WINDOW']: 'Z',
-    ['ENTROPY_CLOCK']: 'K',
+    '社会性剥离': 'bg-emerald-900/50',
+    // 圣所 - 个体性瓦解
+    '个体性瓦解': 'bg-rose-900/50',
+    // 圣所 - 价值观重塑
+    '价值观重塑': 'bg-yellow-900/50',
+    // 圣所 - 循环
+    '循环': 'bg-red-900/50',
+    // 深渊 - 层级一：感官与逻辑扭曲
+    '感官扭曲': 'bg-violet-900/70',
+    // 深渊 - 层级二：时空与存在悖论
+    '时空悖论': 'bg-fuchsia-900/70',
+    // 深渊 - 层级三：宇宙级虚无与终极恐怖
+    '宇宙虚无': 'bg-purple-950/80',
 };
 
 /** 地图视图模式；顺序即按钮顺序 */
@@ -112,11 +75,11 @@ const CarriageCell = memo<CarriageCellProps>(({
 }) => {
     if (!carriage) return <div className="aspect-square rounded bg-zinc-950/50" />;
 
-    const isAbyss = ABYSS_TYPES.includes(carriage.type);
+    const isAbyss = carriage.category === 'abyss';
     const occupantCount = carriage.occupants.length;
-    const typeInfo = CARRIAGE_TYPE_INFO.find(info => info.type === carriage.type);
-    const bgColor = TYPE_COLORS[carriage.type] || 'bg-zinc-800';
-    const icon = CARRIAGE_ICONS[carriage.type];
+    const typeInfo = getCarriageTemplate(carriage.templateId);
+    const bgColor = (typeInfo && SUBCATEGORY_COLORS[typeInfo.subcategory]) || 'bg-zinc-800';
+    const icon = typeInfo?.icon;
 
     return (
         <button
@@ -133,7 +96,7 @@ const CarriageCell = memo<CarriageCellProps>(({
         hover:brightness-130 hover:scale-105 hover:z-20 hover:border-zinc-600
         ${!carriage.isAccessible ? 'opacity-10 cursor-not-allowed' : 'cursor-pointer'}
       `}
-            title={`${typeInfo?.nameCN || carriage.type} [${carriage.id}]\n占用: ${occupantCount}人`}
+            title={`${typeInfo?.nameCN || carriage.templateId} [${carriage.id}]\n占用: ${occupantCount}人`}
             disabled={!carriage.isAccessible}
         >
             {/* 观测者标记 */}
@@ -189,7 +152,7 @@ const Minimap = memo<MinimapProps>(({ grid, masterCol, viewportStart, onJump }) 
         <div className="flex gap-[1px]">
             {Array.from({ length: GAME_CONFIG.GRID_COLS }).map((_, col) => {
                 const hasOccupants = grid.some(row => row[col]?.occupants.length);
-                const hasAbyss = grid.some(row => row[col] && ABYSS_TYPES.includes(row[col]!.type));
+                const hasAbyss = grid.some(row => row[col]?.category === 'abyss');
                 const isMasterCol = masterCol === col;
                 const isInViewport = col >= viewportStart && col < viewportStart + GAME_CONFIG.VIEWPORT_SIZE;
 
@@ -221,8 +184,8 @@ interface HoverCardProps {
 }
 
 const HoverCard = memo<HoverCardProps>(({ carriage }) => {
-    const isAbyss = ABYSS_TYPES.includes(carriage.type);
-    const typeInfo = CARRIAGE_TYPE_INFO.find(info => info.type === carriage.type);
+    const isAbyss = carriage.category === 'abyss';
+    const typeInfo = getCarriageTemplate(carriage.templateId);
 
     return (
         <div className={`p-2.5 rounded-lg border text-xs ${isAbyss
@@ -231,7 +194,7 @@ const HoverCard = memo<HoverCardProps>(({ carriage }) => {
             }`}>
             <div className="flex items-center justify-between mb-1">
                 <span className={`font-medium ${isAbyss ? 'text-purple-300' : 'text-zinc-200'}`}>
-                    {CARRIAGE_ICONS[carriage.type]} {typeInfo?.nameCN || carriage.type}
+                    {typeInfo?.icon} {typeInfo?.nameCN || carriage.templateId}
                 </span>
                 <span className="text-zinc-500 font-mono text-[10px]">{carriage.id}</span>
             </div>
@@ -282,8 +245,8 @@ export const Map: React.FC<MapProps> = memo(({
         let totalOccupants = 0, abyssCount = 0, sanctuaryCount = 0;
         carriages.forEach(c => {
             totalOccupants += c.occupants.length;
-            if (ABYSS_TYPES.includes(c.type)) abyssCount++;
-            if (SANCTUARY_TYPES.includes(c.type)) sanctuaryCount++;
+            if (c.category === 'abyss') abyssCount++;
+            else sanctuaryCount++;
         });
         return { totalOccupants, abyssCount, sanctuaryCount };
     }, [carriages]);
@@ -303,8 +266,8 @@ export const Map: React.FC<MapProps> = memo(({
 
                 let isHighlighted = true;
                 switch (viewMode) {
-                    case 'sanctuary': isHighlighted = SANCTUARY_TYPES.includes(carriage.type); break;
-                    case 'abyss': isHighlighted = ABYSS_TYPES.includes(carriage.type); break;
+                    case 'sanctuary': isHighlighted = carriage.category !== 'abyss'; break;
+                    case 'abyss': isHighlighted = carriage.category === 'abyss'; break;
                     case 'occupied': isHighlighted = carriage.occupants.length > 0; break;
                 }
 
@@ -466,19 +429,13 @@ export const Map: React.FC<MapProps> = memo(({
 
                 {/* 图例和统计 */}
                 <div className="flex flex-wrap justify-between items-center gap-2 text-[9px] text-zinc-500 pt-2 border-t border-zinc-800/50">
+                    {/* 图例从配色表派生：两者共用同一份分组，配色改动不会再让图例说谎 */}
                     <div className="flex flex-wrap gap-3">
-                        <span className="flex items-center gap-1">
-                            <span className="w-2.5 h-2.5 bg-zinc-800 rounded-sm border border-zinc-700" /> 走廊
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2.5 h-2.5 bg-blue-900/50 rounded-sm border border-blue-800/50" /> 宿舍
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2.5 h-2.5 bg-cyan-900/50 rounded-sm border border-cyan-800/50" /> 浴池
-                        </span>
-                        <span className="flex items-center gap-1">
-                            <span className="w-2.5 h-2.5 bg-violet-900/70 rounded-sm border border-violet-700/50 animate-pulse" /> 深渊
-                        </span>
+                        {Object.entries(SUBCATEGORY_COLORS).map(([group, color]) => (
+                            <span key={group} className="flex items-center gap-1">
+                                <span className={`w-2.5 h-2.5 ${color} rounded-sm border border-zinc-700/50`} /> {group}
+                            </span>
+                        ))}
                     </div>
                     <div className="flex gap-3 font-tech">
                         <span>圣所 <span className="text-zinc-300">{stats.sanctuaryCount}</span></span>

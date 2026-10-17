@@ -3,9 +3,9 @@
 // 原则：提供上下文，定义目标，不限制方法
 // ============================================
 
-import { Maiden, SystemState, CarriageType, MemoryNode, ClothingState, AppearanceData, ItemDef } from '../../../meta';
+import { Maiden, SystemState, MemoryNode, ClothingState, AppearanceData, ItemDef } from '../../../meta';
 import { SIGNATURE_LABELS, PERSONALITY_STATE_LABELS } from '../../../const';
-import { ATTIRE_STATE_LABELS, CARRIAGE_TYPE_INFO, ABYSS_TYPES, TIME_CONFIG, WORLD_LORE } from '../../../constants';
+import { ATTIRE_STATE_LABELS, TIME_CONFIG, WORLD_LORE, getCarriageTemplate } from '../../../constants';
 import { maidenSystem, personalityView } from '../../systems';
 
 // ============================================
@@ -63,18 +63,18 @@ function serializeAppearance(app: AppearanceData): string {
 // Context Serializers
 // ============================================
 
-function serializeLocation(carriageType?: CarriageType): string {
-  if (!carriageType) return '[位置] 虚空';
+function serializeLocation(carriageTemplateId?: string): string {
+  if (!carriageTemplateId) return '[位置] 虚空';
 
-  const info = CARRIAGE_TYPE_INFO.find(i => i.type === carriageType);
-  const isAbyss = ABYSS_TYPES.includes(carriageType);
+  const template = getCarriageTemplate(carriageTemplateId);
+  const isAbyss = template?.category === 'abyss';
 
   return `
 [当前位置]
 区域: ${isAbyss ? '深渊 (ABYSS)' : '圣所 (SANCTUARY)'}
-车厢: ${info?.nameCN || carriageType}
-氛围: ${info?.description || ''}
-环境效应: ${info?.functions.join(', ') || '无'}
+车厢: ${template?.nameCN || carriageTemplateId}
+氛围: ${template?.description || ''}
+环境效应: ${template?.features.join(', ') || '无'}
 ${isAbyss ? '[警告] 深渊区域：现实法则扭曲，恐惧与依赖被放大' : ''}
 `.trim();
 }
@@ -192,14 +192,14 @@ export function buildSystemPrompt(
   playerAction: string,
   maiden: Maiden,
   systemState: SystemState,
-  carriageType?: CarriageType,
+  carriageTemplateId?: string,
 ): string {
   return `
 ${WORLD_LORE}
 
 ${serializeSystem(systemState)}
 
-${serializeLocation(carriageType)}
+${serializeLocation(carriageTemplateId)}
 
 ${serializeMaiden(maiden)}
 
