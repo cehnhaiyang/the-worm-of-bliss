@@ -4,7 +4,7 @@
 // API 文档：https://enter.pollinations.ai/api/docs
 // ============================================
 
-import { Maiden, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CharacterStatus, PortraitSnapshot, CUP_SIZES } from '../../meta';
+import { Maiden, CharacterRank, ISShexPersonality, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CUP_SIZES } from '../../meta';
 import { getCarriageTemplate, isAbyssTemplate, STATUS_VISUALS, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../constants';
 import { PersonalityView, personalityView } from '../systems';
 import { hashCode } from '../../const';
@@ -29,21 +29,6 @@ const CONFIG = {
     scene: { width: 1024, height: 576 },
 };
 
-/** 影响立绘的显著状态 */
-const PORTRAIT_SIGNIFICANT_STATUSES: CharacterStatus[] = [
-    'panicked',
-    'aroused',
-    'broken',
-    'injured',
-    'pregnant',
-    'gestating',
-    'euphoric',
-    'dissociated',
-    'devoted',
-    'complicit',
-    'deaconess',
-];
-
 // 等级视觉 - 项圈 + 光效
 const RANK_VISUALS: Record<CharacterRank, string> = {
     unranked: '',
@@ -53,8 +38,8 @@ const RANK_VISUALS: Record<CharacterRank, string> = {
     obsidian: 'wearing a black obsidian collar pulsating with purple veins, void energy aura',
 };
 
-// 孕期视觉 - 键必须与 PORTRAIT_PREGNANCY_MILESTONES 的档位一致，
-// 否则里程碑判定触发了重算，产出的提示词却与上一档逐字相同（图不变）
+// 孕期视觉 - 键必须是 PORTRAIT_PREGNANCY_MILESTONES 里的档位：
+// 不在表里的档位（MOVEMENT_WEEK、TOTAL_WEEKS）由 getPregnancyTag 回退到更低一档
 const PREGNANCY_VISUALS: Record<number, string> = {
     [GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK]: 'slightly soft belly',
     [GAME_CONFIG.PREGNANCY.VISIBLE_WEEK]: 'visible small baby bump, hand gently resting on stomach',
@@ -141,52 +126,6 @@ export class ImageService {
     private currentModel: string = CONFIG.defaultModel;
 
     // ============================================
-    // 立绘更新判定逻辑
-    // ============================================
-
-    generatePortraitHash(maiden: Maiden, carriageTemplateId?: string): string {
-        return JSON.stringify(this.createPortraitSnapshot(maiden, carriageTemplateId));
-    }
-
-    private createPortraitSnapshot(maiden: Maiden, carriageTemplateId?: string): PortraitSnapshot {
-        const attrs = maiden.attributes;
-        const dressLevel = calculateDressLevel(maiden.clothing);
-
-        let pregnancyMilestone = 0;
-        const pregnancyWeek = maiden.physiology.pregnancy?.weekNumber ?? 0;
-        for (const milestone of PORTRAIT_PREGNANCY_MILESTONES) {
-            if (pregnancyWeek >= milestone) pregnancyMilestone = milestone;
-        }
-
-        const significantStatuses = maiden.status
-            .filter(s => PORTRAIT_SIGNIFICANT_STATUSES.includes(s))
-            .sort();
-
-        return {
-            lustBracket: this.getBracket(attrs.lust, PORTRAIT_THRESHOLDS.lust),
-            sanityBracket: this.getBracket(attrs.sanity, PORTRAIT_THRESHOLDS.sanity),
-            obedienceBracket: this.getBracket(attrs.obedience, PORTRAIT_THRESHOLDS.obedience),
-            stressBracket: this.getBracket(attrs.stress, PORTRAIT_THRESHOLDS.stress),
-            corruptionBracket: this.getBracket(attrs.corruption, PORTRAIT_THRESHOLDS.corruption),
-            devotionBracket: this.getBracket(attrs.devotion, PORTRAIT_THRESHOLDS.devotion),
-            significantStatuses,
-            dressLevel,
-            clothingState: maiden.clothing.state,
-            pregnancyMilestone,
-            isInAbyss: carriageTemplateId ? isAbyssTemplate(carriageTemplateId) : false,
-            personalityState: personalityView(maiden).state,
-            rank: maiden.rank,
-        };
-    }
-
-    private getBracket(value: number, thresholds: readonly number[]): number {
-        for (let i = 0; i < thresholds.length; i++) {
-            if (value < thresholds[i]) return i;
-        }
-        return thresholds.length;
-    }
-
-    // ============================================
     // 模型管理
     // ============================================
 
@@ -203,12 +142,12 @@ export class ImageService {
     // 核心生成逻辑 (Pollinations API)
     // ============================================
 
-    /** 
-     * 生成角色立绘
-     * 使用 Pollinations API (gen.pollinations.ai)
-     * 返回图片URL和使用的模型名称
+    /**
+     * 生成角色立绘。
      *
      * 纯字符串拼装，无网络 I/O——真正的请求发生在调用方把 `url` 交给浏览器加载时。
+     * 返回的 `url` 同时是**请求键**：提示词、身份种子与模型都写在里面，因此调用方
+     * 只需比对新旧 URL 就能判断要不要重新请求，不必再另算一份"视觉状态"。
      */
     generateCharacterImage(maiden: Maiden, carriageTemplateId?: string): { url: string; model: string } {
         return {
@@ -238,7 +177,7 @@ export class ImageService {
         parts.push(this.buildBackgroundPrompt(carriageTemplateId));
         parts.push('portrait, cinematic lighting, dark fantasy, gothic, 8k');
 
-        return this.buildUrl(parts, CONFIG.portrait, this.generateSeed(maiden, carriageTemplateId));
+        return this.buildUrl(parts, CONFIG.portrait, this.generateSeed(maiden));
     }
 
     getThumbnailUrl(maiden: Maiden): string {
@@ -276,8 +215,9 @@ export class ImageService {
     /**
      * 年龄标签。
      *
-     * 年龄下限由 `GAME_CONFIG.MAIDEN_AGE.MIN` 保证为成年，因此这里不再有
-     * "young girl" 之类的未成年措辞分支——那种分支只会让下限失效时无人察觉。
+     * 登车年龄区间是 `GAME_CONFIG.MAIDEN_AGE` 的 14~22 岁，措辞按档给出；
+     * 这里不对"下限即成年"作任何假设，低龄档也不省略——省略只会让实际年龄
+     * 与提示词悄悄脱节。
      */
     private getAgeTag(age: number): string {
         if (age <= 16) return `young girl, ${age} years old`;
@@ -503,12 +443,14 @@ export class ImageService {
             : `${theme} background, gothic interior, detailed background`;
     }
 
-    private generateSeed(maiden: Maiden, carriageTemplateId?: string): number {
-        const seedStr = maiden.id +
-            maiden.status.slice().sort().join('') +
-            (carriageTemplateId || '') +
-            maiden.clothing.state;
-        return Math.abs(hashCode(seedStr)) % 10000;
+    /**
+     * 种子只取身份。
+     *
+     * 它决定"这张脸长什么样"，而状态与服装已经写在提示词里；把它们混进种子，
+     * 同一少女会因为换个状态标签就换一张脸，且这个变化对请求键完全不可见。
+     */
+    private generateSeed(maiden: Maiden): number {
+        return Math.abs(hashCode(maiden.id)) % 10000;
     }
 
     private buildUrl(parts: string[], size: { width: number; height: number }, seed: number): string {

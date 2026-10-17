@@ -88,9 +88,9 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
     const [showPreciseAge, setShowPreciseAge] = useState(false);
     const [retryNonce, setRetryNonce] = useState(0);
 
-    // 记录"上一次已发起请求"的视觉哈希。用 ref 而非 state：它只用于去重，
+    // 记录"上一次已发起请求"的 URL。用 ref 而非 state：它只用于去重，
     // 不应触发渲染。
-    const lastRequestedHashRef = useRef<string>('');
+    const lastRequestedUrlRef = useRef<string>('');
     const mountedRef = useRef(true);
 
     const isInAbyss = carriageTemplateId ? isAbyssTemplate(carriageTemplateId) : false;
@@ -106,47 +106,46 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
             setImageUrl('');
             setUsedModel('');
             setLoadError(false);
-            lastRequestedHashRef.current = '';
+            lastRequestedUrlRef.current = '';
             return;
         }
 
-        // 计算当前视觉状态的哈希值 (包含 ID、服装、关键状态、理智区间等)
-        const currentHash = imageService.generatePortraitHash(maiden, carriageTemplateId);
+        // 请求键就是 URL 本身：提示词的每一部分、身份种子、当前模型都在里面，
+        // 因此"URL 没变"等价于"要画的东西没变"。
+        const { url, model } = imageService.generateCharacterImage(maiden, carriageTemplateId);
 
-        // 只按"视觉状态是否变化"决定要不要请求。上一次请求失败不构成重发理由：
+        // 只按"要不要重新请求"决定。上一次请求失败不构成重发理由：
         // 之前把 loadError 也放进这个判断里，于是失败后每个 tick 都重发一次，
         // 且开头的 setLoadError(false) 会让错误面板刚出现就被抹掉。
-        if (currentHash === lastRequestedHashRef.current) return;
+        if (url === lastRequestedUrlRef.current) return;
 
-        lastRequestedHashRef.current = currentHash;
+        lastRequestedUrlRef.current = url;
         setLoading(true);
         setLoadError(false);
-
-        const { url, model } = imageService.generateCharacterImage(maiden, carriageTemplateId);
 
         // 预加载图片：生成接口只拼 URL，真正的加载与失败判定都在这里
         const img = new Image();
         img.src = url;
         img.onload = () => {
             // 竞态校验：网络慢时可能已切到别的视觉状态，此时丢弃这次结果
-            if (!mountedRef.current || currentHash !== lastRequestedHashRef.current) return;
+            if (!mountedRef.current || url !== lastRequestedUrlRef.current) return;
             setImageUrl(url);
             setUsedModel(model);
             setLoading(false);
             setLoadError(false);
         };
         img.onerror = () => {
-            if (!mountedRef.current || currentHash !== lastRequestedHashRef.current) return;
+            if (!mountedRef.current || url !== lastRequestedUrlRef.current) return;
             setLoading(false);
             setLoadError(true);
             console.error("Image load failed for URL:", url);
         };
 
-    }, [maiden, carriageTemplateId, retryNonce]); // 依赖项保持宽泛，由内部哈希比对进行节流
+    }, [maiden, carriageTemplateId, retryNonce]); // 依赖项保持宽泛，由内部 URL 比对进行节流
 
     /** 重试：作废上次请求记录并重跑 effect，加载逻辑只此一份 */
     const handleRetry = () => {
-        lastRequestedHashRef.current = '';
+        lastRequestedUrlRef.current = '';
         setRetryNonce(n => n + 1);
     };
 

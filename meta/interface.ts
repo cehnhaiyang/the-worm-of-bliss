@@ -936,26 +936,6 @@ export interface GameLog {
 }
 
 /**
- * AI 生成肖像的提示词注入快照
- * @remarks 所有字段均为量化区间，不含原始数值，供提示词插值用
- */
-export interface PortraitSnapshot {
-  lustBracket: number;
-  sanityBracket: number;
-  obedienceBracket: number;
-  stressBracket: number;
-  corruptionBracket: number;
-  devotionBracket: number;
-  significantStatuses: CharacterStatus[];
-  dressLevel: DressLevel;
-  clothingState: AttireState;
-  pregnancyMilestone: number;
-  isInAbyss: boolean;
-  personalityState: PersonalityState;
-  rank: CharacterRank;
-}
-
-/**
  * 神恩赐予记录
  */
 export interface GraceEvent {
