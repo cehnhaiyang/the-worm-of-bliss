@@ -4,23 +4,9 @@
 // ============================================
 
 import React, { useState, useMemo, useCallback, memo } from 'react';
-import { Maiden, MaidenSummary, CharacterStatus, RANK_ORDER } from '../../meta';
+import { Maiden, MaidenSummary, CharacterStatus } from '../../meta';
 import { getCurrentCarriageId } from '../../const';
-import { STATUS_LABELS } from '../../constants';
-
-/**
- * 等级徽标的颜色与罗马数字标识。
- *
- * 中文名（"黑曜""金"…）不在此列：列表只显示图标，卡片则用 `badge` 组件自己
- * 按等级选色，两处视觉本就不同，硬凑一张带名字的表只会多出一份没人读的字面量。
- */
-const RANK_STYLES: Record<string, { color: string; icon: string }> = {
-    obsidian: { color: 'text-purple-400', icon: 'IV' },
-    gold: { color: 'text-yellow-400', icon: 'III' },
-    silver: { color: 'text-gray-300', icon: 'II' },
-    copper: { color: 'text-orange-400', icon: 'I' },
-    unranked: { color: 'text-zinc-500', icon: '0' },
-};
+import { RANK_DEFINITIONS, STATUS_LABELS } from '../../constants';
 
 /** 排序下拉；value 与 `filteredMaidens` 里的 switch 分支一一对应 */
 const MAIDEN_SORT_OPTIONS = [
@@ -93,7 +79,7 @@ const MaidenItem = memo<MaidenItemProps>(({ maiden, isFocused, isInCurrentCarria
     const sanity = 'attributes' in maiden ? maiden.attributes.sanity : maiden.sanity;
     const rank = 'rank' in maiden ? maiden.rank : 'unranked';
     const isCritical = sanity < 30;
-    const rankStyle = RANK_STYLES[rank] || RANK_STYLES.unranked;
+    const rankDef = RANK_DEFINITIONS[rank];
 
     return (
         <button
@@ -101,8 +87,8 @@ const MaidenItem = memo<MaidenItemProps>(({ maiden, isFocused, isInCurrentCarria
             className={`list-item w-full text-left group ${isFocused ? 'list-item-active' : ''} ${isCritical && !isFocused ? 'list-item-danger' : ''}`}
         >
             {/* 左侧：等级标识 */}
-            <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-zinc-900/60 border border-zinc-800/50 ${rankStyle.color} transition-colors group-hover:border-zinc-700/50`}>
-                <span className="text-sm font-mono">{rankStyle.icon}</span>
+            <div className={`w-7 h-7 rounded-md flex items-center justify-center bg-zinc-900/60 border border-zinc-800/50 ${rankDef.listColor} transition-colors group-hover:border-zinc-700/50`}>
+                <span className="text-sm font-mono">{rankDef.icon}</span>
             </div>
 
             {/* 中间：名字和状态 */}
@@ -250,7 +236,7 @@ export const MaidenList: React.FC<MaidenListProps> = memo(({
                 case 'sanity': return getSanity(a) - getSanity(b);
                 case 'sanity_desc': return getSanity(b) - getSanity(a);
                 case 'status': return b.status.length - a.status.length;
-                case 'rank': return (RANK_ORDER[getRank(b)] || 0) - (RANK_ORDER[getRank(a)] || 0);
+                case 'rank': return RANK_DEFINITIONS[getRank(b)].order - RANK_DEFINITIONS[getRank(a)].order;
                 default: return 0;
             }
         });

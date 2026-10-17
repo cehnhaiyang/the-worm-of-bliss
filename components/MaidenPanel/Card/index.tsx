@@ -1,6 +1,6 @@
 import React, { useState, useEffect, memo, useRef } from 'react';
 import { Maiden, MaidenView, CharacterStatus } from '../../../meta';
-import { STATUS_LABELS, isAbyssTemplate } from '../../../constants';
+import { RANK_DEFINITIONS, STATUS_LABELS, isAbyssTemplate } from '../../../constants';
 import { imageService } from '../../../engines';
 import { formatPreciseAge } from '../../../const';
 import { Appearance } from './Appearance';
@@ -224,11 +224,7 @@ export const MaidenCard: React.FC<MaidenCardProps> = memo(({
                 </div>
 
                 {maiden.rank !== 'unranked' && (
-                    <div className={`absolute top-11 right-2 badge ${maiden.rank === 'obsidian' ? 'badge-purple' :
-                        maiden.rank === 'gold' ? 'badge-warning' :
-                            maiden.rank === 'silver' ? 'bg-zinc-700/60 text-zinc-200 border border-zinc-500/40' :
-                                'bg-orange-900/40 text-orange-300 border border-orange-700/40'
-                        }`}>
+                    <div className={`absolute top-11 right-2 badge ${RANK_DEFINITIONS[maiden.rank].badgeClass}`}>
                         {maiden.rank.toUpperCase()}
                     </div>
                 )}

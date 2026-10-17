@@ -8,7 +8,7 @@ import React, { useState, useEffect, memo, useMemo, useRef } from 'react';
 import { Maiden, MemoryNode, MemoryHistoryEntry } from '../../../../meta';
 import { formatGameTimeDisplay, isAlteredMemory } from '../../../../const';
 import { textService } from '../../../../engines';
-import { TAMPER_PERMISSIONS } from '../../../../constants';
+import { RANK_DEFINITIONS } from '../../../../constants';
 
 interface MemoryProps {
   maiden: Maiden;
@@ -161,7 +161,7 @@ export const Memory: React.FC<MemoryProps> = ({ maiden, onClose, gameStartTime, 
   // 失败时置回空串，使再次打开面板可以重试，而不是永久停在"无记忆数据"。
   const lastAttemptedId = useRef<string>('');
 
-  const permission = TAMPER_PERMISSIONS[maiden.rank] || TAMPER_PERMISSIONS.unranked;
+  const permission = RANK_DEFINITIONS[maiden.rank].tamper;
   const activeChain = viewLegacy ? (maiden.legacyMemoryChain || []) : maiden.memoryChain;
   const isDeaconess = maiden.rank === 'obsidian';
 

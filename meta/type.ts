@@ -36,22 +36,18 @@ export type DressLevel =
 
 /**
  * 角色阶级系统（按等级升序排列）
+ *
+ * 低端两级取"五金"中的锡与铁：锡在五金里最贱，铁次之，故列于铜环之下。
+ * 排序权重不在这里——档位的全部内容（含顺序）由 `RANK_DEFINITIONS` 单点定义。
  */
 export type CharacterRank =
     | 'unranked'  // 无等级
+    | 'tin'       // 锡环
+    | 'iron'      // 铁环
     | 'copper'    // 铜环
     | 'silver'    // 银环
     | 'gold'      // 金环
     | 'obsidian'; // 黑曜石（最高阶）
-
-// 阶级排序常量，供比较运算使用
-export const RANK_ORDER: Record<CharacterRank, number> = {
-    unranked: 0,
-    copper: 1,
-    silver: 2,
-    gold: 3,
-    obsidian: 4,
-} as const;
 
 /**
  * 角色自发行为类型（按语义分组）

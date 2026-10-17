@@ -4,16 +4,11 @@
 // API 文档：https://enter.pollinations.ai/api/docs
 // ============================================
 
-import { Maiden, CharacterRank, CharacterStatus, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CUP_SIZES } from '../../meta';
-import { getCarriageTemplate, isAbyssTemplate, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, GAME_CONFIG } from '../../constants';
+import { Maiden, CharacterStatus, PhysicalStats, NameOrigin, AttireState, AppearanceData, ClothingState, ItemDef, CUP_SIZES } from '../../meta';
+import { getCarriageTemplate, isAbyssTemplate, calculateDressLevel, PORTRAIT_THRESHOLDS, PORTRAIT_PREGNANCY_MILESTONES, RANK_DEFINITIONS, GAME_CONFIG } from '../../constants';
 import { personalityView } from '../systems';
 import { hashCode } from '../../const';
 
-// ============================================
-// 配置常量
-// ============================================
-
-// 可用图像模型列表
 export const AVAILABLE_IMAGE_MODELS = {
     FLUX: 'flux',
 } as const;
@@ -27,7 +22,6 @@ const CONFIG = {
     portrait: { width: 768, height: 1024 },
 };
 
-// 状态视觉 - 附加在表情之上的姿态补充
 const STATUS_VISUALS: Record<CharacterStatus, string> = {
     'normal': '',
     'panicked': 'tears, trembling, scared expression, wide eyes',
@@ -53,17 +47,6 @@ const STATUS_VISUALS: Record<CharacterStatus, string> = {
     'observing': 'leaning on window, staring into void, wide eyes',
 };
 
-// 等级视觉 - 项圈 + 光效
-const RANK_VISUALS: Record<CharacterRank, string> = {
-    unranked: '',
-    copper: 'wearing a rustic copper collar, warm subtle rim lighting',
-    silver: 'wearing a polished silver collar, cold clinical lighting',
-    gold: 'wearing an ornate golden collar, radiant divine aura',
-    obsidian: 'wearing a black obsidian collar pulsating with purple veins, void energy aura',
-};
-
-// 孕期视觉 - 键必须是 PORTRAIT_PREGNANCY_MILESTONES 里的档位：
-// 不在表里的档位（MOVEMENT_WEEK、TOTAL_WEEKS）由 getPregnancyTag 回退到更低一档
 const PREGNANCY_VISUALS: Record<number, string> = {
     [GAME_CONFIG.PREGNANCY.DISCOVERY_WEEK]: 'slightly soft belly',
     [GAME_CONFIG.PREGNANCY.VISIBLE_WEEK]: 'visible small baby bump, hand gently resting on stomach',
@@ -71,8 +54,6 @@ const PREGNANCY_VISUALS: Record<number, string> = {
     [GAME_CONFIG.PREGNANCY.IMMINENT_WEEK]: 'extremely pregnant, massive belly, swollen figure, expression of endurance',
 };
 
-// 种族特征映射 - 键集必须覆盖 NameOrigin 全部取值：
-// 写成 Partial 时漏掉的语源会静默丢掉族群描述，提示词里就只剩一个无名少女
 const ETHNICITY_MAP: Record<NameOrigin, string> = {
     // 东亚
     chinese: 'East Asian maiden, delicate porcelain skin, elegant features',
@@ -131,7 +112,6 @@ const ETHNICITY_MAP: Record<NameOrigin, string> = {
     mythical: 'ethereal maiden, otherworldly beauty, faintly luminous skin',
 };
 
-// 服装状态映射
 const CLOTHING_STATE_MAP: Record<AttireState, string | null> = {
     intact: null,
     torn: 'clothes are torn and shredded, exposing skin underneath',
@@ -197,7 +177,7 @@ export class ImageService {
         if (pregnancy) parts.push(pregnancy);
         // 裸体兜底由 buildClothingPrompt 负责：它返回的字符串恒非空
         parts.push(this.buildClothingPrompt(maiden.clothing));
-        const rank = RANK_VISUALS[maiden.rank];
+        const rank = RANK_DEFINITIONS[maiden.rank].portraitPrompt;
         if (rank) parts.push(rank);
         parts.push(this.buildBackgroundPrompt(carriageTemplateId));
         parts.push('portrait, cinematic lighting, dark fantasy, gothic, 8k');

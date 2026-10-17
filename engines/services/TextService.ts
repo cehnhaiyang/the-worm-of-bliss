@@ -16,7 +16,6 @@ import {
     Maiden,
     MemoryAction,
     MemoryNode,
-    RANK_ORDER,
     RawDeadNode,
     RawInsertion,
     RawMemoryNode,
@@ -27,7 +26,7 @@ import {
     ATTIRE_STATE_LABELS,
     getCarriageTemplate,
     LLM_CONFIG,
-    TAMPER_PERMISSIONS,
+    RANK_DEFINITIONS,
     WORLD_LORE,
 } from '../../constants';
 import { maidenSystem, personalityView } from '../systems';
@@ -85,7 +84,7 @@ const responseSchemaDesc = `
     "fatigue": "number (疲劳变化)",
     "addStatus": ["string (仅限: ${NARRATIVE_STATUSES.join(' / ')})"],
     "removeStatus": ["string (仅限与 addStatus 相同的词表)"],
-    "rankChange": "string (仅限: ${Object.keys(RANK_ORDER).join(' / ')})",
+    "rankChange": "string (仅限: ${Object.keys(RANK_DEFINITIONS).join(' / ')})",
     "fertilityChange": "number (NO PLUS SIGN)",
     "pregnancyProgress": "number"
   },
@@ -231,7 +230,7 @@ function asStatusList(value: unknown): CharacterStatus[] {
 }
 
 function asRank(value: unknown): CharacterRank | undefined {
-    return typeof value === 'string' && value in RANK_ORDER ? value as CharacterRank : undefined;
+    return typeof value === 'string' && value in RANK_DEFINITIONS ? value as CharacterRank : undefined;
 }
 
 const NARRATIVE_ACTIONS = ['initiate', 'leave', 'stay', 'return'] as const;
@@ -862,7 +861,7 @@ ${schemaDescription}`;
         directive: string
     ): Promise<{ narrative: string; selfOpinion: string } | null> {
         try {
-            const permission = TAMPER_PERMISSIONS[maiden.rank];
+            const permission = RANK_DEFINITIONS[maiden.rank].tamper;
             const permissionDesc = `${permission.description} (能力: ${permission.capability})`;
             const prompt = buildTamperMemoryPrompt(maiden, node, directive, permissionDesc);
 

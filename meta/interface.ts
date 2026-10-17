@@ -404,6 +404,41 @@ export interface BehaviorState {
     socialContext?: SocialContext;        // 社交上下文（无社交时为 undefined）
 }
 
+/**
+ * 记忆篡改权限：可改写的要素范围随等级单调扩张，每一级新增一类要素
+ */
+export interface RankTamperPermission {
+    canTamper: boolean;
+    canImplant: boolean;
+    /** 权限阶段标识，写入篡改提示词供模型自检 */
+    capability: string;
+    /** 该阶段允许与禁止改写的内容，原样进入提示词 */
+    description: string;
+}
+
+/**
+ * 单一等级档位的全部内容。
+ *
+ * 档位只在这里描述一次：`RANK_DEFINITIONS` 以 `CharacterRank` 为键，漏掉任何一档都是编译错误。
+ */
+export interface RankDefinition {
+    /** 排序权重，等级比较的唯一依据 */
+    order: number;
+    /** 世界观中的环名 */
+    nameCN: string;
+    /** 列表标识：unranked 为 0，其余按档位递增的罗马数字 */
+    icon: string;
+    /** 列表标识色（Tailwind text-* 类） */
+    listColor: string;
+    /** 卡片徽章类名 */
+    badgeClass: string;
+    /** 立绘提示词片段；unranked 无项圈，为空串 */
+    portraitPrompt: string;
+    tamper: RankTamperPermission;
+    /** 晋升仪式旁白；unranked 无仪式 */
+    ceremonyText: string[];
+}
+
 // ============================================================================
 // 6. 移动与导航 (Movement & Navigation)
 // ============================================================================

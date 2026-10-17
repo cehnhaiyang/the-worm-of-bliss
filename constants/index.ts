@@ -7,8 +7,8 @@
 // 游戏配置
 export * from './config';
 
-// 游戏权限与等级常量
-export * from './game';
+// 角色阶级定义
+export * from './rank';
 
 // 车厢系统常量
 export * from './carriages';
